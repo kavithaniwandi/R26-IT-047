@@ -14,6 +14,8 @@ import activeIcon from './assets/active.png';
 import reliefIcon from './assets/relief.png';
 import hotlineIcon from './assets/hotline.png';
 import RequestForm from './components/RequestForm.jsx';
+import History from './pages/History';
+import OfflineBanner from './components/OfflineBanner';
 
 // Navigation Bar Component
 const NavigationBar = () => {
@@ -1055,6 +1057,91 @@ const SimpleMedical = () => (
 const SimpleDisaster = () => {
   const [activeSection, setActiveSection] = useState('emergency-form');
   
+  // Emergency Request Form State
+  const [formData, setFormData] = useState({
+    patientName: '',
+    age: '',
+    medicalNeed: '',
+    urgency: 'normal',
+    medicines: [{ name: '', grams: '' }],
+    location: null,
+    notes: ''
+  });
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle medicine changes
+  const handleMedicineChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: prev.medicines.map((med, i) => 
+        i === index ? { ...med, [field]: value } : med
+      )
+    }));
+  };
+
+  // Add new medicine field
+  const addMedicine = () => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: [...prev.medicines, { name: '', grams: '' }]
+    }));
+  };
+
+  // Remove medicine field
+  const removeMedicine = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: prev.medicines.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.patientName || !formData.age || !formData.medicalNeed) {
+      alert('Please fill in all required fields (Patient Name, Age, and Type of Emergency)');
+      return;
+    }
+
+    // Create request object
+    const request = {
+      ...formData,
+      timestamp: new Date().toISOString(),
+      localId: Date.now(),
+      syncStatus: 'pending'
+    };
+
+    // Save to localStorage for demo purposes
+    const existingRequests = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+    existingRequests.push(request);
+    localStorage.setItem('emergencyRequests', JSON.stringify(existingRequests));
+
+    // Show success message
+    alert('Emergency request submitted successfully! It has been saved locally and will sync when online.');
+
+    // Reset form
+    setFormData({
+      patientName: '',
+      age: '',
+      medicalNeed: '',
+      urgency: 'normal',
+      medicines: [{ name: '', grams: '' }],
+      location: null,
+      notes: ''
+    });
+
+    // Redirect to history page
+    window.location.href = '/history';
+  };
+  
   // Mock data for demonstration
   const activeDisasters = [
     {
@@ -1431,6 +1518,9 @@ const SimpleDisaster = () => {
                       </label>
                       <input
                         type="text"
+                        name="patientName"
+                        value={formData.patientName}
+                        onChange={handleChange}
                         placeholder="e.g. Saman Perera"
                         style={{
                           width: '100%',
@@ -1439,6 +1529,7 @@ const SimpleDisaster = () => {
                           borderRadius: '8px',
                           fontSize: '14px',
                           background: '#f9fafb',
+                          color: '#000000',
                           transition: 'all 0.2s'
                         }}
                         onFocus={(e) => {
@@ -1465,8 +1556,12 @@ const SimpleDisaster = () => {
                       </label>
                       <input
                         type="number"
-                        placeholder="e.g. 34"
-                        min="0" max="120"
+                        name="age"
+                        value={formData.age}
+                        onChange={handleChange}
+                        placeholder="e.g. 35"
+                        min="1"
+                        max="120"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -1474,6 +1569,7 @@ const SimpleDisaster = () => {
                           borderRadius: '8px',
                           fontSize: '14px',
                           background: '#f9fafb',
+                          color: '#000000',
                           transition: 'all 0.2s'
                         }}
                         onFocus={(e) => {
@@ -1614,6 +1710,9 @@ const SimpleDisaster = () => {
                       Type of Emergency *
                     </label>
                     <select
+                      name="medicalNeed"
+                      value={formData.medicalNeed}
+                      onChange={handleChange}
                       style={{
                         width: '100%',
                         padding: '10px 14px',
@@ -1621,6 +1720,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
@@ -1693,6 +1793,8 @@ const SimpleDisaster = () => {
                   }}>
                     <input
                       type="text"
+                      value={formData.medicines[0]?.name || ''}
+                      onChange={(e) => handleMedicineChange(0, 'name', e.target.value)}
                       placeholder="e.g. Paracetamol"
                       style={{
                         padding: '10px 14px',
@@ -1700,6 +1802,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => {
@@ -1715,6 +1818,8 @@ const SimpleDisaster = () => {
                     />
                     <input
                       type="text"
+                      value={formData.medicines[0]?.grams || ''}
+                      onChange={(e) => handleMedicineChange(0, 'grams', e.target.value)}
                       placeholder="500mg"
                       style={{
                         padding: '10px 14px',
@@ -1722,6 +1827,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => {
@@ -1864,6 +1970,9 @@ const SimpleDisaster = () => {
                     }} />
                   </div>
                   <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
                     placeholder="Any additional details about the patient's condition..."
                     style={{
                       width: '100%',
@@ -1872,6 +1981,7 @@ const SimpleDisaster = () => {
                       borderRadius: '8px',
                       fontSize: '14px',
                       background: '#f9fafb',
+                      color: '#000000',
                       resize: 'vertical',
                       minHeight: '80px',
                       fontFamily: 'inherit',
@@ -1893,6 +2003,7 @@ const SimpleDisaster = () => {
                 {/* Submit Button */}
                 <button
                   type="button"
+                  onClick={handleSubmit}
                   style={{
                     width: '100%',
                     padding: '16px',
@@ -2313,16 +2424,53 @@ const SimpleDisaster = () => {
 };
 
 function App() {
+  // Register Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("✅ Service Worker registered:", reg.scope);
+
+            // Listen for SW updates
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              newWorker?.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  console.log("🔄 New Service Worker available — refresh to update");
+                }
+              });
+            });
+          })
+          .catch((err) => console.error("❌ Service Worker failed:", err));
+      });
+    }
+  }, []);
+
   useEffect(() => {
     console.log("Jeevadhara app with blue theme and parallax mounted");
   }, []);
 
   return (
     <Router>
+      {/* OfflineBanner sits outside Routes — visible on every page */}
+      <OfflineBanner />
+
       <Routes>
         <Route path="/" element={<SimpleHome />} />
         <Route path="/medical-donations" element={<SimpleMedical />} />
         <Route path="/disaster-donations" element={<SimpleDisaster />} />
+        <Route path="/emergency-request" element={<History />} />
+        <Route path="/history"           element={<History />} />
+
+        {/* ── Future routes (add as you build them) ──────────
+        <Route path="/dashboard"   element={<Dashboard />} />
+        <Route path="/donations"   element={<Donations />} />
+        ─────────────────────────────────────────────────── */}
       </Routes>
     </Router>
   );
