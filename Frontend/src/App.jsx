@@ -9,7 +9,13 @@ import heroVideo2 from './assets/2.mp4';
 import heroVideo3 from './assets/3.mp4';
 import heroVideo4 from './assets/4.mp4';
 import heroVideo5 from './assets/5.mp4';
+import emergencyIcon from './assets/emergency.png';
+import activeIcon from './assets/active.png';
+import reliefIcon from './assets/relief.png';
+import hotlineIcon from './assets/hotline.png';
 import RequestForm from './components/RequestForm.jsx';
+import History from './pages/History';
+import OfflineBanner from './components/OfflineBanner';
 
 // Navigation Bar Component
 const NavigationBar = () => {
@@ -1051,6 +1057,91 @@ const SimpleMedical = () => (
 const SimpleDisaster = () => {
   const [activeSection, setActiveSection] = useState('emergency-form');
   
+  // Emergency Request Form State
+  const [formData, setFormData] = useState({
+    patientName: '',
+    age: '',
+    medicalNeed: '',
+    urgency: 'normal',
+    medicines: [{ name: '', grams: '' }],
+    location: null,
+    notes: ''
+  });
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle medicine changes
+  const handleMedicineChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: prev.medicines.map((med, i) => 
+        i === index ? { ...med, [field]: value } : med
+      )
+    }));
+  };
+
+  // Add new medicine field
+  const addMedicine = () => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: [...prev.medicines, { name: '', grams: '' }]
+    }));
+  };
+
+  // Remove medicine field
+  const removeMedicine = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      medicines: prev.medicines.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.patientName || !formData.age || !formData.medicalNeed) {
+      alert('Please fill in all required fields (Patient Name, Age, and Type of Emergency)');
+      return;
+    }
+
+    // Create request object
+    const request = {
+      ...formData,
+      timestamp: new Date().toISOString(),
+      localId: Date.now(),
+      syncStatus: 'pending'
+    };
+
+    // Save to localStorage for demo purposes
+    const existingRequests = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+    existingRequests.push(request);
+    localStorage.setItem('emergencyRequests', JSON.stringify(existingRequests));
+
+    // Show success message
+    alert('Emergency request submitted successfully! It has been saved locally and will sync when online.');
+
+    // Reset form
+    setFormData({
+      patientName: '',
+      age: '',
+      medicalNeed: '',
+      urgency: 'normal',
+      medicines: [{ name: '', grams: '' }],
+      location: null,
+      notes: ''
+    });
+
+    // Redirect to history page
+    window.location.href = '/history';
+  };
+  
   // Mock data for demonstration
   const activeDisasters = [
     {
@@ -1114,26 +1205,57 @@ const SimpleDisaster = () => {
   ];
 
   const navigationItems = [
-    { id: 'emergency-form', label: 'Emergency Request Form', icon: '🚨', color: '#f59e0b' },
-    { id: 'active-disasters', label: 'Active Disasters', icon: '🌊', color: '#fbbf24' },
-    { id: 'relief-requests', label: 'Relief Requests', icon: '📦', color: '#facc15' },
-    { id: 'emergency-hotline', label: '24/7 Emergency Hotline', icon: '📞', color: '#fde047' }
+    { id: 'emergency-form', label: 'Emergency Request Form', icon: emergencyIcon, color: '#fca5a5' },
+    { id: 'active-disasters', label: 'Active Disasters', icon: activeIcon, color: '#f87171' },
+    { id: 'relief-requests', label: 'Relief Requests', icon: reliefIcon, color: '#ef4444' },
+    { id: 'emergency-hotline', label: '24/7 Emergency Hotline', icon: hotlineIcon, color: '#dc2626' }
   ];
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #fefce8 0%, #fef3c7 100%)',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
+    <>
+      <style>{`
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        html, body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          overflow-x: hidden;
+          position: relative;
+        }
+        #root {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          overflow-x: hidden;
+        }
+      `}</style>
+      <div style={{ 
+        minHeight: '100vh', 
+        width: '100vw',
+        background: '#fef2f2',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        margin: 0,
+        padding: 0,
+        boxSizing: 'border-box',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        overflowX: 'hidden'
+      }}>
       {/* Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
-        padding: '40px 20px',
+        background: '#fca5a5',
+        padding: '30px 20px',
         textAlign: 'center',
-        color: 'white',
+        color: 'black',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        width: '100%'
       }}>
         <div style={{
           position: 'absolute',
@@ -1168,87 +1290,119 @@ const SimpleDisaster = () => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
         padding: '30px 20px',
-        maxWidth: '1200px',
-        margin: '0 auto'
+        width: '100%'
       }}>
         {navigationItems.map((item) => (
           <div
             key={item.id}
             onClick={() => setActiveSection(item.id)}
             style={{
-              background: activeSection === item.id ? 'white' : 'rgba(255,255,255,0.7)',
-              border: `2px solid ${item.color}`,
-              borderRadius: '16px',
-              padding: '24px',
+              background: 'rgba(255, 255, 255, 0.8)',
+              border: activeSection === item.id ? '2px solid ' + item.color : '1px solid ' + item.color,
+              borderRadius: '12px',
+              padding: '20px',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               textAlign: 'center',
-              transform: activeSection === item.id ? 'scale(1.05)' : 'scale(1)',
-              boxShadow: activeSection === item.id 
-                ? `0 10px 30px ${item.color}30` 
-                : '0 4px 15px rgba(0,0,0,0.1)'
+              boxShadow: activeSection === item.id ? '0 4px 15px ' + item.color + '0.2' : '0 2px 8px rgba(0,0,0,0.05)',
+              transform: activeSection === item.id ? 'translateY(-2px)' : 'translateY(0)'
             }}
             onMouseOver={(e) => {
-              if (activeSection !== item.id) {
-                e.target.style.transform = 'scale(1.02)';
-                e.target.style.boxShadow = `0 8px 25px ${item.color}20`;
-              }
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 15px ' + item.color + '0.2';
             }}
             onMouseOut={(e) => {
-              if (activeSection !== item.id) {
-                e.target.style.transform = 'scale(1)';
-                e.target.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-              }
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
             }}
           >
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{item.icon}</div>
+            <div style={{ 
+              width: '40px', 
+              height: '40px', 
+              margin: '0 auto 10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img 
+                src={item.icon} 
+                alt={item.label}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain' 
+                }}
+                onError={(e) => {
+                  // Fallback to emoji if icon fails to load
+                  const fallbackIcons = {
+                    'emergency-form': '🚨',
+                    'active-disasters': '🌊',
+                    'relief-requests': '📦',
+                    'emergency-hotline': '📞'
+                  };
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = '<span style="font-size: 1.5rem;">' + (fallbackIcons[item.id] || '📋') + '</span>';
+                }}
+              />
+            </div>
             <h3 style={{ 
               fontSize: '1.1rem', 
-              fontWeight: '600', 
-              color: item.color,
-              margin: '0 0 8px 0'
+              fontWeight: '500', 
+              color: 'black',
+              marginBottom: '5px' 
             }}>
               {item.label}
             </h3>
-            <div style={{
-              width: '40px',
-              height: '4px',
-              background: item.color,
-              margin: '0 auto',
-              borderRadius: '2px',
-              opacity: activeSection === item.id ? 1 : 0.5
-            }} />
           </div>
         ))}
       </div>
 
       {/* Content Area */}
       <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '0 20px 40px'
+        padding: '0 20px 40px',
+        width: '100%'
       }}>
         {/* Emergency Request Form Section */}
         {activeSection === 'emergency-form' && (
           <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '30px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+            background: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              marginBottom: '24px'
+              gap: '10px',
+              marginBottom: '16px'
             }}>
-              <span style={{ fontSize: '2rem' }}>🚨</span>
+              <div style={{
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img 
+                  src={emergencyIcon} 
+                  alt="Emergency Request Form"
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'contain' 
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = '<span style="font-size: 1.2rem;">🚨</span>';
+                  }}
+                />
+              </div>
               <h2 style={{ 
-                fontSize: '1.8rem', 
-                fontWeight: '700', 
-                color: '#f59e0b',
+                fontSize: '1.4rem', 
+                fontWeight: '600', 
+                color: 'black',
                 margin: 0
               }}>
                 Emergency Request Form
@@ -1364,6 +1518,9 @@ const SimpleDisaster = () => {
                       </label>
                       <input
                         type="text"
+                        name="patientName"
+                        value={formData.patientName}
+                        onChange={handleChange}
                         placeholder="e.g. Saman Perera"
                         style={{
                           width: '100%',
@@ -1372,6 +1529,7 @@ const SimpleDisaster = () => {
                           borderRadius: '8px',
                           fontSize: '14px',
                           background: '#f9fafb',
+                          color: '#000000',
                           transition: 'all 0.2s'
                         }}
                         onFocus={(e) => {
@@ -1398,8 +1556,12 @@ const SimpleDisaster = () => {
                       </label>
                       <input
                         type="number"
-                        placeholder="e.g. 34"
-                        min="0" max="120"
+                        name="age"
+                        value={formData.age}
+                        onChange={handleChange}
+                        placeholder="e.g. 35"
+                        min="1"
+                        max="120"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -1407,6 +1569,7 @@ const SimpleDisaster = () => {
                           borderRadius: '8px',
                           fontSize: '14px',
                           background: '#f9fafb',
+                          color: '#000000',
                           transition: 'all 0.2s'
                         }}
                         onFocus={(e) => {
@@ -1547,6 +1710,9 @@ const SimpleDisaster = () => {
                       Type of Emergency *
                     </label>
                     <select
+                      name="medicalNeed"
+                      value={formData.medicalNeed}
+                      onChange={handleChange}
                       style={{
                         width: '100%',
                         padding: '10px 14px',
@@ -1554,6 +1720,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
@@ -1626,6 +1793,8 @@ const SimpleDisaster = () => {
                   }}>
                     <input
                       type="text"
+                      value={formData.medicines[0]?.name || ''}
+                      onChange={(e) => handleMedicineChange(0, 'name', e.target.value)}
                       placeholder="e.g. Paracetamol"
                       style={{
                         padding: '10px 14px',
@@ -1633,6 +1802,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => {
@@ -1648,6 +1818,8 @@ const SimpleDisaster = () => {
                     />
                     <input
                       type="text"
+                      value={formData.medicines[0]?.grams || ''}
+                      onChange={(e) => handleMedicineChange(0, 'grams', e.target.value)}
                       placeholder="500mg"
                       style={{
                         padding: '10px 14px',
@@ -1655,6 +1827,7 @@ const SimpleDisaster = () => {
                         borderRadius: '8px',
                         fontSize: '14px',
                         background: '#f9fafb',
+                        color: '#000000',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => {
@@ -1797,6 +1970,9 @@ const SimpleDisaster = () => {
                     }} />
                   </div>
                   <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
                     placeholder="Any additional details about the patient's condition..."
                     style={{
                       width: '100%',
@@ -1805,6 +1981,7 @@ const SimpleDisaster = () => {
                       borderRadius: '8px',
                       fontSize: '14px',
                       background: '#f9fafb',
+                      color: '#000000',
                       resize: 'vertical',
                       minHeight: '80px',
                       fontFamily: 'inherit',
@@ -1826,6 +2003,7 @@ const SimpleDisaster = () => {
                 {/* Submit Button */}
                 <button
                   type="button"
+                  onClick={handleSubmit}
                   style={{
                     width: '100%',
                     padding: '16px',
@@ -2241,20 +2419,58 @@ const SimpleDisaster = () => {
         </a>
       </div>
     </div>
+    </>
   );
 };
 
 function App() {
+  // Register Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("✅ Service Worker registered:", reg.scope);
+
+            // Listen for SW updates
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              newWorker?.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  console.log("🔄 New Service Worker available — refresh to update");
+                }
+              });
+            });
+          })
+          .catch((err) => console.error("❌ Service Worker failed:", err));
+      });
+    }
+  }, []);
+
   useEffect(() => {
     console.log("Jeevadhara app with blue theme and parallax mounted");
   }, []);
 
   return (
     <Router>
+      {/* OfflineBanner sits outside Routes — visible on every page */}
+      <OfflineBanner />
+
       <Routes>
         <Route path="/" element={<SimpleHome />} />
         <Route path="/medical-donations" element={<SimpleMedical />} />
         <Route path="/disaster-donations" element={<SimpleDisaster />} />
+        <Route path="/emergency-request" element={<History />} />
+        <Route path="/history"           element={<History />} />
+
+        {/* ── Future routes (add as you build them) ──────────
+        <Route path="/dashboard"   element={<Dashboard />} />
+        <Route path="/donations"   element={<Donations />} />
+        ─────────────────────────────────────────────────── */}
       </Routes>
     </Router>
   );
