@@ -5,6 +5,7 @@ import DonationDetailsModal from './DonationDetailsModal';
 import DonateItemModal from './DonateItemModal';
 import DonateChoiceModal from './DonateChoiceModal';
 import DonateMoneyModal from './DonateMoneyModal';
+import PaymentSandboxModal from './PaymentSandboxModal';
 
 const urgencyStyles = {
   'CRITICAL': 'bg-[#E53E3E]/10 text-[#E53E3E]',
@@ -31,6 +32,8 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
   const [donateOpen, setDonateOpen] = useState(false);
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [moneyOpen, setMoneyOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentPayload, setPaymentPayload] = useState(null);
 
   return (
     <motion.article
@@ -138,8 +141,19 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
         onClose={() => setMoneyOpen(false)}
         request={request}
         onConfirm={(payload) => {
-          // placeholder: show simple confirmation (replace with API call later)
-          alert(`Thanks! Monetary donation of LKR ${payload.amount} queued for request ${payload.requestId}`);
+          // open sandbox payment flow with payload
+          setPaymentPayload(payload);
+          setPaymentOpen(true);
+        }}
+      />
+
+      <PaymentSandboxModal
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        payload={paymentPayload}
+        onSuccess={(tx) => {
+          // replace with real API call later; show confirmation for now
+          alert(`Payment successful (sandbox). Transaction: ${tx.transactionId}`);
         }}
       />
     </motion.article>
