@@ -3,6 +3,8 @@ import { BadgeCheck, MapPin, Package, Store, ChevronRight, ShieldCheck } from 'l
 import { useState } from 'react';
 import DonationDetailsModal from './DonationDetailsModal';
 import DonateItemModal from './DonateItemModal';
+import DonateChoiceModal from './DonateChoiceModal';
+import DonateMoneyModal from './DonateMoneyModal';
 
 const urgencyStyles = {
   'CRITICAL': 'bg-[#E53E3E]/10 text-[#E53E3E]',
@@ -27,6 +29,8 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
   const locationLabel = isNearYou ? 'Near you' : `${request.distanceKm.toFixed(1)} km away`;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [donateOpen, setDonateOpen] = useState(false);
+  const [choiceOpen, setChoiceOpen] = useState(false);
+  const [moneyOpen, setMoneyOpen] = useState(false);
 
   return (
     <motion.article
@@ -103,7 +107,7 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
         </button>
         <button
           type="button"
-          onClick={() => setDonateOpen(true)}
+          onClick={() => setChoiceOpen(true)}
           className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#2D9E6B] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#23845c]"
         >
           Donate This Item
@@ -117,7 +121,25 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
         request={request}
         onConfirm={(payload) => {
           // placeholder: show simple confirmation (replace with API call later)
-          alert(`Thanks! Donation queued for request ${payload.requestId} (qty: ${payload.quantity})`);
+          alert(`Thanks! Medicine donation queued for request ${payload.requestId} (qty: ${payload.quantity})`);
+        }}
+      />
+
+      <DonateChoiceModal
+        open={choiceOpen}
+        onClose={() => setChoiceOpen(false)}
+        request={request}
+        onChooseMedicine={() => setDonateOpen(true)}
+        onChooseMoney={() => setMoneyOpen(true)}
+      />
+
+      <DonateMoneyModal
+        open={moneyOpen}
+        onClose={() => setMoneyOpen(false)}
+        request={request}
+        onConfirm={(payload) => {
+          // placeholder: show simple confirmation (replace with API call later)
+          alert(`Thanks! Monetary donation of LKR ${payload.amount} queued for request ${payload.requestId}`);
         }}
       />
     </motion.article>
