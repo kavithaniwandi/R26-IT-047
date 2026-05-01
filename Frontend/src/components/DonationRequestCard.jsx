@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion';
 import { BadgeCheck, MapPin, Package, Store, ChevronRight, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import DonationDetailsModal from './DonationDetailsModal';
+import DonateItemModal from './DonateItemModal';
 
 const urgencyStyles = {
   'CRITICAL': 'bg-[#E53E3E]/10 text-[#E53E3E]',
@@ -22,6 +25,8 @@ const matchStyles = (score) => {
 const DonationRequestCard = ({ request, donorDistrict }) => {
   const isNearYou = request.district === donorDistrict;
   const locationLabel = isNearYou ? 'Near you' : `${request.distanceKm.toFixed(1)} km away`;
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
 
   return (
     <motion.article
@@ -90,6 +95,7 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
+          onClick={() => setDetailsOpen(true)}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[#2D9E6B] hover:text-[#2D9E6B]"
         >
           View Donation Details
@@ -97,11 +103,23 @@ const DonationRequestCard = ({ request, donorDistrict }) => {
         </button>
         <button
           type="button"
+          onClick={() => setDonateOpen(true)}
           className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#2D9E6B] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#23845c]"
         >
           Donate This Item
         </button>
       </div>
+
+      <DonationDetailsModal open={detailsOpen} onClose={() => setDetailsOpen(false)} request={request} />
+      <DonateItemModal
+        open={donateOpen}
+        onClose={() => setDonateOpen(false)}
+        request={request}
+        onConfirm={(payload) => {
+          // placeholder: show simple confirmation (replace with API call later)
+          alert(`Thanks! Donation queued for request ${payload.requestId} (qty: ${payload.quantity})`);
+        }}
+      />
     </motion.article>
   );
 };
