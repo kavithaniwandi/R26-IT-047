@@ -16,6 +16,7 @@ import hotlineIcon from './assets/hotline.png';
 import RequestForm from './components/RequestForm.jsx';
 import History from './pages/History';
 import OfflineBanner from './components/OfflineBanner';
+import MedicineDonationsPage from './pages/MedicineDonations.jsx';
 
 // Navigation Bar Component
 const NavigationBar = () => {
@@ -2462,7 +2463,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<SimpleHome />} />
-        <Route path="/medical-donations" element={<SimpleMedical />} />
+        <Route path="/medical-donations" element={<MedicineDonationsPage />} />
         <Route path="/disaster-donations" element={<SimpleDisaster />} />
         <Route path="/emergency-request" element={<History />} />
         <Route path="/history"           element={<History />} />
