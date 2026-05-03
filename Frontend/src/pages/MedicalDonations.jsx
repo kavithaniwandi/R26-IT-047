@@ -1,28 +1,27 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Heart, 
-  Plus, 
-  Search, 
+import {
+  Heart,
+  Search,
   Filter,
   Clock,
   MapPin,
   Users,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
   Activity,
   Droplet,
   Pill,
   Stethoscope,
-  Ambulance
+  Ambulance,
+  Sparkles
 } from 'lucide-react';
+import PersonalizedDonorFeed from '../components/PersonalizedDonorFeed';
 
 const MedicalDonations = () => {
   const [activeTab, setActiveTab] = useState('donate');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showPersonalizedFeed, setShowPersonalizedFeed] = useState(false);
 
   const donationCategories = [
     { id: 'all', name: 'All Categories', icon: Heart },
@@ -112,9 +111,9 @@ const MedicalDonations = () => {
     }
   ];
 
-  const filteredRequests = donationRequests.filter(request => {
+  const filteredRequests = donationRequests.filter((request) => {
     const matchesSearch = request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.hospital.toLowerCase().includes(searchTerm.toLowerCase());
+      request.hospital.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || request.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -130,7 +129,6 @@ const MedicalDonations = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Hero Section */}
       <section className="bg-gradient-to-r from-donation-600 to-green-600 text-white py-16">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <motion.div
@@ -143,14 +141,13 @@ const MedicalDonations = () => {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Medical Donations</h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Save lives through medical donations. Every contribution helps provide critical healthcare 
+              Save lives through medical donations. Every contribution helps provide critical healthcare
               to those who need it most.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="py-12 bg-white border-b">
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -179,10 +176,41 @@ const MedicalDonations = () => {
         </div>
       </section>
 
-      {/* Main Content */}
       <section className="py-12">
         <div className="max-w-6xl mx-auto px-4">
-          {/* Tabs */}
+          <div className="mb-8 rounded-2xl bg-white p-6 shadow-lg">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#F0FFF4] px-3 py-1 text-sm font-semibold text-[#2D9E6B]">
+                  <Sparkles className="h-4 w-4" />
+                  Personalized Donation Requests
+                </div>
+                <h2 className="mt-3 text-2xl font-bold text-gray-800">Open your personalized feed</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Your matched donation requests appear in a dedicated section when you need them.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPersonalizedFeed((current) => !current)}
+                className="inline-flex items-center justify-center rounded-xl bg-[#2D9E6B] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#23845c]"
+              >
+                {showPersonalizedFeed ? 'Hide Personalized Donation Requests' : 'Personalized Donation Requests'}
+              </button>
+            </div>
+          </div>
+
+          {showPersonalizedFeed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-10"
+            >
+              <PersonalizedDonorFeed />
+            </motion.div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <button
               onClick={() => setActiveTab('donate')}
@@ -216,7 +244,6 @@ const MedicalDonations = () => {
             </button>
           </div>
 
-          {/* Donate Tab */}
           {activeTab === 'donate' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -246,9 +273,7 @@ const MedicalDonations = () => {
                 <h3 className="text-2xl font-bold text-gray-800 mb-6">Quick Donation Form</h3>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Donation Type
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Donation Type</label>
                     <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-donation-500 focus:border-transparent">
                       <option>Blood Donation</option>
                       <option>Medicines</option>
@@ -257,9 +282,7 @@ const MedicalDonations = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Location
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                     <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-donation-500 focus:border-transparent">
                       <option>Nearest Center</option>
                       <option>Downtown</option>
@@ -275,14 +298,12 @@ const MedicalDonations = () => {
             </motion.div>
           )}
 
-          {/* Requests Tab */}
           {activeTab === 'requests' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
-              {/* Search and Filter */}
               <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1 relative">
@@ -302,7 +323,7 @@ const MedicalDonations = () => {
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-donation-500 focus:border-transparent"
                     >
-                      {donationCategories.map(category => (
+                      {donationCategories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
                         </option>
@@ -312,7 +333,6 @@ const MedicalDonations = () => {
                 </div>
               </div>
 
-              {/* Requests List */}
               <div className="grid gap-6">
                 {filteredRequests.map((request) => (
                   <motion.div
@@ -358,7 +378,6 @@ const MedicalDonations = () => {
             </motion.div>
           )}
 
-          {/* Opportunities Tab */}
           {activeTab === 'opportunities' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -403,15 +422,14 @@ const MedicalDonations = () => {
         </div>
       </section>
 
-      {/* Emergency Alert */}
       <section className="py-8 bg-red-50">
         <div className="max-w-6xl mx-auto px-4">
           <div className="bg-red-100 rounded-lg p-6 flex items-center space-x-4">
-            <AlertCircle className="w-8 h-8 text-red-600 flex-shrink-0" />
+            <Filter className="w-8 h-8 text-red-600 flex-shrink-0" />
             <div>
               <h3 className="text-lg font-semibold text-red-900 mb-1">Critical Blood Shortage</h3>
               <p className="text-red-700">
-                Type O- blood urgently needed at City General Hospital. 
+                Type O- blood urgently needed at City General Hospital.
                 <Link to="/medical-donations" className="underline ml-2 font-medium">
                   Donate now to save lives
                 </Link>
