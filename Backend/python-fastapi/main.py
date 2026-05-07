@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from database import ping_db
-from routes.medical_requests  import router as medical_router
-# from routes.donations          import router as donations_router    # coming soon
-# from routes.ml_recommendations import router as ml_router          # coming soon
+
+from routes.medical_requests import router as medical_router
+from routes.ml_recommendations import router as ml_router   # ✅ ENABLED
 
 load_dotenv()
 
@@ -35,15 +35,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routes
 app.include_router(medical_router, prefix="/api/medical-requests", tags=["Medical Requests"])
-# app.include_router(donations_router, prefix="/api/donations",    tags=["Donations"])
-# app.include_router(ml_router,        prefix="/api/ml",           tags=["ML Recommendations"])
+app.include_router(ml_router, prefix="/api/ml", tags=["ML Recommendations"])  # ✅ ENABLED
 
 @app.get("/api/health", tags=["Health"])
 async def health():
     db_ok = await ping_db()
     return {
-        "status":   "ok" if db_ok else "degraded",
+        "status": "ok" if db_ok else "degraded",
         "database": "connected" if db_ok else "unreachable",
     }
 
