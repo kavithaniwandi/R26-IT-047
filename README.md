@@ -1,179 +1,248 @@
-Smart Medical Donation System with Disaster Response Donation System
-A disaster management platform designed to support victims, hospitals, donors, and emergency response teams during natural disasters such as floods, landslides, and pandemics. The system combines an Offline-First PWA, Machine Learning, and GIS to ensure emergency requests can be collected, stored, synchronized, analyzed, and visualized in real time — even in low-connectivity environments.
+Smart Medical Donation System with Disaster Response
+<div align="center">
+Intelligent Disaster Healthcare Support & Resource Optimization Platform
 
+An offline-first disaster management platform designed to support victims, hospitals, donors, and emergency response teams during natural disasters such as floods, landslides, and pandemics.
+
+Built using Progressive Web Applications (PWA), Machine Learning, and GIS technologies to ensure emergency medical requests can be collected, synchronized, analyzed, and visualized in real time — even in low-connectivity environments.
+
+</div>
+System Pipeline
+Capture Offline → Store & Sync → ML Geo-Intel → Resource Map → Donation Match
 Project Overview
-During disasters, affected people often cannot access medical support quickly due to:
+
+During disasters, emergency medical response systems often fail because of:
+
 Unstable or unavailable internet connectivity
 Lost or delayed emergency requests
-Inability to identify high-demand medical areas
-Poorly managed donations causing duplication or shortages
-Sub-optimal placement of temporary medical camps
-This platform solves these problems through a five-stage pipeline:
-```
-Capture Offline → Store & Sync → ML Geo-Intel → Resource Map → Donation Match
-```
----
-Key Features
+Poor visibility into high-demand medical zones
+Inefficient donation management
+Poor placement of temporary medical camps
+
+The Smart Medical Donation System addresses these challenges through an integrated disaster-response architecture that combines:
+
+Offline-first data collection
+Reliable synchronization mechanisms
+Machine learning–driven geographic intelligence
+Real-time GIS visualization
+Intelligent donation matching
+Core Features
 Feature	Description
-Offline-First PWA	Service workers capture and store emergency requests locally using IndexedDB — no internet required
-Store-and-Forward Sync	Automatically synchronizes offline data to the central server when connectivity is restored
-ML Site Recommendation	Predicts optimal locations for temporary medical camps using historical disaster data
-Live GIS Heatmaps	Real-time demand density maps via Leaflet.js and OpenStreetMap
-Smart Donation Matching	Connects donors with verified, real-time medical needs to prevent wastage
-Clinical Priority Queue	Rule-based triage engine that scores and ranks patient cases by urgency
-Disaster Relief Prediction	XGBoost-powered medicine demand forecasting for disaster-affected areas
-Multi-Channel Input	Accepts requests via PWA web app and SMS gateway
----
----
+Offline-First PWA	Emergency requests can be submitted without internet connectivity using IndexedDB and Service Workers
+Store-and-Forward Synchronization	Automatically synchronizes offline data when connectivity becomes available
+ML Camp Recommendation	Predicts optimal locations for temporary medical camps
+GIS Heatmaps	Displays live medical demand density maps using Leaflet.js and OpenStreetMap
+Smart Donation Matching	Matches donors with verified urgent medical requirements
+Clinical Priority Queue	Rule-based triage system that prioritizes patients by urgency
+Disaster Relief Prediction	Predicts medicine demand in affected regions using ML forecasting
+Multi-Channel Input	Supports both PWA and SMS-based emergency submissions
+Architecture Overview
+ ┌──────────────────────┐
+ │  Victims / Volunteers │
+ └──────────┬───────────┘
+            │
+            ▼
+ ┌──────────────────────┐
+ │ Offline-First PWA    │
+ │ React + ServiceWorker│
+ └──────────┬───────────┘
+            │
+            ▼
+ ┌──────────────────────┐
+ │ IndexedDB Local Queue│
+ └──────────┬───────────┘
+            │ Sync
+            ▼
+ ┌──────────────────────┐
+ │ Node.js + Express API│
+ └──────────┬───────────┘
+            │
+            ▼
+ ┌──────────────────────┐
+ │ MongoDB Central Store│
+ └──────────┬───────────┘
+            │
+ ┌──────────┴───────────┐
+ │                      │
+ ▼                      ▼
+ML Analytics      GIS Visualization
+(Python)          (Leaflet.js)
 Team & Components
 IT22104076 — E. M. K. N. Ekanayake
-Component 1 — Offline-First Progressive Web Application (PWA)
-What it does
-This component ensures the entire platform keeps working even when internet connectivity is completely unavailable — which is the most common scenario during natural disasters such as floods or landslides.
-How it works
-The application is built as a Progressive Web App (PWA) using React.js, with a Service Worker running in the background at all times. When a victim, volunteer, or health worker submits an emergency medical request and there is no internet connection, the Service Worker intercepts the request and stores it locally in the browser using IndexedDB (a built-in offline database). The data stays safe on the device until connectivity is restored, at which point the system automatically synchronizes everything with the central MongoDB server — without the user needing to do anything manually.
-Key behaviours
-Works fully offline — no internet required to submit emergency requests
-Service Worker monitors network status continuously
-Emergency data is never lost, even if the device loses power after submission (IndexedDB persists across sessions)
-No manual re-submission needed; sync happens automatically in the background
-Supports low-bandwidth environments where connections are slow or intermittent
-Technology
-React.js (frontend framework)
-Service Workers (background sync and offline interception)
-IndexedDB (local offline data storage)
-PWA manifest (installable on mobile and desktop)
----
-Component 2 — Store-and-Forward Synchronization
-What it does
-This component handles the reliable transfer of offline-stored emergency data back to the central server once internet connectivity returns, ensuring zero data loss across the entire disaster response lifecycle.
-How it works
-When a request is submitted offline, it follows a structured store-and-forward pipeline:
-The user submits an emergency medical request through the PWA
-The Service Worker detects there is no internet and stores the request in IndexedDB locally
-The Service Worker continuously monitors network connectivity in the background
-As soon as a connection is detected, the queued requests are automatically packaged and sent to the central Node.js/Express backend
-The backend confirms receipt and the local queue is cleared
-This mechanism means that even in areas where internet access appears only briefly — for example, a few minutes of 2G signal — the system will flush all stored requests during that window.
-Key behaviours
-Fully automatic — no user action required after initial submission
-Handles multiple queued requests in a single sync batch
-Prevents duplicate submissions through request ID tracking
-Maintains submission timestamp integrity (timestamps reflect when the request was originally made, not when it was synced)
-Improves disaster response continuity by ensuring command centres receive complete, uninterrupted data streams
-Technology
-Service Workers (background sync API)
-IndexedDB (persistent local queue)
-Node.js + Express.js (backend receiver)
-MongoDB (central data store)
----
-Component 3 — GIS Dynamic Resource Mapping
-What it does
-This component provides a live, interactive map that gives emergency authorities, hospital administrators, and relief coordinators a real-time visual picture of where resources are, where demand is concentrated, and which zones need urgent attention.
-How it works
-The system integrates Leaflet.js with OpenStreetMap tiles to render an interactive map directly inside the PWA. As emergency requests are submitted and synchronized, the backend processes their geographic coordinates and updates the map in real time. The map visualizes multiple layers of information simultaneously, allowing coordinators to see the full operational picture at a glance.
-A key feature is live demand heatmapping — areas with a high concentration of incoming emergency requests are rendered as heat zones on the map, making it immediately obvious where the greatest medical need is clustered, without requiring any manual analysis.
-Map layers and features
+Component 01 — Offline-First Progressive Web Application (PWA)
+Purpose
+
+Ensures the platform continues functioning even when internet connectivity is unavailable during disasters.
+
+Key Functionalities
+Offline emergency request submission
+Local persistent storage using IndexedDB
+Automatic background synchronization
+Installable PWA support
+Reliable request preservation across sessions
+Workflow
+User Submits Request
+        ↓
+Service Worker Detects Offline State
+        ↓
+Request Stored in IndexedDB
+        ↓
+Network Connectivity Restored
+        ↓
+Automatic Synchronization to Server
+Technologies
+React.js
+Service Workers
+IndexedDB
+PWA Manifest
+Component 02 — Store-and-Forward Synchronization
+Purpose
+
+Guarantees reliable transmission of offline-collected disaster data to the central server.
+
+Synchronization Pipeline
+Offline Request
+      ↓
+Local Queue Storage
+      ↓
+Connectivity Monitoring
+      ↓
+Automatic Batch Synchronization
+      ↓
+Server Confirmation
+      ↓
+Queue Clearance
+Key Features
+Automatic synchronization
+Duplicate prevention
+Batch request handling
+Timestamp integrity maintenance
+Reliable low-bandwidth operation
+Technologies
+Service Worker Background Sync API
+IndexedDB
+Node.js
+Express.js
+MongoDB
+Component 03 — GIS Dynamic Resource Mapping
+Purpose
+
+Provides real-time situational awareness through interactive disaster maps.
+
+GIS Layers
 Layer	Description
-Hospital markers	Locations of active hospitals and their current status
-Medical camp markers	Positions of deployed temporary medical camps
-Donation centre markers	Locations where donations can be dropped off or collected
-Emergency zone highlights	High-priority areas flagged for urgent resource deployment
-Live demand heatmap	Colour-gradient overlay showing real-time request density by location
-Key benefits
-Helps authorities make deployment decisions in seconds rather than hours
-Reduces the risk of sending resources to already-served areas
-Improves coordination between multiple response teams operating in the same region
-Enhances situational awareness for NGOs, government agencies, and hospital networks
-Technology
-Leaflet.js (interactive map rendering)
-OpenStreetMap (open-source map tiles)
-GeoJSON data format for location markers
-Backend coordinate processing (Node.js + MongoDB geospatial queries)
----
-Component 4 — ML-Based Geo-Intelligence for Camp Location Recommendation
-What it does
-This component uses Machine Learning to analyse disaster data and recommend the most optimal locations for setting up temporary medical camps — removing guesswork from one of the most critical decisions in disaster response.
-The problem it solves
-During a disaster, authorities must quickly decide where to position temporary medical camps. Poor placement wastes resources, leaves victims unreachable, and slows response times. This component automates that decision by learning from historical disaster patterns and current demand signals.
-How it works
-The ML pipeline ingests multiple data sources and produces a ranked list of recommended camp locations along with demand density heatmaps.
-Input features used by the model:
+Hospital Markers	Active hospitals and status
+Medical Camps	Temporary camp locations
+Donation Centers	Donation collection points
+Emergency Zones	High-priority response regions
+Heatmaps	Live medical demand density
+Key Benefits
+Faster deployment decisions
+Better coordination between agencies
+Reduced resource duplication
+Real-time operational visibility
+Technologies
+Leaflet.js
+OpenStreetMap
+GeoJSON
+MongoDB Geospatial Queries
+Component 04 — ML-Based Geo-Intelligence for Camp Recommendation
+Purpose
+
+Uses machine learning to recommend optimal temporary medical camp locations.
+
+Input Features
 Feature	Description
-Geographic coordinates	Latitude/longitude of incoming requests
-Disaster type	Flood, landslide, pandemic, etc.
-Population density	Number of people in each zone
-Number of medical requests	Volume of emergency submissions per area
-Road accessibility	Whether the location can be physically reached
-Nearby hospitals	Distance to existing healthcare infrastructure
-Processing pipeline:
-Historical disaster records are used to train the Scikit-learn model
-During a live disaster, real-time request data is fed into the trained model
-The model identifies high-demand medical zones and predicts where urgent assistance will be needed next
-It outputs a ranked list of safe, accessible, and strategically optimal camp locations
-Results are overlaid on the GIS map as heatmaps and location markers
-Expected outputs:
-Recommended coordinates for new temporary medical camps
-Demand density heatmaps showing predicted pressure zones
-Risk flags for areas where demand is projected to escalate
-Key benefits
-Reduces decision-making time from hours to minutes for field commanders
-Accounts for road accessibility, preventing camps from being placed in unreachable areas
-Learns from past disasters, improving recommendations over time
-Integrates directly with the GIS map so recommendations are immediately actionable
-Technology
-Python (ML pipeline)
-Scikit-learn (clustering and prediction algorithms)
-Pandas (data preprocessing and feature engineering)
-Leaflet.js + OpenStreetMap (visualization of recommendations)
-MongoDB (storage of historical and real-time disaster data)
----
-IT22128522 - Perera D. K. S. D.
+Geographic Coordinates	Latitude & longitude
+Disaster Type	Flood, landslide, pandemic
+Population Density	Population concentration
+Request Volume	Emergency demand count
+Road Accessibility	Reachability analysis
+Nearby Hospitals	Existing healthcare infrastructure
+ML Processing Pipeline
+Historical Disaster Data
+            ↓
+Data Preprocessing
+            ↓
+ML Model Training
+            ↓
+Live Disaster Data Input
+            ↓
+Demand Analysis
+            ↓
+Camp Location Recommendations
+            ↓
+GIS Visualization
+Outputs
+Recommended camp coordinates
+Demand heatmaps
+High-risk escalation zones
+Technologies
+Python
+Scikit-learn
+Pandas
+Leaflet.js
+MongoDB
+IT22128522 — Perera D. K. S. D.
 Patient Onboarding & Clinical Priority Queue
-A structured three-step workflow for registering and triaging patients:
-Step 1 — Patient Identification: Captures name, age, NIC, and financial constraint status with GN citizen record verification
-Step 2 — Hospital & Medical Officer Verification: Validates institutions via HIN/HNO search and fuzzy alias matching; verifies medical officers against SLMC registration numbers
-Step 3 — Medical Priority Assessment: Analyzes a free-text medical summary through a rule-based clinical scoring engine
+Three-Step Workflow
+Step 01 — Patient Identification
+Name, age, NIC collection
+Financial constraint identification
+GN division verification
+Step 02 — Hospital & Medical Officer Verification
+HIN/HNO validation
+Fuzzy alias matching
+SLMC medical officer verification
+Step 03 — Medical Priority Assessment
+Free-text medical summary analysis
+Rule-based clinical scoring engine
 Clinical Priority Engine (Rules v2)
-A fully explainable, rule-based triage mechanism (no black-box ML). Scores patients across:
+Scoring Categories
 Category	Examples
-Diseases	Dengue, stroke, sepsis, pneumonia, COVID-19
-Severity Indicators	Critical, unstable, life-threatening, ICU required
-Symptoms	Bleeding, respiratory failure, chest pain, shock
-Situational Factors	Financial constraints, public/government hospital access
-Priority Bands:
+Diseases	Dengue, stroke, sepsis
+Severity Indicators	ICU required, unstable
+Symptoms	Bleeding, respiratory failure
+Situational Factors	Financial constraints
+Priority Levels
 Level	Score Range
 LOW	0 – 24
 MEDIUM	25 – 49
 HIGH	50 – 79
 EMERGENCY	80+
-Data Sets Used: GN Divisions, Hospital Registry, Medical Officer (MO) Registry
----
-IT22177414 - Fernando R. U.
+IT22177414 — Fernando R. U.
 Intelligent Donor Matching & Disaster Relief Prediction
-Component 1 — Intelligent Donor Request Matching & Recommendation System
-An AI-powered recommendation engine that personalizes donation feeds for each donor by computing a compatibility score using:
-Geographic distance between donor and hospital
+Component 01 — Intelligent Donor Matching System
+Purpose
+
+Provides personalized donation recommendations using AI-powered compatibility scoring.
+
+Matching Factors
+Geographic proximity
 Donor preference matching
 Medicine category similarity
-Urgency-based priority score
-Donation affordability estimation
-Historical donor interaction patterns
-ML Models Evaluated:
-Model	RMSE	MAE	R² Score	Result
-Random Forest	0.023981	0.008663	0.988118	✅ Selected
-CatBoost	0.027504	0.014963	0.984370	—
-XGBoost	0.084982	0.060729	0.850782	—
-Supports two donation workflows: Medicine Donation and Monetary Donation.
-Component 2 — Integrated Disaster Relief Prediction System
-Predicts medicine demand for disaster-affected GN divisions using historical OTC demand data, population demographics, and seasonal patterns.
-ML Models Evaluated (Medicine Demand Forecasting):
-Model	MAE	RMSE	R² Score	Result
-Random Forest	0.005086	0.008808	0.5544	—
-XGBoost	0.004691	0.008356	0.5990	✅ Selected
-Outputs structured donation requests published to hospitals, NGOs, and relief coordinators. Includes a Streamlit dashboard for real-time visualization of predicted demand, active relief requests, and population statistics.
----
-Tech Stack
+Urgency scoring
+Affordability estimation
+Historical donor interactions
+Evaluated ML Models
+Model	RMSE	MAE	R² Score	Status
+Random Forest	0.023981	0.008663	0.988118	Selected
+CatBoost	0.027504	0.014963	0.984370	Evaluated
+XGBoost	0.084982	0.060729	0.850782	Evaluated
+Component 02 — Disaster Relief Prediction System
+Purpose
+
+Forecasts medicine demand for disaster-affected areas using machine learning.
+
+Selected Model
+Model	MAE	RMSE	R² Score	Status
+XGBoost Regressor	0.004691	0.008356	0.5990	Selected
+Outputs
+Predicted medicine demand
+Relief request generation
+Population-based analysis
+Real-time Streamlit dashboards
+Technology Stack
 Frontend
 React.js
 Progressive Web App (PWA)
@@ -181,101 +250,111 @@ Service Workers
 Backend
 Node.js
 Express.js
-Database
+Databases
 MongoDB
-IndexedDB (offline storage)
-Mapping & GIS
+IndexedDB
+GIS & Mapping
 Leaflet.js
 OpenStreetMap
 Machine Learning
 Python
 Scikit-learn
+Pandas
 XGBoost
 CatBoost
-Pandas
-Streamlit (dashboard)
----
-Getting Started
+Streamlit
+Installation Guide
 Prerequisites
-Node.js (v18+)
+Node.js v18+
 Python 3.9+
 MongoDB
-Installation
-```bash
-# Clone the repository
-git clone https://github.com/kavithaniwandi/R26-IT-047.gitcd smart-medical-donation-system
+Getting Started
+Clone Repository
+git clone https://github.com/kavithaniwandi/R26-IT-047.git
 
-# Install frontend/backend dependencies
+cd smart-medical-donation-system
+Install Dependencies
 npm install
-
-# Install Python ML dependencies
+Install Python Requirements
 pip install -r requirements.txt
-
-# Start the backend server
+Start Backend Server
 npm run server
-
-# Start the frontend PWA
+Start Frontend PWA
 npm run client
-
-# Launch the Streamlit dashboard 
+Launch Streamlit Dashboard
 streamlit run disaster_prediction/dashboard.py
-```
 Environment Variables
-Create a `.env` file in the root directory:
-```env
-MONGO_URI=mongodb+srv://disadmin:rjslffvvLMIDWSgJ@cluster0.mlaz1dg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0PORT=5000
-```
----
+
+Create a .env file in the project root:
+
+MONGO_URI=mongodb+srv://YOUR_CONNECTION_STRING
+PORT=5000
 Functional Requirements
-Offline Submission — Store medical requests locally using IndexedDB; support operation without internet
-Auto Synchronization — Automatically send stored requests when connectivity is restored
-Multi-Channel Input — Accept requests via PWA web app and SMS gateway
-Live Heatmapping — Display demand density on maps using geographic coordinates
-ML Site Recommendation — Recommend suitable temporary medical camp locations
-Smart Donation Matching — Match donations with verified urgent needs
-Priority Triage — Categorize requests into Critical, High, and Normal
----
+Requirement	Description
+Offline Submission	Support emergency requests without internet
+Auto Synchronization	Sync data automatically when online
+Multi-Channel Input	PWA + SMS support
+Live Heatmapping	Geographic demand visualization
+ML Recommendation	Camp location prediction
+Smart Donation Matching	Intelligent donor allocation
+Priority Triage	Emergency prioritization
 Non-Functional Requirements
 Requirement	Description
-Reliability	Prevent loss of critical emergency requests
-Availability	Support low-bandwidth and offline environments
-Scalability	Handle large-scale disaster traffic
-Accuracy	Maintain precise ML predictions and donation matching
-Usability	Simple, high-contrast interface designed for stressed users
-Data Security	Protect victim information and ensure authorized access
----
+Reliability	Prevent data loss
+Availability	Support offline and low-bandwidth environments
+Scalability	Handle large disaster traffic
+Accuracy	Maintain ML precision
+Usability	High-contrast emergency-focused UI
+Security	Protect sensitive victim data
 ML Models & Performance
-Camp Location Recommendation 
-Algorithm: Scikit-learn clustering/classification
-Input: Geographic coordinates, disaster type, population density, number of requests, road accessibility, nearby hospitals
-Output: Optimal camp locations and demand heatmaps
-Clinical Priority Scoring 
-Type: Rule-based (fully explainable, not ML)
-Rules Version: 2
-NLP: Optional lightweight spaCy tokenization (no embeddings or NER)
-Donor Matching Selected Model: Random Forest (R² = 0.9881)
-Medicine Demand Forecasting 
-Selected Model: XGBoost Regressor (R² = 0.5990)
-Data: OTC datasets 2022–2024 + Kaduwela population demographics
----
- Evaluation Plan
+Camp Location Recommendation
+Property	Details
+Algorithm	Scikit-learn clustering/classification
+Inputs	Coordinates, disaster type, population density
+Outputs	Camp recommendations & heatmaps
+Clinical Priority Engine
+Property	Details
+Type	Rule-based scoring
+Explainability	Fully transparent
+NLP	Optional spaCy tokenization
+Donor Matching Model
+Selected Model	R² Score
+Random Forest	0.9881
+Medicine Demand Forecasting
+Selected Model	R² Score
+XGBoost Regressor	0.5990
+Evaluation Plan
 Technical Evaluation
-Synchronization Success Rate — Measure offline-to-online sync reliability
-ML Accuracy — Compare predicted camp locations with historical demand data
-System Performance — Measure request-to-dashboard update latency
-Matching Efficiency — Quantify reduction in resource wastage
+Synchronization success rate
+ML prediction accuracy
+Dashboard update latency
+Donation matching efficiency
 User-Centered Evaluation
-Usability Testing — Time-to-submit under stress conditions
-Decision Efficiency — Donor response speed vs. traditional systems
-User Surveys — Likert-scale feedback from volunteers
-Field Simulations — Testing in low-connectivity disaster scenarios
----
- Knowledge Domains
-Software Architecture (offline-first systems, sync mechanisms)
-Geographic Information Systems (mapping, spatial analysis)
-Machine Learning (predictive analytics, recommendation systems)
-Humanitarian Logistics (disaster resource management)
-Human-Computer Interaction (emergency-focused UI/UX)
----
- License
-This project is licensed under the MIT License. See the LICENSE file for details.
+Stress-condition usability testing
+Decision efficiency measurements
+Volunteer feedback surveys
+Low-connectivity field simulations
+Knowledge Domains
+Offline-First Software Architecture
+Geographic Information Systems (GIS)
+Machine Learning & Predictive Analytics
+Humanitarian Logistics
+Emergency-Centered UI/UX Design
+Future Enhancements
+AI-powered disaster severity prediction
+Mobile native application support
+Drone-assisted medical delivery integration
+Real-time government alert integration
+Multi-language emergency support
+License
+
+This project is licensed under the MIT License.
+
+See the LICENSE file for more information.
+
+<div align="center">
+Smart Medical Donation System with Disaster Response
+
+Building resilient healthcare response systems for disaster-affected communities through intelligent technology.
+
+</div>
