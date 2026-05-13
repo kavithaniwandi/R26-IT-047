@@ -316,89 +316,245 @@ GIS Visualization
 
 # IT22177414 — Fernando R. U.
 
-# Intelligent Donor Matching & Disaster Relief Prediction
+
+## Component 01 — Intelligent Donor Matching & Disaster Relief Prediction
+
+## Overview
+A machine learning–based medical donation matching system that ranks donation requests for each donor based on compatibility, urgency, location, and donor preference. The system helps donors view the most relevant donation requests first and supports both medicine and money donation workflows.
 
 ---
 
-## Component 01 — Intelligent Donor Matching System
-
-### Purpose
-
-Provides AI-powered donation recommendations using compatibility scoring.
-
-### Matching Factors
-
-- Geographic proximity
-- Donor preference matching
-- Medicine category similarity
-- Urgency scoring
-- Affordability estimation
-- Historical donor interaction patterns
-
-### Evaluated ML Models
-
-| Model | RMSE | MAE | R² Score | Status |
-|:--|:--|:--|:--|:--|
-| Random Forest | 0.023981 | 0.008663 | 0.988118 | Selected |
-| CatBoost | 0.027504 | 0.014963 | 0.984370 | Evaluated |
-| XGBoost | 0.084982 | 0.060729 | 0.850782 | Evaluated |
+# Key Features
+- Personalized donor dashboard
+- Compatibility score prediction
+- Ranked medical donation request feed
+- Medicine donation workflow
+- Money donation sandbox workflow
+- Request filtering and prioritization
+- ML model comparison and evaluation
+- Synthetic dataset generation for training/testing
 
 ---
+
+# Tech Stack
+
+## Frontend
+- Streamlit
+- HTML / CSS / JavaScript
+
+## Backend
+- Flask
+
+## Machine Learning
+- XGBoost
+- CatBoost
+- Random Forest
+
+## Libraries
+- pandas
+- numpy
+- scikit-learn
+- joblib
+- streamlit
+
+---
+
+# Input Parameters
+
+## Donor Features
+- Age
+- Residence location
+- Income bracket
+- Preferred donation category
+
+## Donation Request Features
+- Medicine name
+- Disease type
+- Age group
+- Hospital location
+- Medicine category
+- Estimated price
+- Urgency level
+
+---
+
+# Feature Engineering
+The following features were generated for model training:
+
+- Urgency score
+- Distance calculation
+- Preference matching
+- Compatibility ranking score
+
+---
+
+# Machine Learning Models Used
+- XGBoost
+- CatBoost
+- Random Forest
+
+---
+
+# Model Evaluation Metrics
+The models were evaluated using:
+
+- RMSE (Root Mean Squared Error)
+- MAE (Mean Absolute Error)
+- R² Score
+
+---
+
+# Final Model Results
+
+| Model | RMSE | MAE | R² Score |
+|---|---|---|---|
+| Random Forest | 0.023981 | 0.008663 | 0.988118 |
+| CatBoost | 0.027504 | 0.014963 | 0.984370 |
+| XGBoost | 0.084982 | 0.060729 | 0.850782 |
+
+### Selected Final Model
+**Random Forest** was selected as the best-performing model.
+
+---
+
+# System Flow
+
+1. Collect donor and donation request data
+2. Preprocess and clean datasets
+3. Generate important matching features
+4. Train ML models
+5. Predict compatibility scores
+6. Rank requests by compatibility
+7. Display personalized donor feed
+8. Continue to medicine or money donation workflow
+
+
+
 
 ## Component 02 — Disaster Relief Prediction System
 
-### Purpose
+# Disaster Medicine Demand Forecasting & Donation Request System
 
-Forecasts medicine demand for disaster-affected regions.
+## Overview
+This project is an AI-powered disaster medicine demand forecasting and donation request generation system developed to support emergency healthcare resource management during disaster situations.
 
-### Selected Model
-
-| Model | MAE | RMSE | R² Score | Status |
-|:--|:--|:--|:--|:--|
-| XGBoost Regressor | 0.004691 | 0.008356 | 0.5990 | Selected |
-
-### Outputs
-
-- Predicted medicine demand
-- Relief request generation
-- Population-based analysis
-- Real-time Streamlit dashboards
+The system predicts weekly medicine requirements for disaster-affected GN divisions using demographic population data and historical OTC medicine demand patterns. It also generates structured donation requests to assist disaster management authorities and healthcare organizations.
 
 ---
 
-# Technology Stack
+## Features
 
-## Frontend
+- AI-based medicine demand forecasting
+- Population-based medicine requirement estimation
+- Automated donation request generation
+- Interactive Streamlit dashboard
+- XGBoost regression model integration
+- Feature importance visualization
+- Model comparison using Random Forest and XGBoost
 
-- React.js
-- Progressive Web Application (PWA)
-- Service Workers
+---
 
-## Backend
-
-- Node.js
-- Express.js
-
-## Databases
-
-- MongoDB
-- IndexedDB
-
-## GIS & Mapping
-
-- Leaflet.js
-- OpenStreetMap
-
-## Machine Learning
+## Technologies Used
 
 - Python
-- Scikit-learn
-- Pandas
-- XGBoost
-- CatBoost
 - Streamlit
+- XGBoost
+- Random Forest
+- Pandas
+- NumPy
+- Scikit-learn
+- Matplotlib
+- Joblib
 
 ---
+
+## Machine Learning Workflow
+
+```text
+Historical Medicine Data + Population Data
+                ↓
+        Data Preprocessing
+                ↓
+       Feature Engineering
+                ↓
+      Model Training (RF/XGB)
+                ↓
+         Model Evaluation
+                ↓
+      XGBoost Model Selection
+                ↓
+     Medicine Demand Prediction
+                ↓
+   Donation Request Generation
+```
+
+---
+
+## Input Parameters
+
+| Feature | Description |
+|---|---|
+| Medicine_Encoded | Encoded medicine category |
+| Age_Encoded | Encoded demographic age group |
+| Month | Seasonal forecasting month |
+| Unit_Encoded | Encoded medicine unit type |
+
+---
+
+## Model Evaluation
+
+| Model | MAE | RMSE | R² Score |
+|---|---|---|---|
+| Random Forest | 0.005086 | 0.008808 | 0.5544 |
+| XGBoost | 0.004690 | 0.008355 | 0.5990 |
+
+### Final Selected Model
+- XGBoost Regressor
+
+---
+
+## Installation
+
+### Clone Repository
+
+```bash
+git clone <repository-url>
+cd disaster-donation-request-prediction
+```
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Train Models
+
+### Random Forest
+
+```bash
+python train_model.py
+```
+
+### XGBoost
+
+```bash
+python train_xgboost.py
+```
+
+---
+
+## Run Application
+
+```bash
+streamlit run app_xgboost.py
+```
+
+---
+
+Final Year Research Project
 
 # Installation Guide
 
