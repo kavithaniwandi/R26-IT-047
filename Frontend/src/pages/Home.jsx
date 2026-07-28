@@ -1,207 +1,590 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import Navigation from '../components/Navigation'
-import Footer from '../components/Footer'
-import './Home.css'
+import React from "react";
+import { Link } from "react-router-dom";
+import {
+  FaHospital,
+  FaHeartbeat,
+  FaMapMarkedAlt,
+  FaHandsHelping,
+  FaAmbulance,
+  FaBoxes,
+  FaShieldAlt,
+  FaUserFriends,
+  FaArrowRight,
+  FaTint,
+  FaLocationArrow
+} from "react-icons/fa";
+
+import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
+import "./Home.css";
+
 
 function Home() {
+
   return (
+
     <div className="home">
+
       <Navigation />
-      
-      {/* Hero Section with Parallax */}
-      <section className="hero-section parallax">
-        <div className="hero-content">
-          <h1 className="hero-title">Smart Medical Donation System</h1>
-          <p className="hero-subtitle">Disaster Response & Emergency Medical Supplies</p>
-          <div className="hero-buttons">
-            <Link to="/donations" className="hero-button primary">Donate Now</Link>
-            <Link to="/map" className="hero-button secondary">View Map</Link>
-          </div>
-        </div>
+
+
+      {/* ================= HERO SECTION ================= */}
+
+      <section className="hero-section">
+
         <div className="hero-overlay"></div>
+
+        <div className="hero-container">
+
+          <div className="hero-content">
+
+            <h1>
+              Smart Medical Donation
+              <br />
+              & Emergency Response System
+            </h1>
+
+
+            <p>
+              Connecting donors, hospitals, volunteers and emergency
+              responders to deliver medical resources faster during
+              disasters and critical situations.
+            </p>
+
+
+            <div className="hero-buttons">
+
+              <Link
+                to="/donations"
+                className="primary-btn"
+              >
+                Donate Now
+              </Link>
+
+
+              <Link
+                to="/map"
+                className="secondary-btn"
+              >
+                View Disaster Map
+              </Link>
+
+            </div>
+
+
+          </div>
+
+        </div>
+
       </section>
 
-      {/* About Section */}
+
+
+      {/* ================= STATISTICS ================= */}
+
+
+      <section className="statistics-section">
+
+        <div className="container">
+
+
+          <div className="statistics-grid">
+
+
+            <div className="stat-card">
+
+              <h2>
+                12K+
+              </h2>
+
+              <p>
+                Registered Donors
+              </p>
+
+            </div>
+
+
+
+            <div className="stat-card">
+
+              <h2>
+                350+
+              </h2>
+
+              <p>
+                Healthcare Partners
+              </p>
+
+            </div>
+
+
+
+            <div className="stat-card">
+
+              <h2>
+                8K+
+              </h2>
+
+              <p>
+                Emergency Requests
+              </p>
+
+            </div>
+
+
+
+            <div className="stat-card">
+
+              <h2>
+                24/7
+              </h2>
+
+              <p>
+                Emergency Support
+              </p>
+
+            </div>
+
+
+          </div>
+
+
+        </div>
+
+      </section>
+
+
+
+
+
+      {/* ================= ABOUT ================= */}
+
+
       <section className="about-section">
-        <div className="section-container">
-          <h2 className="section-title">About Our Mission</h2>
-          <p className="section-description">
-            MediDonate is a revolutionary platform connecting medical donors with healthcare facilities 
-            and disaster response teams. Our smart system ensures timely delivery of critical medical 
-            supplies during emergencies, saving lives when it matters most.
+
+
+        <div className="container">
+
+
+          <div className="section-title">
+
+
+            <span>
+              ABOUT OUR SYSTEM
+            </span>
+
+
+            <h2>
+              Saving Lives Through
+              Intelligent Coordination
+            </h2>
+
+
+            <p>
+
+              Our platform provides a centralized solution for medical
+              donations, disaster monitoring, emergency requests and
+              resource allocation. It helps deliver essential medical
+              support to affected communities quickly and efficiently.
+
+            </p>
+
+
+          </div>
+
+
+
+
+
+          <div className="about-grid">
+
+
+            <div className="info-card">
+
+
+              <FaHospital className="card-icon"/>
+
+
+              <h3>
+                Hospital Network
+              </h3>
+
+
+              <p>
+                Connect hospitals and healthcare organizations
+                with available medical resources.
+              </p>
+
+
+            </div>
+
+
+
+
+
+            <div className="info-card">
+
+
+              <FaHeartbeat className="card-icon"/>
+
+
+              <h3>
+                Medical Donations
+              </h3>
+
+
+              <p>
+                Manage medicine, equipment and emergency
+                supply donations securely.
+              </p>
+
+
+            </div>
+
+
+
+
+
+            <div className="info-card">
+
+
+              <FaMapMarkedAlt className="card-icon"/>
+
+
+              <h3>
+                Disaster Mapping
+              </h3>
+
+
+              <p>
+                Monitor flood and landslide affected areas
+                using interactive maps.
+              </p>
+
+
+            </div>
+
+
+
+
+
+            <div className="info-card">
+
+
+              <FaHandsHelping className="card-icon"/>
+
+
+              <h3>
+                Volunteer Network
+              </h3>
+
+
+              <p>
+                Coordinate volunteers for emergency support
+                and supply distribution.
+              </p>
+
+
+            </div>
+
+
+          </div>
+
+
+        </div>
+
+
+      </section>
+
+
+
+
+
+      {/* ================= SERVICES ================= */}
+
+
+      <section className="services-section">
+
+
+        <div className="container">
+
+
+          <div className="section-title">
+
+            <span>
+              OUR SERVICES
+            </span>
+
+
+            <h2>
+              Complete Disaster Response Solution
+            </h2>
+
+
+          </div>
+
+
+
+
+
+          <div className="services-grid">
+
+
+
+            <div className="service-card">
+
+              <FaAmbulance className="service-icon"/>
+
+              <h3>
+                Emergency Response
+              </h3>
+
+              <p>
+                Rapid coordination between victims,
+                responders and healthcare providers.
+              </p>
+
+            </div>
+
+
+
+
+            <div className="service-card">
+
+              <FaTint className="service-icon"/>
+
+              <h3>
+                Blood Donation
+              </h3>
+
+              <p>
+                Match blood donors with urgent medical
+                requirements.
+              </p>
+
+            </div>
+
+
+
+
+
+            <div className="service-card">
+
+              <FaBoxes className="service-icon"/>
+
+              <h3>
+                Inventory Management
+              </h3>
+
+              <p>
+                Track available medicines and medical
+                equipment.
+              </p>
+
+            </div>
+
+
+
+
+
+            <div className="service-card">
+
+              <FaLocationArrow className="service-icon"/>
+
+              <h3>
+                Location Tracking
+              </h3>
+
+              <p>
+                Identify affected areas and optimize
+                resource delivery.
+              </p>
+
+            </div>
+
+
+
+
+
+            <div className="service-card">
+
+              <FaShieldAlt className="service-icon"/>
+
+              <h3>
+                Secure Platform
+              </h3>
+
+              <p>
+                Protect user information with
+                authentication and verification.
+              </p>
+
+            </div>
+
+
+
+
+
+            <div className="service-card">
+
+              <FaUserFriends className="service-icon"/>
+
+              <h3>
+                Community Support
+              </h3>
+
+              <p>
+                Connect volunteers and communities
+                during emergencies.
+              </p>
+
+            </div>
+
+
+
+          </div>
+
+
+        </div>
+
+
+      </section>
+
+
+
+
+
+      {/* ================= DISASTER MAP PREVIEW ================= */}
+
+
+
+      <section className="map-section">
+
+
+        <div className="container map-container">
+
+
+          <div className="map-content">
+
+
+            <span>
+              REAL TIME MONITORING
+            </span>
+
+
+            <h2>
+              Disaster Intelligence Dashboard
+            </h2>
+
+
+            <p>
+              Monitor disaster locations, affected communities,
+              emergency requests and available resources through
+              a centralized mapping system.
+            </p>
+
+
+            <Link
+              to="/map"
+              className="map-btn"
+            >
+
+              Explore Map
+              <FaArrowRight/>
+
+            </Link>
+
+
+          </div>
+
+
+
+          <div className="map-box">
+
+            <h3>
+              Live Disaster Map
+            </h3>
+
+
+            <p>
+              Floods • Landslides • Emergency Requests
+            </p>
+
+
+          </div>
+
+
+
+        </div>
+
+
+      </section>
+
+
+
+
+
+
+      {/* ================= CTA ================= */}
+
+
+      <section className="cta-section">
+
+
+        <div className="container">
+
+
+          <h2>
+            Together We Can Save More Lives
+          </h2>
+
+
+          <p>
+            Become a donor or volunteer and support
+            communities during emergencies.
           </p>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-number">10K+</div>
-              <div className="stat-label">Donors Registered</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">500+</div>
-              <div className="stat-label">Healthcare Partners</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">50K+</div>
-              <div className="stat-label">Lives Impacted</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">24/7</div>
-              <div className="stat-label">Emergency Response</div>
-            </div>
+
+
+
+          <div className="cta-buttons">
+
+
+            <Link
+              to="/donations"
+              className="primary-btn"
+            >
+              Become A Donor
+            </Link>
+
+
+
+            <Link
+              to="/contacts"
+              className="secondary-btn"
+            >
+              Join Volunteers
+            </Link>
+
+
           </div>
+
+
         </div>
+
+
       </section>
 
-      {/* Services Section 1 - Medical Supplies */}
-      <section className="services-section parallax" data-speed="0.5">
-        <div className="services-overlay"></div>
-        <div className="section-container">
-          <div className="service-content">
-            <h2 className="section-title">Medical Supplies Distribution</h2>
-            <p className="section-description">
-              Our intelligent routing system ensures medical supplies reach the right locations at the right time. 
-              From basic first aid kits to specialized equipment, we coordinate with healthcare providers to 
-              meet urgent needs during disasters and medical emergencies.
-            </p>
-            <div className="service-features">
-              <div className="feature-item">
-                <span className="feature-icon">🏥</span>
-                <h3>Hospital Partnerships</h3>
-                <p>Direct coordination with healthcare facilities</p>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">🚚</span>
-                <h3>Smart Logistics</h3>
-                <p>AI-powered route optimization for delivery</p>
-              </div>
-              <div className="feature-item">
-                <span className="feature-icon">📦</span>
-                <h3>Inventory Management</h3>
-                <p>Real-time tracking of medical supplies</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Services Section 2 - Blood Donation */}
-      <section className="blood-section">
-        <div className="section-container">
-          <div className="blood-content">
-            <h2 className="section-title">Blood Donation Network</h2>
-            <p className="section-description">
-              Connect with blood donors across the region. Our platform matches blood types with urgent 
-              requirements, ensuring critical blood supplies are available for surgeries, trauma cases, 
-              and disaster response operations.
-            </p>
-            <div className="blood-types">
-              <div className="blood-type">A+</div>
-              <div className="blood-type">A-</div>
-              <div className="blood-type">B+</div>
-              <div className="blood-type">B-</div>
-              <div className="blood-type">AB+</div>
-              <div className="blood-type">AB-</div>
-              <div className="blood-type">O+</div>
-              <div className="blood-type">O-</div>
-            </div>
-            <Link to="/donations" className="cta-button">Become a Donor</Link>
-          </div>
-        </div>
-      </section>
 
-      {/* Services Section 3 - Disaster Response */}
-      <section className="disaster-section parallax" data-speed="0.3">
-        <div className="disaster-overlay"></div>
-        <div className="section-container">
-          <div className="disaster-content">
-            <h2 className="section-title">Disaster Response System</h2>
-            <p className="section-description">
-              When disaster strikes, every second counts. Our SOS alert system and real-time mapping 
-              enable rapid deployment of medical resources to affected areas. Coordinate with emergency 
-              responders and volunteers to provide immediate medical assistance.
-            </p>
-            <div className="disaster-features">
-              <div className="disaster-feature">
-                <span className="disaster-icon">🚨</span>
-                <h3>SOS Alerts</h3>
-                <p>Instant emergency notification system</p>
-              </div>
-              <div className="disaster-feature">
-                <span className="disaster-icon">🗺️</span>
-                <h3>Real-time Mapping</h3>
-                <p>Live tracking of affected areas and resources</p>
-              </div>
-              <div className="disaster-feature">
-                <span className="disaster-icon">👥</span>
-                <h3>Volunteer Network</h3>
-                <p>Mobilize community support quickly</p>
-              </div>
-              <div className="disaster-feature">
-                <span className="disaster-icon">📡</span>
-                <h3>Communication Hub</h3>
-                <p>Seamless coordination between teams</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section 4 - Volunteer Network */}
-      <section className="volunteer-section">
-        <div className="section-container">
-          <h2 className="section-title">Join Our Volunteer Network</h2>
-          <p className="section-description">
-            Make a difference in your community. Join thousands of volunteers who help coordinate 
-            donations, assist with logistics, and provide support during medical emergencies. 
-            Your time and skills can save lives.
-          </p>
-          <div className="volunteer-roles">
-            <div className="role-card">
-              <span className="role-icon">🚗</span>
-              <h3>Transport Volunteers</h3>
-              <p>Help deliver medical supplies to healthcare facilities</p>
-            </div>
-            <div className="role-card">
-              <span className="role-icon">📞</span>
-              <h3>Call Center Support</h3>
-              <p>Assist with donor coordination and emergency calls</p>
-            </div>
-            <div className="role-card">
-              <span className="role-icon">💉</span>
-              <h3>Medical Professionals</h3>
-              <p>Provide expertise and support during emergencies</p>
-            </div>
-            <div className="role-card">
-              <span className="role-icon">📋</span>
-              <h3>Administrative Support</h3>
-              <p>Help with documentation and logistics planning</p>
-            </div>
-          </div>
-          <Link to="/contacts" className="cta-button secondary">Sign Up as Volunteer</Link>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta-section parallax">
-        <div className="cta-overlay"></div>
-        <div className="section-container">
-          <div className="cta-content">
-            <h2 className="cta-title">Ready to Make a Difference?</h2>
-            <p className="cta-description">
-              Join our community of donors and volunteers. Together, we can save lives and 
-              provide critical medical support during emergencies.
-            </p>
-            <div className="cta-buttons">
-              <Link to="/donations" className="cta-button primary">Start Donating</Link>
-              <Link to="/sos" className="cta-button emergency">SOS Emergency</Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <Footer />
+
+
     </div>
-  )
+
+  );
+
 }
 
-export default Home
+
+export default Home;

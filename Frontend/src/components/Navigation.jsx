@@ -1,70 +1,270 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import './Navigation.css'
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import logo from "../assets/logo.png";
+import "./Navigation.css";
+
 
 function Navigation() {
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { user, logout } = useAuth()
+
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  const { user, logout } = useAuth();
+
+
 
   useEffect(() => {
+
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+
+      setScrolled(window.scrollY > 50);
+
+    };
+
+
+    window.addEventListener(
+      "scroll",
+      handleScroll
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
+
+    };
+
+
+  }, []);
+
+
+
+
+
+  const closeMenu = () => {
+
+    setMobileMenuOpen(false);
+
+  };
+
+
+
+
 
   const handleLogout = () => {
-    logout()
-    navigate('/')
-    setMobileMenuOpen(false)
-  }
+
+    logout();
+
+    navigate("/");
+
+    closeMenu();
+
+  };
+
+
+
+
 
   return (
-    <nav className={`navigation ${scrolled ? 'scrolled' : ''}`}>
+
+    <nav
+      className={`navigation ${
+        scrolled ? "scrolled" : ""
+      }`}
+    >
+
+
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          <span className="logo-icon">❤️</span>
-          <span className="logo-text">MediDonate</span>
+
+
+
+        {/* LOGO */}
+
+        <Link 
+          to="/"
+          className="nav-logo"
+        >
+
+          <img
+            src={logo}
+            alt="MediDonate Logo"
+            className="logo-image"
+          />
+
         </Link>
 
-        <div className={`nav-links ${mobileMenuOpen ? 'open' : ''}`}>
-          <Link to="/" className="nav-link">Home</Link>
-          <Link to="/map" className="nav-link">Map</Link>
-          <Link to="/donations" className="nav-link">Donations</Link>
-          <Link to="/contacts" className="nav-link">Contacts</Link>
-          {user ? (
-            <>
-              <Link to="/profile" className="nav-link profile-link">
-                <span className="profile-icon">👤</span>
-                <span className="profile-name">{user.name || 'Profile'}</span>
+
+
+
+
+        {/* NAVIGATION LINKS */}
+
+        <div
+          className={`nav-links ${
+            mobileMenuOpen ? "open" : ""
+          }`}
+        >
+
+
+
+          <Link
+            to="/"
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            Home
+          </Link>
+
+
+
+
+          <Link
+            to="/map"
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            Disaster Map
+          </Link>
+
+
+
+
+
+          <Link
+            to="/donations"
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            Donations
+          </Link>
+
+
+
+
+
+          <Link
+            to="/contacts"
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            Contacts
+          </Link>
+
+          {
+            user ? (
+
+              <>
+
+
+                <Link
+                  to="/profile"
+                  className="nav-link profile-link"
+                  onClick={closeMenu}
+                >
+
+                  {user.name || "Profile"}
+
+                </Link>
+
+
+
+
+                <button
+                  className="logout-button"
+                  onClick={handleLogout}
+                >
+
+                  Logout
+
+                </button>
+
+
+              </>
+
+
+            ) : (
+
+
+              <Link
+                to="/signin"
+                className="nav-link"
+                onClick={closeMenu}
+              >
+
+                Sign In
+
               </Link>
-              <button onClick={handleLogout} className="nav-link logout-button">Logout</button>
-            </>
-          ) : (
-            <Link to="/signin" className="nav-link">Sign In</Link>
-          )}
-          <Link to="/sos" className="nav-link sos-button">SOS</Link>
+
+
+            )
+
+          }
+
+          <Link
+            to="/sos"
+            className="sos-button"
+            onClick={closeMenu}
+          >
+
+            Emergency SOS
+
+          </Link>
+
+
+
+
         </div>
 
-        <button 
+
+
+
+
+        {/* MOBILE MENU */}
+
+        <button
+
           className="mobile-menu-button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle menu"
+
+          onClick={() =>
+            setMobileMenuOpen(!mobileMenuOpen)
+          }
+
         >
-          <span className={`hamburger ${mobileMenuOpen ? 'open' : ''}`}>
+
+          <span
+            className={`hamburger ${
+              mobileMenuOpen ? "active" : ""
+            }`}
+          >
+
             <span></span>
+
             <span></span>
+
             <span></span>
+
+
           </span>
+
+
         </button>
+
+
+
       </div>
+
+
     </nav>
-  )
+
+  );
+
 }
 
-export default Navigation
+
+export default Navigation;

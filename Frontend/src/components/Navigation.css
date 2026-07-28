@@ -1,224 +1,461 @@
 .navigation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: transparent;
-  transition: all 0.3s ease;
-  padding: 1.5rem 0;
+
+    position: fixed;
+
+    top:0;
+
+    left:0;
+
+    width:100%;
+
+    z-index:1000;
+
+    padding:20px 0;
+
+    background:transparent;
+
+    transition:0.3s ease;
+
 }
+
+
+
 
 .navigation.scrolled {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-  padding: 1rem 0;
+
+    background:white;
+
+    box-shadow:
+    0 5px 25px rgba(0,0,0,0.08);
+
+    padding:14px 0;
+
 }
+
+
+
+
 
 .nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+
+
+    width:90%;
+
+    max-width:1200px;
+
+    margin:auto;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+
 }
+
+
+
+
+
+/* LOGO */
+
 
 .nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #2c3e50;
-  transition: color 0.3s ease;
+
+    display:flex;
+
+    align-items:center;
+
 }
 
-.navigation.scrolled .nav-logo {
-  color: #3498db;
+
+
+.logo-image {
+
+
+    width:190px;
+
+    height:auto;
+
+    object-fit:contain;
+
+
 }
 
-.logo-icon {
-  font-size: 1.8rem;
-}
+
+
+
+
+
+/* NAV LINKS */
+
 
 .nav-links {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
+
+
+    display:flex;
+
+    align-items:center;
+
+    gap:30px;
+
+
 }
+
+
+
 
 .nav-link {
-  text-decoration: none;
-  color: #2c3e50;
-  font-weight: 500;
-  font-size: 1rem;
-  transition: color 0.3s ease;
-  position: relative;
+
+
+    text-decoration:none;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    transition:0.3s;
+
+
 }
+
+
 
 .navigation.scrolled .nav-link {
-  color: #34495e;
+
+
+    color:#1E293B;
+
+
 }
+
+
+
 
 .nav-link:hover {
-  color: #3498db;
+
+
+    color:#1565C0;
+
+
 }
 
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: #3498db;
-  transition: width 0.3s ease;
-}
 
-.nav-link:hover::after {
-  width: 100%;
-}
 
-.sos-button {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white !important;
-  padding: 0.8rem 2rem;
-  border-radius: 50px;
-  font-weight: 600;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-  transition: all 0.3s ease;
-}
 
-.sos-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6);
-  color: white !important;
-}
 
-.sos-button::after {
-  display: none;
-}
+
+
+/* PROFILE */
+
 
 .profile-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+
+
+    cursor:pointer;
+
+
 }
 
-.profile-icon {
-  font-size: 1.2rem;
-}
 
-.profile-name {
-  font-weight: 600;
-}
+
+
+
+
+
+/* LOGOUT */
+
 
 .logout-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #2c3e50;
-  transition: color 0.3s ease;
-  position: relative;
+
+
+    background:none;
+
+    border:none;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+
 }
+
+
 
 .navigation.scrolled .logout-button {
-  color: #34495e;
+
+
+    color:#1E293B;
+
+
 }
+
+
 
 .logout-button:hover {
-  color: #e74c3c;
+
+
+    color:#D32F2F;
+
+
 }
 
-.logout-button::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: #e74c3c;
-  transition: width 0.3s ease;
+
+
+
+
+
+
+/* SOS BUTTON */
+
+
+.sos-button {
+
+
+    text-decoration:none;
+
+    background:#D32F2F;
+
+    color:white;
+
+    padding:12px 28px;
+
+    border-radius:8px;
+
+    font-weight:700;
+
+    transition:.3s;
+
+
 }
 
-.logout-button:hover::after {
-  width: 100%;
+
+
+
+.sos-button:hover {
+
+
+    background:#B71C1C;
+
+    transform:translateY(-3px);
+
+
 }
+
+
+
+
+
+
+
+/* MOBILE BUTTON */
+
 
 .mobile-menu-button {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
+
+
+    display:none;
+
+    border:none;
+
+    background:none;
+
+    cursor:pointer;
+
+
 }
+
+
+
 
 .hamburger {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 25px;
+
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:6px;
+
+
 }
+
+
+
 
 .hamburger span {
-  width: 100%;
-  height: 3px;
-  background: #2c3e50;
-  border-radius: 3px;
-  transition: all 0.3s ease;
+
+
+    width:30px;
+
+    height:3px;
+
+    background:white;
+
+    border-radius:10px;
+
+    transition:.3s;
+
+
 }
+
+
 
 .navigation.scrolled .hamburger span {
-  background: #34495e;
+
+
+    background:#0F4C81;
+
+
 }
 
-.hamburger.open span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
+
+
+
+
+
+/* MOBILE MENU */
+
+
+@media(max-width:900px){
+
+
+
+.mobile-menu-button {
+
+
+    display:block;
+
+
 }
 
-.hamburger.open span:nth-child(2) {
-  opacity: 0;
+
+
+
+.nav-links {
+
+
+    position:fixed;
+
+    top:0;
+
+    right:-100%;
+
+    width:75%;
+
+    height:100vh;
+
+    background:white;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    gap:35px;
+
+    transition:.3s;
+
+    box-shadow:
+    -5px 0 25px rgba(0,0,0,.1);
+
+
 }
 
-.hamburger.open span:nth-child(3) {
-  transform: rotate(-45deg) translate(7px, -6px);
+
+
+.nav-links.open {
+
+
+    right:0;
+
+
 }
 
-@media (max-width: 768px) {
-  .mobile-menu-button {
-    display: block;
-  }
 
-  .nav-links {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 70%;
-    height: 100vh;
-    background: white;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2rem;
-    transition: right 0.3s ease;
-    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
-  }
 
-  .nav-links.open {
-    right: 0;
-  }
 
-  .nav-link {
-    font-size: 1.2rem;
-  }
+.nav-link {
 
-  .sos-button {
-    padding: 1rem 2.5rem;
-    font-size: 1.2rem;
-  }
+
+    color:#1E293B;
+
+    font-size:18px;
+
+
+}
+
+
+
+
+.logout-button {
+
+
+    color:#1E293B;
+
+
+}
+
+
+
+.sos-button {
+
+
+    padding:14px 35px;
+
+
+}
+
+
+
+
+.logo-image {
+
+
+    width:150px;
+
+
+}
+
+
+
+}
+
+
+
+
+
+/* MOBILE HAMBURGER ANIMATION */
+
+
+.hamburger.active span:nth-child(1){
+
+    transform:
+    rotate(45deg)
+    translate(7px,7px);
+
+}
+
+
+
+.hamburger.active span:nth-child(2){
+
+    opacity:0;
+
+}
+
+
+
+.hamburger.active span:nth-child(3){
+
+    transform:
+    rotate(-45deg)
+    translate(7px,-7px);
+
 }
