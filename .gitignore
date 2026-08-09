@@ -29,3 +29,6 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+
+package.json
+package-lock.json

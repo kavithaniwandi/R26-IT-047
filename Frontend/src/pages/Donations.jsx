@@ -19,6 +19,12 @@ function Donations() {
             <p>Donate blood and help save lives during emergencies and medical procedures</p>
             <button className="donate-button">Donate Blood</button>
           </div>
+          <div className="story-card">
+            <span className="story-icon">📖</span>
+            <h2>Priority Queue</h2>
+            <p>Join the priority queue and receive faster support during critical emergencies.</p>
+            <button className="donate-button">Join Priority Queue</button>
+          </div>
           <div className="donation-card">
             <span className="donation-icon">🏥</span>
             <h2>Medical Supplies</h2>
