@@ -7,6 +7,7 @@ import Contacts from './pages/Contacts'
 import SignIn from './pages/SignIn'
 import SOS from './pages/SOS'
 import Profile from './pages/Profile'
+import DisasterDonationRequest from './pages/DisasterDonationRequest'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/sos" element={<SOS />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/disaster-donation-request" element={<DisasterDonationRequest />} />
       </Routes>
     </Router>
   )
