@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, users, disaster_donation_requests
+from app.routers import auth, users, disaster_donation_requests, donation_history
 
 app = FastAPI(
     title="Disaster Relief & Donation API",
@@ -18,6 +18,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(disaster_donation_requests.router)
+app.include_router(donation_history.router)
 
 @app.get("/")
 def root():

@@ -3,9 +3,9 @@ from typing import List
 from datetime import datetime
 
 class DonationItem(BaseModel):
-    itemName: str = Field(..., min_length=2, example="Rice")
-    unit: str = Field(..., example="kg")
-    quantity: float = Field(..., gt=0, example=50.0)
+    itemName: str = Field(..., min_length=2)
+    unit: str = Field(...)
+    quantity: float = Field(..., gt=0)
 
 class DonationRequestCreate(BaseModel):
     items: List[DonationItem] = Field(..., min_items=1)
