@@ -7,3 +7,4 @@ database = client[settings.DATABASE_NAME]
 user_collection = database.get_collection("users")
 donation_request_collection = database.get_collection("donation_requests")
 donation_history_collection = database.get_collection("donation_history")
+donation_items_collection = database.get_collection("donation_items")
