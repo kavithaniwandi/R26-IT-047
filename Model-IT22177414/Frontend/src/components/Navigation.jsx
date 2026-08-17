@@ -156,6 +156,14 @@ function Navigation() {
             Contacts
           </Link>
 
+          <Link
+            to="/donor-details"
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            Donor Details
+          </Link>
+
           {
             user ? (
 

@@ -1,0 +1,197 @@
+.donor-page {
+  min-height: 100vh;
+  background: #edf3f8;
+  color: #172033;
+}
+
+.donor-wrapper {
+  width: min(1120px, 86%);
+  margin: 0 auto;
+  padding: 32px 0 60px;
+}
+
+.donor-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(120, 142, 187, 0.28);
+  border-radius: 24px;
+  box-shadow: 0 18px 44px rgba(33, 65, 128, 0.08);
+  padding: 30px 24px;
+}
+
+.donor-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.donor-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b7bd7, #0d5ea7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.8rem;
+}
+
+.donor-badge {
+  display: inline-block;
+  background: #eaf3ff;
+  border: 1px solid #cfe1ff;
+  color: #1d6ed8;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.donor-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+.donor-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.donor-metric {
+  background: linear-gradient(180deg, #f8fbff, #edf5ff);
+  border: 1px solid #dfeaff;
+  border-radius: 18px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.donor-metric span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: #52657f;
+}
+
+.donor-metric strong {
+  font-size: clamp(1.3rem, 2vw, 2rem);
+  color: #10213d;
+}
+
+.donor-info-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 20px;
+}
+
+.info-panel {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #dfeaff;
+  border-radius: 18px;
+  padding: 20px 18px;
+}
+
+.info-panel h3 {
+  margin: 0 0 14px;
+  color: #172033;
+  font-size: 1.2rem;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(155, 170, 195, 0.25);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row span {
+  color: #53627d;
+  font-weight: 600;
+}
+
+.info-row strong {
+  color: #10213d;
+  text-align: right;
+}
+
+.history-item {
+  border: 1px solid #dfeaff;
+  border-radius: 14px;
+  background: #f4f9ff;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.history-head strong {
+  color: #14233a;
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill.fulfilled {
+  background: rgba(43, 182, 115, 0.12);
+  color: #14834d;
+}
+
+.status-pill.partial {
+  background: rgba(229, 139, 65, 0.12);
+  color: #b75e11;
+}
+
+.status-pill.remaining {
+  background: rgba(31, 111, 235, 0.12);
+  color: #1c5cc0;
+}
+
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: #5c6d86;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 720px) {
+  .donor-metrics,
+  .donor-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donor-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

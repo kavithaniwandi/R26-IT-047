@@ -5,7 +5,8 @@ from app.routers import (
     users,
     disaster_donation_requests,
     donation_history,
-    donation_items
+    donation_items,
+    population
 )
 
 app = FastAPI(
@@ -26,6 +27,7 @@ app.include_router(users.router)
 app.include_router(disaster_donation_requests.router)
 app.include_router(donation_history.router)
 app.include_router(donation_items.router)
+app.include_router(population.router)
 
 @app.get("/")
 def root():
