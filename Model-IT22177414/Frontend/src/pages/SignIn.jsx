@@ -9,10 +9,11 @@ function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -21,14 +22,41 @@ function SignIn() {
       return
     }
 
-    const userData = {
-      name: email.split('@')[0],
-      email: email,
-      id: Date.now()
-    }
+    setLoading(true)
 
-    login(userData)
-    navigate('/')
+    try {
+      const response = await fetch('http://127.0.0.1:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Login failed')
+      }
+
+      // Save token and user details to localStorage
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('user', JSON.stringify(data))
+
+      // Update AuthContext state
+      login(data)
+
+      // Navigate to respective dashboard based on user role
+      if (data.userType === 'admin') {
+        navigate('/admin-dashboard')
+      } else {
+        navigate('/donor-dashboard')
+      }
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -44,22 +72,22 @@ function SignIn() {
           <form className="signin-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
-              <input 
-                type="email" 
-                id="email" 
-                placeholder="Enter your email" 
-                required 
+              <input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="form-group">
               <label htmlFor="password">Password</label>
-              <input 
-                type="password" 
-                id="password" 
-                placeholder="Enter your password" 
-                required 
+              <input
+                type="password"
+                id="password"
+                placeholder="Enter your password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -71,7 +99,9 @@ function SignIn() {
               </label>
               <a href="#" className="forgot-password">Forgot password?</a>
             </div>
-            <button type="submit" className="signin-button">Sign In</button>
+            <button type="submit" className="signin-button" disabled={loading}>
+              {loading ? 'Signing In...' : 'Sign In'}
+            </button>
           </form>
           <div className="signin-divider">
             <span>or</span>

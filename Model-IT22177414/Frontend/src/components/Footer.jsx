@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import './Footer.css'
 
 function Footer() {
@@ -23,22 +24,22 @@ function Footer() {
           <div className="footer-section">
             <h3 className="footer-title">Quick Links</h3>
             <ul className="footer-links">
-              <li><a href="/">Home</a></li>
-              <li><a href="/map">Map</a></li>
-              <li><a href="/donations">Donations</a></li>
-              <li><a href="/contacts">Contacts</a></li>
-              <li><a href="/sos">SOS</a></li>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/map">Disaster Map</Link></li>
+              <li><Link to="/donations">Donations</Link></li>
+              <li><Link to="/contacts">Contacts</Link></li>
+              <li><Link to="/sos">Emergency SOS</Link></li>
             </ul>
           </div>
 
           <div className="footer-section">
             <h3 className="footer-title">Services</h3>
             <ul className="footer-links">
-              <li><a href="#">Medical Supplies</a></li>
-              <li><a href="#">Blood Donation</a></li>
-              <li><a href="#">Emergency Response</a></li>
-              <li><a href="#">Disaster Relief</a></li>
-              <li><a href="#">Volunteer Network</a></li>
+              <li><Link to="/donations">Medical Supplies</Link></li>
+              <li><Link to="/donations">Blood Donation</Link></li>
+              <li><Link to="/sos">Emergency Response</Link></li>
+              <li><Link to="/disaster-donation-request">Disaster Relief</Link></li>
+              <li><Link to="/contacts">Volunteer Network</Link></li>
             </ul>
           </div>
 

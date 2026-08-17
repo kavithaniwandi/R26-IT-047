@@ -1,18 +1,18 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.routers import (
     auth,
     users,
     disaster_donation_requests,
     donation_history,
     donation_items,
-    population
+    population,
+    divisions,
 )
 
-app = FastAPI(
-    title="Disaster Relief & Donation API",
-    version="1.0.0"
-)
+app = FastAPI(title="Disaster Relief & Donation API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,12 +22,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure directory exists and mount static route
+os.makedirs("static/annotated", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(disaster_donation_requests.router)
 app.include_router(donation_history.router)
 app.include_router(donation_items.router)
 app.include_router(population.router)
+app.include_router(divisions.router)
+
 
 @app.get("/")
 def root():

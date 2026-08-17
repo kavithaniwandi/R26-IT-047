@@ -3,177 +3,165 @@ import Navigation from '../components/Navigation'
 import Footer from '../components/Footer'
 import './DisasterDonationRequest.css'
 
-const DEFAULT_POPULATIONS = [420, 310, 540, 260, 390]
-
-const KADUWELA_GN_DIVISIONS = [
-  '469 Ranala',
-  '470 Nawagamuwa',
-  '470 A Nawagamuwa South',
-  '471 Ihala Bomiriya',
-  '471 A Wakewatta',
-  '472 A Pahala Bomiriya',
-  '472 B Pahala Bomiriya',
-  '473 Kothalawala',
-  '473 A Kaduwela',
-  '474 Hewagama',
-  '474 A Rangahawatta',
-  '475 Welivita',
-  '475 A Mahadeniya',
-  '476 Malabe East',
-  '476 A Malabe West',
-  '476 B Malabe North',
-  '477 Thalangama North',
-  '477 North Thalangama B',
-  '477 B Mumnethotugoda',
-  '477 C Pothuarawa',
-  '478 Thalanghena North',
-  '478 A Thalanghena South',
-  '479 Jayawadanagama',
-  '479 A Pahalawela',
-  '479 B Asiri Uyana',
-  '479 C Wickramasinghepura',
-  '479 D Kumaragewatta',
-  '479 E Batapotha',
-  '479 F Aruppitiya',
-  '480 Welipillawa',
-  '480 A Dadigamuwa',
-  '480 B Ambilladeniya',
-  '480 C Bawathewela',
-  '487 Oruwala',
-  '487 A Shanthalokagama',
-  '488 Korathota',
-  '488 A Welihinda',
-  '488 B Thunandhena',
-  '489 Pore',
-  '489 A Boralugoda',
-  '490 Athurugiriya',
-  '490 A Athurugiriya South',
-  '490 B Thaldiyawala',
-  '491 Kalapaluwawa',
-  '491 A Walpola',
-  '491 B Kotuwegoda',
-  '492 Sri Subhuthipura',
-  '492 A Battaramulla South',
-  '492 B Battaramulla North',
-  '492 C Udumulla',
-  '492 D Rajamalwatta',
-  '494 Hokandara North',
-  '494 A Hokandara East',
-  '494 B Arangala',
-  '494 C Hokandara South',
-  '495 Wellangiriya',
-  '495 A Awarihena',
-]
-
-const NAWALAPITIYA_GN_DIVISIONS = [
-  '314 Ambagamuwa South',
-  '314 A Ambagamuwa East',
-  '314 C Sellipigama',
-  '314 D Homagama',
-  '314 E Kalaweldeniya',
-  '314 F Dehigasthenna',
-  '314 G Habbakanda',
-  '315 A Ginigathhena',
-  '315 B Samansirigama',
-  '315 C Vidulipura South',
-  '315 D Vidulipura North',
-  '316 Bulathgama',
-  '316 A Rampadeniya',
-  '316 B Gonawala',
-  '316 C Kalugala',
-  '316 D Pitawala',
-  '316 E Millagahamula',
-  '316 F Dagampitiya',
-  '316 G Kehelwarawa',
-  '317 Kirivan Eliya',
-  '317 A Lakshapana',
-  '317 B Waggama',
-  '317 C Morahenagama',
-  '318 Polpitiya',
-  '318 A Hitigegama',
-  '318 B Hagarapitiya',
-  '318 C Minuwandeniya',
-  '318 D Jambuthenna',
-  '318 E Koththallena',
-]
-
 const DISASTER_TYPES = ['Flood', 'Landslide']
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical']
 
 function DisasterDonationRequest() {
-  const [locationCount, setLocationCount] = useState(1)
-  const [step, setStep] = useState('intro')
+  const [step, setStep] = useState('dashboard')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [viewRequestModal, setViewRequestModal] = useState(null)
+
+  // Dynamic Division Data from Database
+  const [divisionsData, setDivisionsData] = useState([])
+  const [dsAreas, setDsAreas] = useState([])
+  const [gnDivisionsList, setGnDivisionsList] = useState([])
+  const [divisionsLoading, setDivisionsLoading] = useState(false)
+
+  // Form State
   const [disasterType, setDisasterType] = useState('Flood')
-  const [severity, setSeverity] = useState('High')
-  const [affectedArea, setAffectedArea] = useState(KADUWELA_GN_DIVISIONS[0])
+  const [dsArea, setDsArea] = useState('')
+  const [gnDivision, setGnDivision] = useState('')
   const [gnSearch, setGnSearch] = useState('')
+  const [locationCount, setLocationCount] = useState(1)
+  const [severity, setSeverity] = useState('High')
+
+  // Upload & Estimation State
+  const [rawFiles, setRawFiles] = useState(Array(5).fill(null))
   const [images, setImages] = useState(Array(5).fill(null))
   const [analysisData, setAnalysisData] = useState([])
+  const [analyzing, setAnalyzing] = useState(false)
   const [draggingIndex, setDraggingIndex] = useState(null)
   const [donationItems, setDonationItems] = useState([])
   const [selectedDonationItems, setSelectedDonationItems] = useState([])
   const [donationItemsLoading, setDonationItemsLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Requests Table State
+  const [donationRequests, setDonationRequests] = useState([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [searchTableQuery, setSearchTableQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const totalPopulation = analysisData.reduce((sum, item) => sum + (item?.population ?? 0), 0)
-  const reliefItems = [
-    { label: 'Drinking Water', quantity: Math.round(totalPopulation * 3), unit: 'L' },
-    { label: 'Food Packs', quantity: Math.round(totalPopulation * 1.4), unit: 'packs' },
-    { label: 'OTC Medicines', quantity: Math.round(totalPopulation * 0.7), unit: 'boxes' },
-    { label: 'Hygiene Kits', quantity: Math.round(totalPopulation * 0.8), unit: 'kits' },
-  ]
 
-  const [selectedRequestId, setSelectedRequestId] = useState(1)
-  const [donationRequests, setDonationRequests] = useState([
-    {
-      id: 1,
-      name: `${KADUWELA_GN_DIVISIONS[0]} - Flood`,
-      status: 'fulfilled',
-      type: 'Flood',
-      items: ['Rice', 'Water'],
-      total: 120,
-      donationItems: [
-        { name: 'Rice', donated: 90, remaining: 10, status: 'fulfilled' },
-        { name: 'Water', donated: 80, remaining: 12, status: 'remaining' },
-      ],
-    },
-    {
-      id: 2,
-      name: 'Athurugiriya South - Flood',
-      status: 'remaining',
-      type: 'Flood',
-      items: ['Rice', 'Medicine', 'Water'],
-      total: 96,
-      donationItems: [
-        { name: 'Rice', donated: 42, remaining: 18, status: 'remaining' },
-        { name: 'Medicine', donated: 20, remaining: 10, status: 'remaining' },
-        { name: 'Water', donated: 30, remaining: 12, status: 'remaining' },
-      ],
-    },
-    {
-      id: 3,
-      name: 'Malabe East - Flood',
-      status: 'fulfilled',
-      type: 'Flood',
-      items: ['Food Packs', 'Hygiene Kits'],
-      total: 84,
-      donationItems: [
-        { name: 'Food Packs', donated: 52, remaining: 0, status: 'fulfilled' },
-        { name: 'Hygiene Kits', donated: 32, remaining: 0, status: 'fulfilled' },
-      ],
-    },
-    {
-      id: 4,
-      name: 'Nawagamuwa - Landslide',
-      status: 'remaining',
-      type: 'Landslide',
-      items: ['Medicine', 'Hygiene Kits'],
-      total: 58,
-      donationItems: [
-        { name: 'Medicine', donated: 18, remaining: 12, status: 'remaining' },
-        { name: 'Hygiene Kits', donated: 14, remaining: 9, status: 'remaining' },
-      ],
-    },
-  ])
+  // Fetch All Administrative Divisions from DB
+  const fetchDivisions = async () => {
+    setDivisionsLoading(true)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/divisions')
+      if (response.ok) {
+        const data = await response.json()
+        setDivisionsData(data)
+        if (Array.isArray(data) && data.length > 0) {
+          const areaNames = data.map((d) => d.dsArea)
+          setDsAreas(areaNames)
+          setDsArea(areaNames[0])
+          setGnDivisionsList(data[0].gnDivisions || [])
+          setGnDivision(data[0].gnDivisions?.[0] || '')
+        }
+      }
+    } catch (err) {
+      console.error('Error loading administrative divisions:', err)
+    } finally {
+      setDivisionsLoading(false)
+    }
+  }
+
+  // Fetch Disaster Requests from DB
+  const fetchAllRequests = async () => {
+    setRequestsLoading(true)
+    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || ''
+    try {
+      const response = await fetch('http://127.0.0.1:8000/disaster-donation-requests', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          const formatted = data.map((req, idx) => {
+            const items = req.items || []
+            const totalUnits = items.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0)
+            return {
+              id: req.id || `REQ-${idx + 100}`,
+              dsArea: req.dsArea || 'N/A',
+              gnDivision: req.gnDivision || 'General Zone',
+              type: req.disasterType || 'Flood',
+              severity: req.severity || 'High',
+              population: req.population || 0,
+              status: req.status || 'remaining',
+              items: items.map((i) => `${i.itemName} (${i.quantity} ${i.unit})`),
+              totalUnits: totalUnits,
+              date: req.createdAt ? new Date(req.createdAt).toISOString().split('T')[0] : 'Today',
+              donationItems: items.map((i) => ({
+                name: i.itemName,
+                donated: i.donated || 0,
+                remaining: i.remaining !== undefined ? i.remaining : Number(i.quantity) || 0,
+                status: i.status || 'remaining',
+                unit: i.unit,
+              })),
+            }
+          })
+          setDonationRequests(formatted)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching disaster donation requests:', err)
+    } finally {
+      setRequestsLoading(false)
+    }
+  }
+
+  // Fetch Catalog Donation Items from DB
+  const loadDonationItems = async () => {
+    setDonationItemsLoading(true)
+    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || ''
+    try {
+      const response = await fetch('http://127.0.0.1:8000/donation-items', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (response.ok) {
+        const items = await response.json()
+        setDonationItems(items)
+      }
+    } catch (error) {
+      console.error('Unable to fetch donation items:', error)
+    } finally {
+      setDonationItemsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDivisions()
+    fetchAllRequests()
+    loadDonationItems()
+  }, [])
+
+  const handleDsAreaChange = (e) => {
+    const selectedArea = e.target.value
+    setDsArea(selectedArea)
+    setGnSearch('')
+
+    const matched = divisionsData.find((d) => d.dsArea === selectedArea)
+    const gnList = matched ? matched.gnDivisions || [] : []
+    setGnDivisionsList(gnList)
+    setGnDivision(gnList[0] || '')
+  }
+
+  const filteredGnList = gnDivisionsList.filter((gn) =>
+    gn.toLowerCase().includes(gnSearch.toLowerCase())
+  )
+
+  const handleOpenCreateModal = () => setIsModalOpen(true)
+  const handleCloseModal = () => setIsModalOpen(false)
+
+  const handleProceedToUpload = (e) => {
+    e.preventDefault()
+    setIsModalOpen(false)
+    setRawFiles(Array(5).fill(null))
+    setImages(Array(5).fill(null))
+    setAnalysisData([])
+    setStep('upload')
+  }
 
   const handleImageSelect = (event, index) => {
     const file = event.target.files?.[0]
@@ -181,8 +169,28 @@ function DisasterDonationRequest() {
 
     const previewUrl = URL.createObjectURL(file)
     const updatedImages = [...images]
+    const updatedFiles = [...rawFiles]
+
     updatedImages[index] = previewUrl
+    updatedFiles[index] = file
+
     setImages(updatedImages)
+    setRawFiles(updatedFiles)
+  }
+
+  const handleRemoveImage = (index) => {
+    const updatedImages = [...images]
+    const updatedFiles = [...rawFiles]
+    updatedImages[index] = null
+    updatedFiles[index] = null
+    setImages(updatedImages)
+    setRawFiles(updatedFiles)
+
+    if (analysisData.length > 0) {
+      const updatedAnalysis = [...analysisData]
+      updatedAnalysis[index] = null
+      setAnalysisData(updatedAnalysis)
+    }
   }
 
   const handleDrop = (event, index) => {
@@ -193,28 +201,69 @@ function DisasterDonationRequest() {
 
     const previewUrl = URL.createObjectURL(file)
     const updatedImages = [...images]
+    const updatedFiles = [...rawFiles]
+
     updatedImages[index] = previewUrl
+    updatedFiles[index] = file
+
     setImages(updatedImages)
+    setRawFiles(updatedFiles)
   }
 
-  const handleAnalyze = () => {
-    const totalLocations = Number(locationCount)
-    const results = Array.from({ length: totalLocations }, (_, index) => {
-      const uploadedImage = images[index]
-      const population = uploadedImage ? DEFAULT_POPULATIONS[index] : 0
+  // Call YOLO v8 inference backend for each image
+  const handleAnalyze = async () => {
+    const count = Number(locationCount)
+    const activeFiles = rawFiles.slice(0, count)
+    const hasAnyImage = activeFiles.some((f) => f !== null)
 
-      return {
-        image: uploadedImage,
-        population,
+    if (!hasAnyImage) {
+      alert('Please upload at least one image before running the analysis.')
+      return
+    }
+
+    setAnalyzing(true)
+
+    try {
+      const results = []
+      const updatedAnnotatedImages = [...images]
+
+      for (let i = 0; i < count; i++) {
+        const file = rawFiles[i]
+        if (!file) {
+          results.push({ image: null, population: 0 })
+          continue
+        }
+
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('http://127.0.0.1:8000/population/count', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to analyze image for Location #${i + 1}`)
+        }
+
+        const data = await response.json()
+        const detectedCount = data.person_count || 0
+        const annotatedImgUrl = data.annotated_image_url || images[i]
+
+        updatedAnnotatedImages[i] = annotatedImgUrl
+        results.push({
+          image: annotatedImgUrl,
+          population: detectedCount,
+        })
       }
-    })
 
-    setAnalysisData(results)
-  }
-
-  const handleBackToUpload = () => {
-    setAnalysisData([])
-    setStep('setup')
+      setImages(updatedAnnotatedImages)
+      setAnalysisData(results)
+    } catch (err) {
+      alert(err.message || 'Error processing images with AI Model')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   const selectedDonationDetails = donationItems.filter((item) => {
@@ -226,299 +275,154 @@ function DisasterDonationRequest() {
     return sum + (Number(item.quantityPerPerson) || 0) * Math.max(totalPopulation, 1)
   }, 0)
 
-  const requestMetrics = [
-    { label: 'Affected Population', value: totalPopulation },
-    { label: 'Severity', value: severity },
-    { label: 'Disaster Type', value: disasterType },
-  ]
-
-  const fulfilledRequests = donationRequests.filter((request) => request.status === 'fulfilled')
-  const remainingRequests = donationRequests.filter((request) => request.status === 'remaining')
-  const selectedRequest = donationRequests.find((request) => request.id === selectedRequestId) || donationRequests[0]
-
-  const handleDonationAction = (requestId, mode) => {
-    setDonationRequests((current) =>
-      current.map((request) => {
-        if (request.id !== requestId) return request
-
-        const updatedDonationItems = request.donationItems.map((item) => {
-          const fullAmount = item.donated + item.remaining
-          const updatedDonated =
-            mode === 'full'
-              ? fullAmount
-              : item.donated + Math.max(Math.round(fullAmount * 0.25), 1)
-          const safeDonated = Math.min(updatedDonated, fullAmount)
-          const nextStatus = safeDonated >= fullAmount ? 'fulfilled' : 'remaining'
-
-          return {
-            ...item,
-            donated: safeDonated,
-            remaining: Math.max(fullAmount - safeDonated, 0),
-            status: nextStatus,
-          }
-        })
-
-        const nextStatus = updatedDonationItems.every((item) => item.status === 'fulfilled')
-          ? 'fulfilled'
-          : 'remaining'
-
-        return {
-          ...request,
-          donationItems: updatedDonationItems,
-          status: nextStatus,
-        }
-      }),
-    )
-  }
-
-  const handleItemStatusUpdate = (requestId, itemName, nextStatus) => {
-    setDonationRequests((current) =>
-      current.map((request) => {
-        if (request.id !== requestId) return request
-
-        const updatedDonationItems = request.donationItems.map((item) => {
-          if (item.name !== itemName) return item
-
-          const nextItem = {
-            ...item,
-            status: nextStatus,
-          }
-
-          if (nextStatus === 'fulfilled') {
-            return {
-              ...nextItem,
-              donated: item.donated + item.remaining,
-              remaining: 0,
-            }
-          }
-
-          return {
-            ...nextItem,
-            donated: Math.max(item.donated - 1, 0),
-            remaining: Math.max(item.remaining + 1, 0),
-          }
-        })
-
-        const nextStatusValue = updatedDonationItems.every((item) => item.status === 'fulfilled')
-          ? 'fulfilled'
-          : 'remaining'
-
-        return {
-          ...request,
-          donationItems: updatedDonationItems,
-          status: nextStatusValue,
-        }
-      }),
-    )
-  }
-
-  useEffect(() => {
-    const loadDonationItems = async () => {
-      setDonationItemsLoading(true)
-
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token') || ''
-
-      try {
-        const response = await fetch('http://localhost:8000/donation-items', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-
-        if (!response.ok) {
-          throw new Error('Unable to fetch donation items')
-        }
-
-        const items = await response.json()
-        setDonationItems(items)
-      } catch (error) {
-        setDonationItems([
-          { itemId: 'rice', item: 'Rice', quantityPerPerson: 5, unit: 'kg' },
-          { itemId: 'water', item: 'Drinking Water', quantityPerPerson: 3, unit: 'L' },
-          { itemId: 'food', item: 'Food Packs', quantityPerPerson: 1, unit: 'pack' },
-          { itemId: 'medicine', item: 'Medicine', quantityPerPerson: 2, unit: 'box' },
-          { itemId: 'hygiene', item: 'Hygiene Kits', quantityPerPerson: 1, unit: 'kit' },
-        ])
-      } finally {
-        setDonationItemsLoading(false)
-      }
-    }
-
-    loadDonationItems()
-  }, [])
-
   const toggleDonationItemSelection = (item) => {
     const itemKey = item.itemId || item.item
     setSelectedDonationItems((current) =>
       current.includes(itemKey)
         ? current.filter((value) => value !== itemKey)
-        : [...current, itemKey],
+        : [...current, itemKey]
     )
   }
 
-  const renderIntroStep = () => (
-    <div className="request-step intro-step">
-      <div className="intro-card">
-        <div className="intro-badge">Integrated Disaster Relief Prediction System</div>
-        <h1>Smart disaster response planning for flood and landslide emergencies</h1>
-        <p>
-          The system estimates affected population from images, calculates essential relief
-          requirements, and helps coordinate donation requests for medical and emergency support.
-        </p>
-        <div className="intro-points">
-          <span>AI population estimation</span>
-          <span>Relief prediction</span>
-          <span>Donation coordination</span>
-        </div>
-        <div className="request-footer intro-footer">
-          <button type="button" className="primary-button" onClick={() => setStep('setup')}>
-            Get Started
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  const handleCreateRequestSubmit = async () => {
+    if (selectedDonationDetails.length === 0) {
+      alert('Please select at least one donation item.')
+      return
+    }
 
-  const renderSetupStep = () => {
-    const availableAreas = disasterType === 'Flood' ? KADUWELA_GN_DIVISIONS : NAWALAPITIYA_GN_DIVISIONS
-    const filteredAreas = availableAreas.filter((area) =>
-      area.toLowerCase().includes(gnSearch.toLowerCase()),
-    )
+    const payload = {
+      disasterType: disasterType,
+      severity: severity,
+      dsArea: dsArea,
+      gnDivision: gnDivision,
+      population: totalPopulation,
+      status: 'remaining',
+      items: selectedDonationDetails.map((item) => {
+        const requiredQty = (Number(item.quantityPerPerson) || 1) * Math.max(totalPopulation, 1)
+        return {
+          itemName: item.item,
+          unit: item.unit,
+          quantity: requiredQty,
+          donated: 0,
+          remaining: requiredQty,
+          status: 'remaining',
+        }
+      }),
+    }
 
-    return (
-      <div className="request-step">
-        <div className="request-hero">
-          <span className="request-badge">Disaster Donation Request</span>
-          <h1>How many disaster locations need support?</h1>
-          <p>
-            Select the number of affected areas you want to review before starting the
-            image analysis.
-          </p>
-        </div>
+    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || ''
+    setSubmitting(true)
 
-        <div className="location-selector-card">
-          <div className="selector-group">
-            <label htmlFor="disaster-type" className="selector-label">
-              Disaster type
-            </label>
-            <select
-              id="disaster-type"
-              value={disasterType}
-              onChange={(event) => {
-                const nextType = event.target.value
-                setDisasterType(nextType)
-                setGnSearch('')
-                setAffectedArea(
-                  nextType === 'Flood' ? KADUWELA_GN_DIVISIONS[0] : NAWALAPITIYA_GN_DIVISIONS[0],
-                )
-              }}
-            >
-              {DISASTER_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+    try {
+      const response = await fetch('http://127.0.0.1:8000/disaster-donation-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      })
 
-          <div className="selector-group">
-            <label htmlFor="severity-level" className="selector-label">
-              Severity level
-            </label>
-            <select
-              id="severity-level"
-              value={severity}
-              onChange={(event) => setSeverity(event.target.value)}
-            >
-              {SEVERITY_LEVELS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.detail || 'Failed to submit request')
+      }
 
-          <div className="selector-group">
-            <label htmlFor="gn-search" className="selector-label">
-              Search GN division
-            </label>
-            <input
-              id="gn-search"
-              type="text"
-              className="gn-search-input"
-              placeholder="Search affected area or GN division"
-              value={gnSearch}
-              onChange={(event) => setGnSearch(event.target.value)}
-            />
-          </div>
-
-          <div className="selector-group">
-            <label htmlFor="affected-area" className="selector-label">
-              Affected area / GN division
-            </label>
-            <select
-              id="affected-area"
-              value={affectedArea}
-              onChange={(event) => setAffectedArea(event.target.value)}
-            >
-              {filteredAreas.length > 0 ? (
-                filteredAreas.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))
-              ) : (
-                <option value="">No matching GN division found</option>
-              )}
-            </select>
-          </div>
-
-          <div className="selector-group">
-            <label htmlFor="location-count" className="selector-label">
-              Number of locations
-            </label>
-            <select
-              id="location-count"
-              value={locationCount}
-              onChange={(event) => setLocationCount(Number(event.target.value))}
-            >
-              {[1, 2, 3, 4, 5].map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="request-footer">
-          <button type="button" className="primary-button" onClick={() => setStep('upload')}>
-            Next
-          </button>
-        </div>
-      </div>
-    )
+      await fetchAllRequests()
+      setStep('dashboard')
+    } catch (err) {
+      alert(err.message || 'Error submitting request')
+    } finally {
+      setSubmitting(false)
+    }
   }
+
+  const handleItemStatusToggle = async (reqId, itemName, nextStatus) => {
+    const targetRequest = donationRequests.find((r) => r.id === reqId)
+    if (!targetRequest) return
+
+    const updatedItems = targetRequest.donationItems.map((item) => {
+      if (item.name !== itemName) return item
+      const isFulfilled = nextStatus === 'fulfilled'
+      return {
+        ...item,
+        status: nextStatus,
+        donated: isFulfilled ? item.donated + item.remaining : Math.max(item.donated - 10, 0),
+        remaining: isFulfilled ? 0 : Math.max(item.remaining + 10, 10),
+      }
+    })
+    const allDone = updatedItems.every((i) => i.status === 'fulfilled')
+    const nextRequestStatus = allDone ? 'fulfilled' : 'remaining'
+
+    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || ''
+    try {
+      await fetch(`http://127.0.0.1:8000/disaster-donation-requests/${reqId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          status: nextRequestStatus,
+          items: updatedItems.map((i) => ({
+            itemName: i.name,
+            unit: i.unit,
+            quantity: i.donated + i.remaining,
+            donated: i.donated,
+            remaining: i.remaining,
+            status: i.status,
+          })),
+        }),
+      })
+
+      fetchAllRequests()
+      if (viewRequestModal && viewRequestModal.id === reqId) {
+        setViewRequestModal((prev) => ({
+          ...prev,
+          status: nextRequestStatus,
+          donationItems: updatedItems,
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to update status on server:', error)
+    }
+  }
+
+  const filteredRequests = donationRequests.filter((req) => {
+    const matchesStatus = statusFilter === 'all' || req.status === statusFilter
+    const matchesSearch =
+      req.gnDivision.toLowerCase().includes(searchTableQuery.toLowerCase()) ||
+      req.dsArea.toLowerCase().includes(searchTableQuery.toLowerCase()) ||
+      req.type.toLowerCase().includes(searchTableQuery.toLowerCase()) ||
+      req.severity.toLowerCase().includes(searchTableQuery.toLowerCase()) ||
+      req.id.toLowerCase().includes(searchTableQuery.toLowerCase())
+    return matchesStatus && matchesSearch
+  })
+
+  const totalCount = donationRequests.length
+  const fulfilledCount = donationRequests.filter((r) => r.status === 'fulfilled').length
+  const remainingCount = donationRequests.filter((r) => r.status === 'remaining').length
 
   const renderUploadStep = () => {
     const isAnalyzed = analysisData.length > 0
 
     return (
-      <div className="request-step">
-        <div className="request-hero compact">
-          <div className="request-header-row">
-            <div className="brand-mark-wrap">
-              <div className="brand-mark">V</div>
-            </div>
-            <span className="request-badge">Upload Image References</span>
-            <button type="button" className="sos-mini-button">Emergency SOS</button>
+      <div className="upload-flow-card">
+        {/* Header */}
+        <div className="upload-flow-header">
+          <div className="flow-badge">YOLOv8 AI Population Estimation</div>
+          <h2>Upload Disaster Location Images</h2>
+          <div className="flow-location-pill">
+            <span className="location-pin">📍</span>
+            <strong>{dsArea}</strong> — <span>{gnDivision}</span>
           </div>
-          <h1>Upload images for each affected location</h1>
-          <p>
-            Add up to {locationCount} location images. The system will analyze each image for
-            need estimation and population density.
+          <p className="flow-description">
+            Upload images for {locationCount} location slot{locationCount > 1 ? 's' : ''}. The AI model will identify individuals with bounding box highlights and predict essential relief items.
           </p>
         </div>
 
-        <div className="upload-grid">
+        {/* Upload Cards Grid */}
+        <div className={`upload-cards-grid grid-count-${locationCount}`}>
           {Array.from({ length: Number(locationCount) }, (_, index) => {
             const previewImage = images[index]
             const result = analysisData[index]
@@ -526,139 +430,189 @@ function DisasterDonationRequest() {
             return (
               <div
                 key={`slot-${index}`}
-                className={`upload-box ${draggingIndex === index ? 'dragging' : ''}`}
-                onDragOver={(event) => {
-                  event.preventDefault()
+                className={`upload-dropzone-card ${previewImage ? 'has-preview' : ''} ${draggingIndex === index ? 'is-dragging' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault()
                   setDraggingIndex(index)
                 }}
                 onDragLeave={() => setDraggingIndex(null)}
-                onDrop={(event) => handleDrop(event, index)}
+                onDrop={(e) => handleDrop(e, index)}
               >
+                <div className="dropzone-top-bar">
+                  <span className="location-badge">Location #{index + 1}</span>
+                  {previewImage && !isAnalyzed && (
+                    <button
+                      type="button"
+                      className="btn-remove-preview"
+                      onClick={() => handleRemoveImage(index)}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
                 {previewImage ? (
-                  <img src={previewImage} alt={`Location ${index + 1}`} className="upload-preview" />
-                ) : (
-                  <>
-                    <div className="upload-icon">⬆️</div>
-                  </>
-                )}
-
-                <p className="location-title">Location {index + 1}</p>
-
-                {result && result.image && (
-                  <div className="result-inline">
-                    <div className="result-population">Population: {result.population}</div>
+                  <div className="preview-container">
+                    <img
+                      src={previewImage}
+                      alt={`Location ${index + 1}`}
+                      className="preview-img"
+                    />
+                    {isAnalyzed && (
+                      <div className="ai-verified-tag">
+                        <span>✓ YOLO Detected</span>
+                      </div>
+                    )}
+                    {!isAnalyzed && (
+                      <div className="preview-overlay">
+                        <label className="btn-change-image" htmlFor={`upload-${index}`}>
+                          🔄 Change Photo
+                        </label>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {!isAnalyzed && (
-                  <label className="upload-button" htmlFor={`upload-${index}`}>
-                    Upload Image
+                ) : (
+                  <label className="dropzone-placeholder" htmlFor={`upload-${index}`}>
+                    <div className="upload-cloud-icon">📸</div>
+                    <span className="upload-prompt-text">Click or Drag Photo Here</span>
+                    <span className="upload-hint-text">Supports JPG, PNG or WEBP</span>
+                    <span className="btn-browse-file">Browse File</span>
                   </label>
                 )}
 
-                {!isAnalyzed && (
-                  <input
-                    id={`upload-${index}`}
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => handleImageSelect(event, index)}
-                  />
+                {/* Population result card */}
+                {result && result.image && (
+                  <div className="slot-result-badge">
+                    <span className="result-icon">👥</span>
+                    <div className="result-text">
+                      <small>AI Estimated Count</small>
+                      <strong>{result.population} Individuals</strong>
+                    </div>
+                  </div>
                 )}
+
+                <input
+                  id={`upload-${index}`}
+                  type="file"
+                  accept="image/*"
+                  className="hidden-file-input"
+                  onChange={(e) => handleImageSelect(e, index)}
+                />
               </div>
             )
           })}
         </div>
 
+        {/* Total Population Display Banner */}
         {isAnalyzed && (
-          <div className="total-population-box">
-            Total Population: {totalPopulation}
+          <div className="population-result-hero">
+            <div className="hero-icon-wrap">⚡</div>
+            <div className="hero-data">
+              <span className="hero-label">Total AI Estimated Impact</span>
+              <h3 className="hero-count">{totalPopulation} Individuals</h3>
+              <p className="hero-subtext">Verified crowd analysis for {locationCount} location{locationCount > 1 ? 's' : ''} in {gnDivision}</p>
+            </div>
           </div>
         )}
 
-        <div className="request-footer">
-          {isAnalyzed ? (
-            <>
-              <button type="button" className="secondary-button" onClick={handleBackToUpload}>
-                Back
+        {/* Footer Actions */}
+        <div className="upload-action-footer">
+          <button
+            type="button"
+            className="btn-flow-cancel"
+            onClick={() => setStep('dashboard')}
+          >
+            Cancel
+          </button>
+
+          <div className="footer-right-actions">
+            {isAnalyzed ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-flow-secondary"
+                  onClick={() => {
+                    setAnalysisData([])
+                    setImages(rawFiles.map((f) => (f ? URL.createObjectURL(f) : null)))
+                  }}
+                >
+                  ↺ Re-Upload
+                </button>
+                <button
+                  type="button"
+                  className="btn-flow-primary"
+                  onClick={() => setStep('donationRequest')}
+                >
+                  Create Donation Request →
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn-flow-primary"
+                disabled={analyzing}
+                onClick={handleAnalyze}
+              >
+                {analyzing ? '⏳ Running YOLOv8 Detection...' : '⚡ Analyze Images'}
               </button>
-              <button type="button" className="primary-button" onClick={() => setStep('donationRequest')}>
-                Next
-              </button>
-            </>
-          ) : (
-            <button type="button" className="primary-button" onClick={handleAnalyze}>
-              Analyze
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
   const renderDonationRequestStep = () => (
-    <div className="request-step donation-request-step">
-      <div className="donation-request-header">
-        <div className="brand-mark-wrap">
-          <div className="brand-mark">V</div>
-        </div>
-        <div className="donation-request-title-group">
-          <span className="request-badge">Disaster Donation Request</span>
-          <h1>Predictive Relief Request</h1>
-        </div>
-        <button type="button" className="sos-mini-button">Emergency SOS</button>
+    <div className="request-step">
+      <div className="step-header">
+        <h2>Confirm Disaster Donation Needs</h2>
+        <p>Review the predicted requirements for {gnDivision}, {dsArea}</p>
       </div>
 
-      <div className="request-metrics-grid">
-        {requestMetrics.map((metric) => (
-          <div className="request-metric-card" key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className="request-panel">
-        <h3>Predicted Donation Request for {affectedArea}</h3>
-        <div className="request-row">
-          <span>Disaster Type</span>
+      <div className="metrics-summary-bar">
+        <div className="metric-pill">
+          <span>Disaster:</span>
           <strong>{disasterType}</strong>
         </div>
-        <div className="request-row">
-          <span>Severity</span>
+        <div className="metric-pill">
+          <span>Severity:</span>
           <strong>{severity}</strong>
         </div>
-        <div className="request-row">
-          <span>GN Division</span>
-          <strong>{affectedArea}</strong>
+        <div className="metric-pill">
+          <span>DS Area:</span>
+          <strong>{dsArea}</strong>
         </div>
-        <div className="request-row">
-          <span>Estimated Affected Population</span>
+        <div className="metric-pill">
+          <span>Affected Population:</span>
           <strong>{totalPopulation}</strong>
         </div>
       </div>
 
-      <div className="request-panel">
-        <h3>Donation Items to Request</h3>
+      <div className="panel-box">
+        <h3>Required Donation Items</h3>
         {donationItemsLoading ? (
-          <p className="selection-status">Loading donation items...</p>
+          <p>Loading items from database...</p>
+        ) : donationItems.length === 0 ? (
+          <p style={{ color: '#64748b' }}>No catalog items found. Please add donation items to the catalog.</p>
         ) : (
           <div className="donation-item-selector">
             {donationItems.map((item) => {
               const itemKey = item.itemId || item.item
               const isChecked = selectedDonationItems.includes(itemKey)
+              const estimatedUnits = (Number(item.quantityPerPerson) || 1) * Math.max(totalPopulation, 1)
 
               return (
-                <label className="donation-item-option" key={itemKey}>
+                <label className={`item-option-card ${isChecked ? 'selected' : ''}`} key={itemKey}>
                   <input
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => toggleDonationItemSelection(item)}
                   />
-                  <div className="donation-item-copy">
-                    <span>{item.item}</span>
-                    <small>
-                      {item.quantityPerPerson} {item.unit} per person
-                    </small>
+                  <div className="item-info">
+                    <strong>{item.item}</strong>
+                    <small>{item.quantityPerPerson} {item.unit} / person</small>
+                    <span className="unit-calc">Total: {estimatedUnits} {item.unit}</span>
                   </div>
                 </label>
               )
@@ -667,169 +621,17 @@ function DisasterDonationRequest() {
         )}
       </div>
 
-      <div className="request-panel">
-        <h3>Final Request Summary</h3>
-        <div className="summary-box request-summary-box">
-          <div className="summary-row">
-            <span>Selected Items</span>
-            <strong>{selectedDonationDetails.length > 0 ? selectedDonationDetails.length : 'No items selected'}</strong>
-          </div>
-          <div className="summary-row wide-row">
-            <span>Item List</span>
-            <strong>
-              {selectedDonationDetails.length > 0
-                ? selectedDonationDetails.map((item) => item.item).join(', ')
-                : 'None selected'}
-            </strong>
-          </div>
-          <div className="summary-row">
-            <span>Estimated total need</span>
-            <strong>{selectedDonationTotal} units</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="request-footer donation-request-footer">
-        <button type="button" className="secondary-button" onClick={() => setStep('upload')}>
-          Back
+      <div className="request-footer">
+        <button type="button" className="btn-secondary" onClick={() => setStep('upload')}>
+          ← Back
         </button>
-        <button type="button" className="secondary-button" onClick={() => setStep('dashboard')}>
-          View Dashboard
-        </button>
-        <button type="button" className="primary-button" onClick={() => setStep('upload')}>
-          Submit Request
-        </button>
-      </div>
-    </div>
-  )
-
-  const renderDashboardStep = () => (
-    <div className="dashboard-step">
-      <div className="dashboard-header-row">
-        <div className="dashboard-brand-wrap">
-          <div className="dashboard-brand">V</div>
-        </div>
-        <div className="dashboard-title-group">
-          <span className="dashboard-badge">Integrated Disaster Relief Prediction System</span>
-          <h1>Disaster Relief Dashboard</h1>
-        </div>
-        <button type="button" className="sos-mini-button">Emergency SOS</button>
-      </div>
-
-      <div className="dashboard-metrics">
-        <div className="metric-card">
-          <span className="metric-label">Affected Population</span>
-          <strong>{totalPopulation}</strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Fulfilled Requests</span>
-          <strong>{fulfilledRequests.length}</strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Remaining Requests</span>
-          <strong>{remainingRequests.length}</strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Est. Relief Need</span>
-          <strong>{Math.round(totalPopulation * 1.5)} items</strong>
-        </div>
-      </div>
-
-      <div className="dashboard-content lower">
-        <div className="dashboard-panel">
-          <h3>Donation Requests</h3>
-          <div className="request-collection">
-            <div className="request-status-group">
-              <h4>Fulfilled</h4>
-              {fulfilledRequests.map((request) => (
-                <button
-                  type="button"
-                  className={`request-card compact-card fulfilled ${selectedRequestId === request.id ? 'selected' : ''}`}
-                  key={request.id}
-                  onClick={() => setSelectedRequestId(request.id)}
-                >
-                  <div className="request-card-header">
-                    <strong>{request.name}</strong>
-                    <span>{request.status}</span>
-                  </div>
-                  <p>{request.type} • {request.items.length} items</p>
-                  <small>{request.total} total units</small>
-                </button>
-              ))}
-            </div>
-
-            <div className="request-status-group">
-              <h4>Remaining</h4>
-              {remainingRequests.map((request) => (
-                <button
-                  type="button"
-                  className={`request-card compact-card remaining ${selectedRequestId === request.id ? 'selected' : ''}`}
-                  key={request.id}
-                  onClick={() => setSelectedRequestId(request.id)}
-                >
-                  <div className="request-card-header">
-                    <strong>{request.name}</strong>
-                    <span>{request.status}</span>
-                  </div>
-                  <p>{request.type} • {request.items.length} items</p>
-                  <small>{request.total} total units</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-panel">
-          <h3>Request Details</h3>
-          {selectedRequest && (
-            <div className="request-detail-panel">
-              <div className="detail-header-row">
-                <div>
-                  <strong>{selectedRequest.name}</strong>
-                  <small>{selectedRequest.type} disaster</small>
-                </div>
-                <span className={`detail-status ${selectedRequest.status}`}>
-                  {selectedRequest.status}
-                </span>
-              </div>
-
-              <div className="detail-items-list">
-                {selectedRequest.donationItems.map((item) => (
-                  <div className="detail-item-row" key={`${selectedRequest.id}-${item.name}`}>
-                    <div>
-                      <strong>{item.name}</strong>
-                      <small>{item.donated} donated • {item.remaining} remaining</small>
-                    </div>
-                    <div className="detail-actions">
-                      <button
-                        type="button"
-                        className={`detail-action ${item.status === 'fulfilled' ? 'active' : ''}`}
-                        onClick={() => handleItemStatusUpdate(selectedRequest.id, item.name, 'fulfilled')}
-                      >
-                        Fulfilled
-                      </button>
-                      <button
-                        type="button"
-                        className={`detail-action ${item.status === 'remaining' ? 'active' : ''}`}
-                        onClick={() => handleItemStatusUpdate(selectedRequest.id, item.name, 'remaining')}
-                      >
-                        Remaining
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="request-footer dashboard-footer">
-        <button type="button" className="secondary-button" onClick={() => setStep('upload')}>
-          Back
-        </button>
-        <button type="button" className="primary-button" onClick={() => setStep('upload')}>
-          Submit Request
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={submitting || selectedDonationDetails.length === 0}
+          onClick={handleCreateRequestSubmit}
+        >
+          {submitting ? 'Submitting to Database...' : 'Confirm & Publish Request'}
         </button>
       </div>
     </div>
@@ -839,14 +641,345 @@ function DisasterDonationRequest() {
     <div className="disaster-request-page">
       <Navigation />
       <main className="disaster-request-wrapper">
-        <div className="disaster-request-card">
-          {step === 'intro' && renderIntroStep()}
-          {step === 'setup' && renderSetupStep()}
-          {step === 'upload' && renderUploadStep()}
-          {step === 'donationRequest' && renderDonationRequestStep()}
-          {step === 'dashboard' && renderDashboardStep()}
-        </div>
+        {step === 'dashboard' && (
+          <div className="dashboard-container">
+            <div className="dashboard-topbar">
+              <div className="title-area">
+                <h1>Disaster Relief & Donation Dashboard</h1>
+                <p>Track, manage, and coordinate real-time disaster supply requests</p>
+              </div>
+              <div className="topbar-actions">
+                <button
+                  type="button"
+                  className="btn-create-request"
+                  onClick={handleOpenCreateModal}
+                >
+                  + Create New Request
+                </button>
+              </div>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon icon-blue">📋</div>
+                <div className="stat-text">
+                  <span>Total Requests</span>
+                  <h2>{totalCount}</h2>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon icon-amber">⏳</div>
+                <div className="stat-text">
+                  <span>Pending Action</span>
+                  <h2>{remainingCount}</h2>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon icon-green">✅</div>
+                <div className="stat-text">
+                  <span>Fulfilled</span>
+                  <h2>{fulfilledCount}</h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="table-card">
+              <div className="table-controls">
+                <div className="search-box">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search by GN division, DS area, severity, ID..."
+                    value={searchTableQuery}
+                    onChange={(e) => setSearchTableQuery(e.target.value)}
+                  />
+                </div>
+                <div className="filter-buttons">
+                  <button
+                    type="button"
+                    className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setStatusFilter('all')}
+                  >
+                    All ({totalCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-btn ${statusFilter === 'remaining' ? 'active' : ''}`}
+                    onClick={() => setStatusFilter('remaining')}
+                  >
+                    Pending ({remainingCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-btn ${statusFilter === 'fulfilled' ? 'active' : ''}`}
+                    onClick={() => setStatusFilter('fulfilled')}
+                  >
+                    Fulfilled ({fulfilledCount})
+                  </button>
+                </div>
+              </div>
+
+              <div className="table-responsive">
+                <table className="requests-table">
+                  <thead>
+                    <tr>
+                      <th>Request ID</th>
+                      <th>Disaster</th>
+                      <th>Severity</th>
+                      <th>DS Area</th>
+                      <th>Grama Niladhari Division</th>
+                      <th>Affected Pop.</th>
+                      <th>Requested Items</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requestsLoading ? (
+                      <tr>
+                        <td colSpan="9" className="empty-table-cell">
+                          Loading disaster requests from server...
+                        </td>
+                      </tr>
+                    ) : filteredRequests.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" className="empty-table-cell">
+                          No disaster requests found matching your filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredRequests.map((req) => (
+                        <tr key={req.id}>
+                          <td className="font-semibold text-primary">{req.id}</td>
+                          <td>
+                            <span className={`disaster-badge ${req.type.toLowerCase()}`}>
+                              {req.type}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`severity-badge ${(req.severity || 'high').toLowerCase()}`}>
+                              {req.severity || 'High'}
+                            </span>
+                          </td>
+                          <td><strong>{req.dsArea}</strong></td>
+                          <td>{req.gnDivision}</td>
+                          <td>{req.population || '—'}</td>
+                          <td className="items-cell">
+                            <div className="items-tags">
+                              {req.items?.slice(0, 2).map((itm, i) => (
+                                <span className="item-tag" key={i}>{itm}</span>
+                              ))}
+                              {req.items?.length > 2 && (
+                                <span className="item-tag-more">+{req.items.length - 2} more</span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`status-pill ${req.status}`}>
+                              {req.status === 'fulfilled' ? 'Fulfilled' : 'Pending Relief'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn-view"
+                              onClick={() => setViewRequestModal(req)}
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 'upload' && renderUploadStep()}
+        {step === 'donationRequest' && renderDonationRequestStep()}
       </main>
+
+      {/* POPUP MODAL: CREATE NEW REQUEST */}
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={handleCloseModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>Create Disaster Donation Request</h2>
+                <p>Select location specifications and disaster classification</p>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={handleCloseModal}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleProceedToUpload} className="modal-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="modal-disaster-type">Disaster Type</label>
+                  <select
+                    id="modal-disaster-type"
+                    value={disasterType}
+                    onChange={(e) => setDisasterType(e.target.value)}
+                    required
+                  >
+                    {DISASTER_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="modal-severity">Severity Level</label>
+                  <select
+                    id="modal-severity"
+                    value={severity}
+                    onChange={(e) => setSeverity(e.target.value)}
+                    required
+                  >
+                    {SEVERITY_LEVELS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="modal-ds-area">Divisional Secretariat Area</label>
+                <select
+                  id="modal-ds-area"
+                  value={dsArea}
+                  onChange={handleDsAreaChange}
+                  required
+                  disabled={divisionsLoading}
+                >
+                  {dsAreas.length === 0 ? (
+                    <option value="">{divisionsLoading ? 'Loading areas...' : 'No DS Areas available'}</option>
+                  ) : (
+                    dsAreas.map((area) => (
+                      <option key={area} value={area}>{area}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="modal-gn-division">Grama Niladhari Division</label>
+                <select
+                  id="modal-gn-division"
+                  value={gnDivision}
+                  onChange={(e) => setGnDivision(e.target.value)}
+                  required
+                >
+                  {filteredGnList.length > 0 ? (
+                    filteredGnList.map((gn) => (
+                      <option key={gn} value={gn}>{gn}</option>
+                    ))
+                  ) : (
+                    <option value="">No GN division matches search</option>
+                  )}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="modal-location-count">Number of Locations</label>
+                <select
+                  id="modal-location-count"
+                  value={locationCount}
+                  onChange={(e) => setLocationCount(Number(e.target.value))}
+                  required
+                >
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>{n} Location{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={handleCloseModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Upload Images
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL: VIEW / UPDATE REQUEST */}
+      {viewRequestModal && (
+        <div className="modal-overlay" onClick={() => setViewRequestModal(null)}>
+          <div className="modal-content modal-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>{viewRequestModal.id} — {viewRequestModal.gnDivision}</h2>
+                <p>{viewRequestModal.dsArea} District • {viewRequestModal.type} Disaster</p>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={() => setViewRequestModal(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="detail-modal-body">
+              <div className="detail-grid">
+                <div>
+                  <span className="label-dim">Status:</span>
+                  <span className={`status-pill ${viewRequestModal.status}`}>
+                    {viewRequestModal.status}
+                  </span>
+                </div>
+                <div>
+                  <span className="label-dim">Severity:</span>
+                  <span className={`severity-badge ${(viewRequestModal.severity || 'high').toLowerCase()}`}>
+                    {viewRequestModal.severity || 'High'}
+                  </span>
+                </div>
+                <div>
+                  <span className="label-dim">Affected Population:</span>
+                  <strong>{viewRequestModal.population || '0'}</strong>
+                </div>
+                <div>
+                  <span className="label-dim">Created Date:</span>
+                  <strong>{viewRequestModal.date}</strong>
+                </div>
+              </div>
+
+              <h4 style={{ marginTop: '20px', marginBottom: '10px' }}>Items & Donation Progress</h4>
+              <div className="detail-items-list">
+                {viewRequestModal.donationItems?.map((item, idx) => (
+                  <div className="detail-item-card" key={idx}>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <p>{item.donated} {item.unit || 'units'} donated • {item.remaining} {item.unit || 'units'} remaining</p>
+                    </div>
+                    <div className="status-actions">
+                      <button
+                        type="button"
+                        className={`action-pill ${item.status === 'fulfilled' ? 'fulfilled' : ''}`}
+                        onClick={() => handleItemStatusToggle(viewRequestModal.id, item.name, 'fulfilled')}
+                      >
+                        {item.status === 'fulfilled' ? '✓ Fulfilled' : 'Mark Fulfilled'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-primary" onClick={() => setViewRequestModal(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   )

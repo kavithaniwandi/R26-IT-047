@@ -9,6 +9,9 @@ import SOS from './pages/SOS'
 import Profile from './pages/Profile'
 import DonorDetails from './pages/DonorDetails'
 import DisasterDonationRequest from './pages/DisasterDonationRequest'
+import DonorDashboard from './pages/DonorDashboard'
+import AdminDashboard from './pages/AdminDashboard'
+
 
 function App() {
   return (
@@ -23,6 +26,8 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/donor-details" element={<DonorDetails />} />
         <Route path="/disaster-donation-request" element={<DisasterDonationRequest />} />
+        <Route path="/donor-dashboard" element={<DonorDashboard />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
       </Routes>
     </Router>
   )

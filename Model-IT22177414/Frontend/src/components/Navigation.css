@@ -1,461 +1,183 @@
 .navigation {
-
-    position: fixed;
-
-    top:0;
-
-    left:0;
-
-    width:100%;
-
-    z-index:1000;
-
-    padding:20px 0;
-
-    background:transparent;
-
-    transition:0.3s ease;
-
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
 }
-
-
-
-
-.navigation.scrolled {
-
-    background:white;
-
-    box-shadow:
-    0 5px 25px rgba(0,0,0,0.08);
-
-    padding:14px 0;
-
-}
-
-
-
-
 
 .nav-container {
-
-
-    width:90%;
-
-    max-width:1200px;
-
-    margin:auto;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-
+  width: 94%;
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
-
-
-
-
 
 /* LOGO */
-
-
 .nav-logo {
-
-    display:flex;
-
-    align-items:center;
-
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
 }
-
-
 
 .logo-image {
-
-
-    width:190px;
-
-    height:auto;
-
-    object-fit:contain;
-
-
+  height: 52px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
 }
-
-
-
-
-
 
 /* NAV LINKS */
-
-
 .nav-links {
-
-
-    display:flex;
-
-    align-items:center;
-
-    gap:30px;
-
-
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap;
 }
-
-
-
 
 .nav-link {
-
-
-    text-decoration:none;
-
-    color:white;
-
-    font-size:15px;
-
-    font-weight:600;
-
-    transition:0.3s;
-
-
+  text-decoration: none;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 6px 4px;
+  transition: color 0.2s ease;
 }
-
-
-
-.navigation.scrolled .nav-link {
-
-
-    color:#1E293B;
-
-
-}
-
-
-
 
 .nav-link:hover {
-
-
-    color:#1565C0;
-
-
+  color: #1d6ed8;
 }
-
-
-
-
-
-
-
-/* PROFILE */
-
 
 .profile-link {
-
-
-    cursor:pointer;
-
-
+  color: #0f172a;
+  font-weight: 700;
 }
 
-
-
-
-
-
-
-/* LOGOUT */
-
+/* ACTION BUTTONS */
+.nav-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 16px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 8px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
 
 .logout-button {
-
-
-    background:none;
-
-    border:none;
-
-    cursor:pointer;
-
-    color:white;
-
-    font-size:15px;
-
-    font-weight:600;
-
-
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
 }
-
-
-
-.navigation.scrolled .logout-button {
-
-
-    color:#1E293B;
-
-
-}
-
-
 
 .logout-button:hover {
-
-
-    color:#D32F2F;
-
-
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
 }
-
-
-
-
-
-
-
-/* SOS BUTTON */
-
 
 .sos-button {
-
-
-    text-decoration:none;
-
-    background:#D32F2F;
-
-    color:white;
-
-    padding:12px 28px;
-
-    border-radius:8px;
-
-    font-weight:700;
-
-    transition:.3s;
-
-
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  border: 1px solid #be123c;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25);
 }
-
-
-
 
 .sos-button:hover {
-
-
-    background:#B71C1C;
-
-    transform:translateY(-3px);
-
-
+  background: linear-gradient(135deg, #be123c, #9f1239);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+  transform: translateY(-1px);
 }
 
-
-
-
-
-
-
-/* MOBILE BUTTON */
-
-
+/* MOBILE TOGGLE */
 .mobile-menu-button {
-
-
-    display:none;
-
-    border:none;
-
-    background:none;
-
-    cursor:pointer;
-
-
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
 }
-
-
-
 
 .hamburger {
-
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:6px;
-
-
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-
-
-
 
 .hamburger span {
-
-
-    width:30px;
-
-    height:3px;
-
-    background:white;
-
-    border-radius:10px;
-
-    transition:.3s;
-
-
+  width: 24px;
+  height: 2.5px;
+  background: #0f172a;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
+/* RESPONSIVE DRAWER */
+@media (max-width: 1040px) {
+  .mobile-menu-button {
+    display: block;
+  }
 
+  .nav-links {
+    position: fixed;
+    top: 72px;
+    right: -100%;
+    width: 280px;
+    height: calc(100vh - 72px);
+    background: #ffffff;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 24px 20px;
+    gap: 16px;
+    border-left: 1px solid #e2e8f0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+    transition: right 0.3s ease;
+  }
 
-.navigation.scrolled .hamburger span {
+  .nav-links.open {
+    right: 0;
+  }
 
+  .nav-link {
+    font-size: 1rem;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
 
-    background:#0F4C81;
-
-
+  .nav-action-btn {
+    width: 100%;
+    height: 42px;
+    margin-top: 4px;
+  }
 }
 
-
-
-
-
-
-/* MOBILE MENU */
-
-
-@media(max-width:900px){
-
-
-
-.mobile-menu-button {
-
-
-    display:block;
-
-
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
 }
 
-
-
-
-.nav-links {
-
-
-    position:fixed;
-
-    top:0;
-
-    right:-100%;
-
-    width:75%;
-
-    height:100vh;
-
-    background:white;
-
-    flex-direction:column;
-
-    justify-content:center;
-
-    gap:35px;
-
-    transition:.3s;
-
-    box-shadow:
-    -5px 0 25px rgba(0,0,0,.1);
-
-
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
 }
 
-
-
-.nav-links.open {
-
-
-    right:0;
-
-
-}
-
-
-
-
-.nav-link {
-
-
-    color:#1E293B;
-
-    font-size:18px;
-
-
-}
-
-
-
-
-.logout-button {
-
-
-    color:#1E293B;
-
-
-}
-
-
-
-.sos-button {
-
-
-    padding:14px 35px;
-
-
-}
-
-
-
-
-.logo-image {
-
-
-    width:150px;
-
-
-}
-
-
-
-}
-
-
-
-
-
-/* MOBILE HAMBURGER ANIMATION */
-
-
-.hamburger.active span:nth-child(1){
-
-    transform:
-    rotate(45deg)
-    translate(7px,7px);
-
-}
-
-
-
-.hamburger.active span:nth-child(2){
-
-    opacity:0;
-
-}
-
-
-
-.hamburger.active span:nth-child(3){
-
-    transform:
-    rotate(-45deg)
-    translate(7px,-7px);
-
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
 }
