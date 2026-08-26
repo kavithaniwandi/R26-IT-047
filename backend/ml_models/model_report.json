@@ -1,0 +1,122 @@
+{
+  "landslide_model": {
+    "cv_f1_weighted_mean": 0.9476,
+    "cv_f1_weighted_std": 0.1048,
+    "cv_acc_mean": 0.9556,
+    "n_training_gnds": 43,
+    "features": [
+      "gn_encoded",
+      "incident_count",
+      "total_families",
+      "total_people",
+      "mean_families",
+      "mean_people",
+      "max_people",
+      "std_people",
+      "people_per_family",
+      "severity_score"
+    ],
+    "target_classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "risk_thresholds": {
+      "low_max": 17.71,
+      "medium_max": 55.49
+    },
+    "note": "Trained on 54 GND-level aggregated records from Landslide_Cleaned.csv (257 incident rows). Class labels derived from severity_score percentiles. 5-fold CV used due to small N."
+  },
+  "flood_model": {
+    "cv_f1_weighted_mean": 0.8694,
+    "cv_f1_weighted_std": 0.0547,
+    "cv_acc_mean": 0.8712,
+    "n_training_gnds": 295,
+    "features": [
+      "latitude",
+      "longitude",
+      "dist_to_kelani_km",
+      "proximity_score",
+      "boggy_frac",
+      "water_frac",
+      "builtup_frac",
+      "road_density",
+      "elevation_proxy",
+      "rainfall_proxy",
+      "river_level_proxy",
+      "is_kelani_zone"
+    ],
+    "target_classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "proxy_label_method": "Composite heuristic: proximity_to_kelani, boggy_frac, water_frac, river_level, rainfall, kelani_zone",
+    "note": "PROXY LABELS  labels derived from geographic and hydrological heuristics, NOT from verified DMC flood incident records. Accuracy reflects agreement with the proxy rule, not ground-truth. See proposal Sec 8.2."
+  },
+  "camp_model": {
+    "test_mae": 3.125,
+    "test_r2": 0.9072,
+    "n_samples": 400,
+    "features": [
+      "latitude",
+      "longitude",
+      "dist_to_kelani_km",
+      "flood_risk_score",
+      "landslide_risk_score",
+      "sos_density",
+      "road_accessibility",
+      "critical_facility_nearby",
+      "open_space_available",
+      "elevation_suitability"
+    ],
+    "target": "suitability_score (0-100 continuous)",
+    "note": "Trained on synthetic candidate locations; suitability label derived from domain-weighted formula."
+  },
+  "priority_model": {
+    "test_mae": 4.017,
+    "test_r2": 0.8241,
+    "n_samples": 800,
+    "features": [
+      "urgency",
+      "affected_people",
+      "affected_families",
+      "has_elderly",
+      "has_children",
+      "has_disabled",
+      "medical_needs_count",
+      "flood_risk_score",
+      "landslide_risk_score",
+      "hours_since_sos",
+      "access_difficulty"
+    ],
+    "target": "priority_score (0-100 continuous)",
+    "note": "Trained on synthetic SOS scenarios using domain-expert-informed priority formula. Includes time-decay to reduce urgency of unresolved stale requests."
+  },
+  "dataset_summary": {
+    "landslide_csv": {
+      "rows": 257,
+      "gn_divisions": 43
+    },
+    "kaduwela_gnd_master": {
+      "named_gnds": 34,
+      "boundary_pts": 23
+    },
+    "kelani_admin_boundaries": {
+      "gnds": 261,
+      "dsds": 11,
+      "districts": 2
+    },
+    "kelani_exposed_buildings": {
+      "records": 404,
+      "total_buildings": 54609
+    },
+    "kelani_affected_roads": {
+      "road_types": 28,
+      "total_km": 738.0
+    },
+    "kelani_landuse": {
+      "classes": 7
+    }
+  }
+}
