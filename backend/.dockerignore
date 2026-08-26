@@ -1,0 +1,44 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local SQLite DB (not needed in Docker — MySQL is used)
+*.db
+*.sqlite3
+
+# Environment files
+.env
+.env.*
+!requirements.txt
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Test files
+tests/
+pytest.ini
+
+# Misc
+*.md

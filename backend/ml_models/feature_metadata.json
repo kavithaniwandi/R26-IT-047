@@ -1,0 +1,128 @@
+{
+  "landslide_model": {
+    "input_features": [
+      "gn_encoded",
+      "incident_count",
+      "total_families",
+      "total_people",
+      "mean_families",
+      "mean_people",
+      "max_people",
+      "std_people",
+      "people_per_family",
+      "severity_score"
+    ],
+    "output_classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "scaler": "landslide_risk_scaler.joblib",
+    "encoder": "landslide_gn_encoder.joblib",
+    "gn_classes": [
+      "314 Abagamuwa East",
+      "314 Abagamuwa South",
+      "314 Ambagamuwa South",
+      "315 Thiniyagala",
+      "316 Bulathgama",
+      "317 Kiriwaneliya",
+      "318 Polpitiya",
+      "Abagamuwa North",
+      "Ambagamuwa  South",
+      "Ambagamuwa East",
+      "Ambagamuwa North",
+      "Ambagamuwa South",
+      "Dagampitiya",
+      "Dehigasthenna",
+      "Gagarapitiya",
+      "Ginigathhena",
+      "Gonawala",
+      "Habbakanda",
+      "Hagarapitiya",
+      "Hitigegama",
+      "Homagama",
+      "Jambuthenna",
+      "Kalaweldeniya",
+      "Kalugala",
+      "Kehelwarawa",
+      "Kiriwaneliya",
+      "Koththalhena",
+      "Koththallena",
+      "Lakshapana",
+      "Millagahamula",
+      "Millagamula",
+      "Minuwandeniya",
+      "Morahenagama",
+      "Pitawala",
+      "Polpitiya",
+      "Rampadeniya",
+      "Sellipigama",
+      "Thiniyagala",
+      "Waggama",
+      "Watawala",
+      "Widulipura North",
+      "Widulipura South",
+      "Widulipura south"
+    ],
+    "risk_thresholds": {
+      "low_max": 17.71,
+      "medium_max": 55.49
+    }
+  },
+  "flood_model": {
+    "input_features": [
+      "latitude",
+      "longitude",
+      "dist_to_kelani_km",
+      "proximity_score",
+      "boggy_frac",
+      "water_frac",
+      "builtup_frac",
+      "road_density",
+      "elevation_proxy",
+      "rainfall_proxy",
+      "river_level_proxy",
+      "is_kelani_zone"
+    ],
+    "output_classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "scaler": "flood_risk_scaler.joblib",
+    "proxy_label": true
+  },
+  "camp_model": {
+    "input_features": [
+      "latitude",
+      "longitude",
+      "dist_to_kelani_km",
+      "flood_risk_score",
+      "landslide_risk_score",
+      "sos_density",
+      "road_accessibility",
+      "critical_facility_nearby",
+      "open_space_available",
+      "elevation_suitability"
+    ],
+    "output": "suitability_score_0_to_100",
+    "scaler": "camp_suitability_scaler.joblib"
+  },
+  "priority_model": {
+    "input_features": [
+      "urgency",
+      "affected_people",
+      "affected_families",
+      "has_elderly",
+      "has_children",
+      "has_disabled",
+      "medical_needs_count",
+      "flood_risk_score",
+      "landslide_risk_score",
+      "hours_since_sos",
+      "access_difficulty"
+    ],
+    "output": "priority_score_0_to_100",
+    "scaler": "priority_score_scaler.joblib"
+  }
+}

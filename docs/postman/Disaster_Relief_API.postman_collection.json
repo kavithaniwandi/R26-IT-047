@@ -1,0 +1,472 @@
+﻿{
+  "info": {
+    "_postman_id": "disaster-relief-api-v1",
+    "name": "Disaster Relief API — R26-IT-047",
+    "description": "Complete API test suite for Disaster Relief Medical Donation Module (FastAPI + MySQL Docker).\n\n**Setup:**\n1. Run `docker-compose up --build`\n2. Set environment to `Local Docker`\n3. Run Auth > Login Admin to get token (auto-saved)\n\n**Base URL:** http://localhost:8000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "api_v1", "value": "http://localhost:8000/api/v1", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status ok', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('ok'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@12345!\",\n  \"phone\": \"+94701234567\",\n  \"address\": \"123 Test Lane, Colombo\"\n}"
+            },
+            "url": { "raw": "{{api_v1}}/auth/register", "host": ["{{api_v1}}"], "path": ["auth", "register"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Register 201 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login — Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "admin@disaster.relief.lk" },
+                { "key": "password", "value": "Admin@2026!" }
+              ]
+            },
+            "url": { "raw": "{{api_v1}}/auth/login", "host": ["{{api_v1}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has access_token', () => pm.expect(json).to.have.property('access_token'));",
+                  "pm.collectionVariables.set('access_token', json.access_token);",
+                  "console.log('Token saved:', json.access_token.substring(0,30) + '...');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login — Donor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "donor@redcross.lk" },
+                { "key": "password", "value": "Donor@2026!" }
+              ]
+            },
+            "url": { "raw": "{{api_v1}}/auth/login", "host": ["{{api_v1}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "POST /auth/login — Victim",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "victim@kaduwela.lk" },
+                { "key": "password", "value": "Victim@2026!" }
+              ]
+            },
+            "url": { "raw": "{{api_v1}}/auth/login", "host": ["{{api_v1}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/auth/me", "host": ["{{api_v1}}"], "path": ["auth", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has email', () => pm.expect(pm.response.json()).to.have.property('email'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👥 Users",
+      "item": [
+        {
+          "name": "GET /users — List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{api_v1}}/users?skip=0&limit=20",
+              "host": ["{{api_v1}}"], "path": ["users"],
+              "query": [{ "key": "skip", "value": "0" }, { "key": "limit", "value": "20" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /users/{id}",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/users/1", "host": ["{{api_v1}}"], "path": ["users", "1"] }
+          }
+        },
+        {
+          "name": "PATCH /users/{id}/role (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"role\": \"volunteer\" }" },
+            "url": { "raw": "{{api_v1}}/users/5/role", "host": ["{{api_v1}}"], "path": ["users", "5", "role"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🆘 SOS Alerts",
+      "item": [
+        {
+          "name": "POST /sos — Create SOS Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 6.936419,\n  \"longitude\": 79.957216,\n  \"district\": \"Colombo\",\n  \"ds_division\": \"Kaduwela\",\n  \"gn_division\": \"Ranala\",\n  \"address_text\": \"45 River View Lane, Ranala\",\n  \"urgency_level\": 5,\n  \"affected_people\": 18,\n  \"affected_families\": 4,\n  \"has_elderly\": true,\n  \"has_children\": true,\n  \"has_disabled\": true,\n  \"medical_needs_summary\": \"Insulin, Asthma Inhalers, First Aid Bandages\"\n}"
+            },
+            "url": { "raw": "{{api_v1}}/sos", "host": ["{{api_v1}}"], "path": ["sos"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('SOS Created', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const b = pm.response.json();",
+                  "if (b.id) pm.collectionVariables.set('sos_id', b.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /sos — List All SOS",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{api_v1}}/sos?skip=0&limit=20&status=active",
+              "host": ["{{api_v1}}"], "path": ["sos"],
+              "query": [
+                { "key": "skip", "value": "0" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "active" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /sos/{id}",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/sos/1", "host": ["{{api_v1}}"], "path": ["sos", "1"] }
+          }
+        },
+        {
+          "name": "PATCH /sos/{id}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"resolved\" }" },
+            "url": { "raw": "{{api_v1}}/sos/1/status", "host": ["{{api_v1}}"], "path": ["sos", "1", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏕️ Medical Camps",
+      "item": [
+        {
+          "name": "POST /camps — Create Camp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Colombo General Relief Camp\",\n  \"latitude\": 6.921400,\n  \"longitude\": 79.852100,\n  \"district\": \"Colombo\",\n  \"ds_division\": \"Colombo\",\n  \"gn_division\": \"Slave Island\",\n  \"estimated_capacity\": 300\n}"
+            },
+            "url": { "raw": "{{api_v1}}/camps", "host": ["{{api_v1}}"], "path": ["camps"] }
+          }
+        },
+        {
+          "name": "GET /camps — List Camps",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{api_v1}}/camps?status=approved",
+              "host": ["{{api_v1}}"], "path": ["camps"],
+              "query": [{ "key": "status", "value": "approved" }]
+            }
+          }
+        },
+        {
+          "name": "PATCH /camps/{id}/approve (Authority/Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"approved\" }" },
+            "url": { "raw": "{{api_v1}}/camps/1/status", "host": ["{{api_v1}}"], "path": ["camps", "1", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💊 Donations",
+      "item": [
+        {
+          "name": "GET /donations — List Donation Items",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{api_v1}}/donations?status=unmet",
+              "host": ["{{api_v1}}"], "path": ["donations"],
+              "query": [{ "key": "status", "value": "unmet" }]
+            }
+          }
+        },
+        {
+          "name": "POST /donations — Make a Donation Pledge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donation_item_id\": 1,\n  \"quantity\": 10,\n  \"donor_notes\": \"Red Cross donation batch - urgent delivery\"\n}"
+            },
+            "url": { "raw": "{{api_v1}}/donations", "host": ["{{api_v1}}"], "path": ["donations"] }
+          }
+        },
+        {
+          "name": "GET /donations/smart-match — AI Matching (Authority)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/donations/smart-match", "host": ["{{api_v1}}"], "path": ["donations", "smart-match"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗺️ Heatmap & Risk",
+      "item": [
+        {
+          "name": "GET /heatmap — Risk Heatmap Data",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/heatmap", "host": ["{{api_v1}}"], "path": ["heatmap"] }
+          }
+        },
+        {
+          "name": "GET /heatmap/predictions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/heatmap/predictions", "host": ["{{api_v1}}"], "path": ["heatmap", "predictions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧍 Victims",
+      "item": [
+        {
+          "name": "POST /victims — Register Victim",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"200112345678\",\n  \"full_name\": \"Amara Fernando\",\n  \"phone\": \"+94761234567\",\n  \"gender\": \"female\",\n  \"age\": 27,\n  \"district\": \"Colombo\",\n  \"ds_division\": \"Kaduwela\",\n  \"gn_division\": \"Ranala\",\n  \"current_address\": \"78 Flood Zone Road, Ranala\",\n  \"latitude\": 6.937000,\n  \"longitude\": 79.958000,\n  \"family_members_count\": 3,\n  \"children_count\": 1,\n  \"elderly_count\": 0,\n  \"disabled_count\": 0,\n  \"pregnant_lactating_count\": 1,\n  \"evacuation_status\": \"at_risk_home\",\n  \"chronic_diseases\": \"None\",\n  \"immediate_medical_needs\": \"Prenatal vitamins, clean water\",\n  \"dietary_and_relief_needs\": \"Baby formula, Ready-to-eat meals\",\n  \"registered_via\": \"web_portal\"\n}"
+            },
+            "url": { "raw": "{{api_v1}}/victims", "host": ["{{api_v1}}"], "path": ["victims"] }
+          }
+        },
+        {
+          "name": "GET /victims — List Victims",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{api_v1}}/victims?skip=0&limit=20",
+              "host": ["{{api_v1}}"], "path": ["victims"],
+              "query": [{ "key": "skip", "value": "0" }, { "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "GET /victims/{id}",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/victims/1", "host": ["{{api_v1}}"], "path": ["victims", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📱 SMS Gateway",
+      "item": [
+        {
+          "name": "POST /sms/inbound — Simulate Inbound SMS SOS",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender\": \"+94771234567\",\n  \"recipient\": \"1919\",\n  \"message\": \"SOS 5 Colombo 8 Need insulin and bandages flooding\"\n}"
+            },
+            "url": { "raw": "{{api_v1}}/sms/inbound", "host": ["{{api_v1}}"], "path": ["sms", "inbound"] }
+          }
+        },
+        {
+          "name": "GET /sms/logs — SMS Gateway Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/sms/logs", "host": ["{{api_v1}}"], "path": ["sms", "logs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Admin Stats",
+      "item": [
+        {
+          "name": "GET /admin/stats — Dashboard Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/admin/stats", "host": ["{{api_v1}}"], "path": ["admin", "stats"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has stats', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "item": [
+        {
+          "name": "GET /notifications — My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{api_v1}}/notifications", "host": ["{{api_v1}}"], "path": ["notifications"] }
+          }
+        }
+      ]
+    }
+  ]
+}
