@@ -1,0 +1,564 @@
+/* ── Page shell ───────────────────────────────────────────────────────────── */
+.donation-appeal-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #eef2fb;
+}
+
+.donation-appeal-container {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8rem 2rem 4rem;
+}
+
+/* ── Page header ──────────────────────────────────────────────────────────── */
+.donation-appeal-header {
+  background: linear-gradient(135deg, #1a237e 0%, #1565c0 60%, #0288d1 100%);
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.donation-appeal-header span {
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.donation-appeal-header h1 {
+  color: #ffffff;
+  font-size: 2rem;
+  margin: 0 0 0.3rem;
+}
+
+.donation-appeal-header p {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.donation-appeal-layout {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: center;
+  align-items: start;
+}
+
+/* ── Shared card base ─────────────────────────────────────────────────────── */
+.campaign-form,
+.appeal-results,
+.quality-results {
+  background: #ffffff;
+  border: 1.5px solid #c7d7f5;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(21, 101, 192, 0.08);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+/* ── Section headings ─────────────────────────────────────────────────────── */
+.campaign-form h2,
+.appeal-results h2,
+.quality-results h2 {
+  color: #1565c0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin: 0 0 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.campaign-form h2 {
+  margin-bottom: 0.9rem;
+}
+
+.campaign-form h2,
+.campaign-form .generate-button,
+.campaign-form .appeal-error {
+  grid-column: 1 / -1;
+}
+
+/* ── Section number bubble ────────────────────────────────────────────────── */
+.section-num {
+  background: #e3f0ff;
+  color: #1565c0;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── Campaign form grid ───────────────────────────────────────────────────── */
+.campaign-form {
+  display: grid;
+  gap: 0.75rem 0.9rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1040px;
+  padding: 1.35rem;
+}
+
+/* ── Form groups ──────────────────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 0;
+}
+
+.form-group:has(#verified_need),
+.form-group:has(#campaign_goal) {
+  grid-column: span 2;
+}
+
+.form-group label {
+  color: #3d5a9e;
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  margin-bottom: 0.28rem;
+  letter-spacing: 0.2px;
+}
+
+/* ── Form inputs ──────────────────────────────────────────────────────────── */
+.form-group input,
+.form-group select {
+  background: #f5f9ff;
+  border: 1.5px solid #c7d7f5;
+  border-radius: 8px;
+  color: #2d3a6b;
+  -webkit-text-fill-color: #2d3a6b;
+  font: inherit;
+  font-size: 0.9rem;
+  min-height: 38px;
+  padding: 0.5rem 0.7rem;
+  width: 100%;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.form-group input::placeholder {
+  color: #a0aec0;
+  -webkit-text-fill-color: #a0aec0;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  background: #ffffff;
+  border-color: #1565c0;
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.13);
+  outline: none;
+  color: #2d3a6b;
+  -webkit-text-fill-color: #2d3a6b;
+}
+
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #f5f9ff inset;
+  -webkit-text-fill-color: #2d3a6b;
+}
+
+.form-group select option {
+  background: #ffffff;
+  color: #2d3a6b;
+  font-size: 0.9rem;
+}
+
+/* ── Generate button ──────────────────────────────────────────────────────── */
+.generate-button {
+  background: linear-gradient(90deg, #1565c0, #0288d1);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 0.7rem 1.5rem;
+  margin-top: 0.25rem;
+  min-height: 42px;
+  width: 100%;
+  letter-spacing: 0.3px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.generate-button:hover {
+  opacity: 0.91;
+  transform: translateY(-1px);
+}
+
+.generate-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* ── Copy / action buttons ────────────────────────────────────────────────── */
+.result-actions button {
+  background: linear-gradient(90deg, #0f9d58, #00796b);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 0.7rem 1.5rem;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.result-actions button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Error ────────────────────────────────────────────────────────────────── */
+.appeal-error {
+  background: #fee2e2;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0;
+  padding: 0.85rem;
+}
+
+/* ── Output layout ────────────────────────────────────────────────────────── */
+.appeal-output-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* ── Placeholder ──────────────────────────────────────────────────────────── */
+.result-placeholder {
+  color: #64748b;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Appeal box ───────────────────────────────────────────────────────────── */
+.appeal-box {
+  background: #f0f7ff;
+  border: 1.5px solid #c7d7f5;
+  border-radius: 8px;
+  min-height: 190px;
+  padding: 1.25rem;
+}
+
+.appeal-box p {
+  color: #2d3a6b;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ── Variant viewer ───────────────────────────────────────────────────────── */
+.variant-viewer {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.variant-controls {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.variant-arrow {
+  align-items: center;
+  background: #1565c0;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1.1rem;
+  font-weight: 800;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+  transition: background 0.2s;
+}
+
+.variant-arrow:hover {
+  background: #0f4c81;
+}
+
+.variant-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.variant-count {
+  color: #1e293b;
+  font-size: 0.92rem;
+  font-weight: 800;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* ── Variant card ─────────────────────────────────────────────────────────── */
+.variant-card {
+  background: linear-gradient(135deg, #f0f7ff, #e8f4fd);
+  border: 1.5px solid #bdd8f5;
+  border-radius: 10px;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  text-align: left;
+  width: 100%;
+}
+
+.variant-card-header,
+.variant-meta {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+.quality-badge,
+.score-chip,
+.best-match-badge {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  min-height: 26px;
+  padding: 0.2rem 0.65rem;
+  text-transform: capitalize;
+}
+
+.quality-badge.high   { background: #dcfce7; color: #166534; }
+.quality-badge.medium { background: #fef3c7; color: #92400e; }
+.quality-badge.low    { background: #fee2e2; color: #991b1b; }
+
+.score-chip {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.best-match-badge {
+  background: linear-gradient(90deg, #f59e0b, #ea580c);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+/* ── Variant text and meta ────────────────────────────────────────────────── */
+.variant-card p {
+  color: #2d3a6b;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.variant-meta {
+  color: #7a90b8;
+  font-size: 0.78rem;
+  border-top: 1px solid #c7d7f5;
+  padding-top: 0.6rem;
+}
+
+/* ── Result actions ───────────────────────────────────────────────────────── */
+.result-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* ── Quality panel ────────────────────────────────────────────────────────── */
+.quality-box {
+  margin-top: 0;
+}
+
+.quality-box h3 {
+  color: #1565c0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin: 0 0 1rem;
+}
+
+/* ── Score hero ───────────────────────────────────────────────────────────── */
+.score-hero {
+  background: linear-gradient(135deg, #1a237e, #1565c0);
+  border-radius: 10px;
+  padding: 1.1rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.score-hero-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.score-hero-denom {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.score-hero-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-top: 0.2rem;
+}
+
+.score-progress {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  height: 8px;
+  margin: 0.75rem 0.5rem 0;
+  overflow: hidden;
+}
+
+.score-progress-fill {
+  background: #ffffff;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 4px;
+  transition: width 0.5s ease;
+}
+
+/* ── Quality rows ─────────────────────────────────────────────────────────── */
+.quality-row {
+  align-items: center;
+  border-bottom: 1px solid #e3f0ff;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+}
+
+.quality-row:last-child {
+  border-bottom: none;
+}
+
+.quality-row span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.quality-row strong {
+  color: #1e293b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pill {
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.18rem 0.6rem;
+}
+
+.status-pill.high   { background: #dcfce7; color: #166534; }
+.status-pill.medium { background: #fef3c7; color: #92400e; }
+.status-pill.low    { background: #fee2e2; color: #991b1b; }
+.status-pill.method { background: #dbeafe; color: #1d4ed8; }
+
+.confidence-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confidence-bar {
+  flex: 1;
+  background: #e3f0ff;
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.confidence-fill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .campaign-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .appeal-output-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .donation-appeal-container {
+    padding: 7rem 1rem 3rem;
+  }
+
+  .donation-appeal-header {
+    padding: 1.25rem;
+    border-radius: 10px;
+  }
+
+  .donation-appeal-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .campaign-form,
+  .appeal-results,
+  .quality-results {
+    padding: 1.1rem;
+  }
+
+  .campaign-form {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group:has(#verified_need),
+  .form-group:has(#campaign_goal) {
+    grid-column: auto;
+  }
+
+  .result-actions {
+    justify-content: stretch;
+  }
+
+  .result-actions button {
+    width: 100%;
+  }
+}

@@ -1,8 +1,43 @@
+<<<<<<< Updated upstream
 # Python
+=======
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python cache
+>>>>>>> Stashed changes
 __pycache__/
 *.py[cod]
 *.pyo
 
+<<<<<<< Updated upstream
 # Environment variables
 .env
 *.env
@@ -34,3 +69,8 @@ Thumbs.db
 
 # Logs
 *.log
+=======
+package.json
+package-lock.json
+!backend/package.json
+>>>>>>> Stashed changes
