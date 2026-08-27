@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Navigation from "../components/Navigation";
-import Footer from "../components/Footer";
 import "./CampSetup.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -72,11 +70,17 @@ export default function CampSetup() {
   const handleToggle = (event, campCode) => {
     event.stopPropagation();
     setActivation((previous) => {
-      const updated = { ...previous, [campCode]: !previous[campCode] };
+      const nextActive = !previous[campCode];
+      const updated = { ...previous, [campCode]: nextActive };
       localStorage.setItem(ACTIVATION_KEY, JSON.stringify(updated));
 
-      if (selectedCamp?.code === campCode && !updated[campCode]) {
+      if (selectedCamp?.code === campCode && !nextActive) {
         setSelectedCamp(null);
+      }
+
+      if (nextActive) {
+        const camp = CAMPS.find((item) => item.code === campCode);
+        setSelectedCamp(camp || null);
       }
 
       return updated;
@@ -100,6 +104,10 @@ export default function CampSetup() {
     setForm({ ...BLANK_MO });
     setFormError("");
     setRegistrationStarted(true);
+  };
+
+  const updateFormField = (field, value) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
   };
 
   const toggleSkill = (skill) => {
@@ -129,21 +137,50 @@ export default function CampSetup() {
     }));
   };
 
-  const handleSaveMO = () => {
-    if (!form.name.trim()) {
-      setFormError("Full name is required.");
-      return;
+  const validateMOForm = () => {
+    const name = form.name.trim();
+    const staffId = form.staffId.trim();
+    const shift = form.shift.trim();
+
+    if (!name) {
+      return "Full name is required.";
     }
+    if (name.length < 3 || !/[a-zA-Z]/.test(name)) {
+      return "Enter a valid name with at least 3 letters.";
+    }
+
+    if (staffId && !/^\d{3,20}$/.test(staffId)) {
+      return "Staff ID must be 3-20 digits only.";
+    }
+
     if (!form.role) {
-      setFormError("Please select a role.");
-      return;
+      return "Select the officer role.";
     }
+
     if (!form.specialty) {
-      setFormError("Please select a primary specialty.");
-      return;
+      return "Select a primary specialty.";
     }
+
+    if (form.skills.length === 0) {
+      return "Select at least one secondary skill.";
+    }
+
     if (!form.supervisor) {
-      setFormError("Please indicate supervisor availability.");
+      return "Choose supervisor availability.";
+    }
+
+    if (shift && !/^([01]?\d|2[0-3])[:.]([0-5]\d)$/.test(shift)) {
+      return "Shift end time must use 24-hour time, for example 15:00.";
+    }
+
+    return "";
+  };
+
+  const handleSaveMO = () => {
+    const validationError = validateMOForm();
+    if (validationError) {
+      setFormError(validationError);
+      window.alert(validationError);
       return;
     }
     setFormError("");
@@ -185,8 +222,6 @@ export default function CampSetup() {
 
   return (
     <div className="cs-page">
-      <Navigation />
-
       <main className="cs-container">
         <div className="cs-steps">
           <div className={`cs-step-item ${step === 1 ? "active" : "done"}`}>
@@ -238,18 +273,16 @@ export default function CampSetup() {
                       <span className={`cs-camp-status ${isActive ? "active" : "standby"}`}>
                         {isActive ? "● Active" : "◌ Standby"}
                       </span>
-                      <label
-                        className="cs-toggle"
+                      <button
+                        type="button"
+                        className={`cs-toggle ${isActive ? "on" : ""}`}
                         onClick={(event) => handleToggle(event, camp.code)}
                         title={isActive ? "Deactivate camp" : "Activate camp"}
+                        aria-label={isActive ? "Deactivate camp" : "Activate camp"}
+                        aria-pressed={isActive}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isActive}
-                          onChange={() => {}}
-                        />
                         <span className="cs-toggle-slider" />
-                      </label>
+                      </button>
                     </div>
 
                     <div className="cs-camp-code">{camp.code}</div>
@@ -265,6 +298,22 @@ export default function CampSetup() {
                 );
               })}
             </div>
+
+            {!selectedCamp && (
+              <div className="cs-confirm-bar empty">
+                <div className="cs-alert-info">
+                  <span>Next step</span>
+                  <div>
+                    <strong>Select an active camp</strong>
+                    <br />
+                    <span>Activate a camp, then continue to MO registration.</span>
+                  </div>
+                </div>
+                <button className="cs-btn-primary" onClick={handleConfirmCamp} disabled>
+                  Confirm camp &amp; register MOs
+                </button>
+              </div>
+            )}
 
             {selectedCamp && (
               <div className="cs-confirm-bar">
@@ -347,16 +396,18 @@ export default function CampSetup() {
                       type="text"
                       placeholder="Dr. Nimal Perera"
                       value={form.name}
-                      onChange={(event) => setForm({ ...form, name: event.target.value })}
+                      onChange={(event) => updateFormField("name", event.target.value)}
                     />
                   </div>
                   <div className="cs-field">
                     <label>Staff ID</label>
                     <input
                       type="text"
-                      placeholder="SLMC-12345"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="12345"
                       value={form.staffId}
-                      onChange={(event) => setForm({ ...form, staffId: event.target.value })}
+                      onChange={(event) => updateFormField("staffId", event.target.value)}
                     />
                   </div>
                 </div>
@@ -368,7 +419,7 @@ export default function CampSetup() {
                       <div
                         key={role}
                         className={`cs-role-pill ${form.role === role ? "selected" : ""}`}
-                        onClick={() => setForm({ ...form, role })}
+                        onClick={() => updateFormField("role", role)}
                       >
                         {role}
                       </div>
@@ -385,7 +436,7 @@ export default function CampSetup() {
                   <label>Primary specialty <span className="cs-req">*</span></label>
                   <select
                     value={form.specialty}
-                    onChange={(event) => setForm({ ...form, specialty: event.target.value })}
+                    onChange={(event) => updateFormField("specialty", event.target.value)}
                   >
                     <option value="">Select specialty…</option>
                     {SPECIALTIES.map((specialty) => <option key={specialty}>{specialty}</option>)}
@@ -435,7 +486,7 @@ export default function CampSetup() {
                       <div
                         key={value}
                         className={`cs-role-pill ${form.supervisor === value ? "selected" : ""}`}
-                        onClick={() => setForm({ ...form, supervisor: value })}
+                        onClick={() => updateFormField("supervisor", value)}
                       >
                         {label}
                       </div>
@@ -446,10 +497,9 @@ export default function CampSetup() {
                 <div className="cs-field">
                   <label>Shift end time</label>
                   <input
-                    type="text"
-                    placeholder="e.g. 18:00"
+                    type="time"
                     value={form.shift}
-                    onChange={(event) => setForm({ ...form, shift: event.target.value })}
+                    onChange={(event) => updateFormField("shift", event.target.value)}
                   />
                 </div>
 
@@ -494,7 +544,6 @@ export default function CampSetup() {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -61,7 +61,7 @@ function Navigation() {
 
     logout();
 
-    navigate("/");
+    navigate("/home");
 
     closeMenu();
 
@@ -87,7 +87,7 @@ function Navigation() {
         {/* LOGO */}
 
         <Link 
-          to="/"
+          to="/home"
           className="nav-logo"
         >
 
@@ -114,7 +114,7 @@ function Navigation() {
 
 
           <Link
-            to="/"
+            to="/home"
             className="nav-link"
             onClick={closeMenu}
           >

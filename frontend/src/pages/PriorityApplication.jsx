@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navigation from "../components/Navigation";
-import Footer from "../components/Footer";
 import "./PriorityApplication.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -30,6 +28,14 @@ const SEV_BG = {
   MEDIUM: "#fef6e8",
   LOW: "#ebf7f0",
 };
+
+const OVERRIDE_REASONS = [
+  "Clinical exam suggests lower acuity",
+  "Stable vitals observed",
+  "Symptoms improved after initial care",
+  "Documentation clarified by MO",
+  "Other clinical judgement",
+];
 
 function routeMO(mos, severity, conditionGroup) {
   const eligible = mos.filter((mo) => {
@@ -73,6 +79,8 @@ export default function PriorityApplication() {
   const [severityResult, setSeverityResult] = useState(null);
   const [assignedMO, setAssignedMO] = useState(null);
   const [extractResult, setExtractResult] = useState(null);
+  const [overrideSeverity, setOverrideSeverity] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -85,6 +93,13 @@ export default function PriorityApplication() {
     setSession(JSON.parse(raw));
   }, [navigate]);
 
+  useEffect(() => {
+    if (!severityResult || !extractResult || !overrideSeverity) return;
+
+    const currentSession = JSON.parse(localStorage.getItem(SESSION_KEY));
+    setAssignedMO(routeMO(currentSession.mos, overrideSeverity, extractResult.specialty));
+  }, [extractResult, overrideSeverity, severityResult]);
+
   const handleFlagToggle = (flag) => {
     setCheckedFlags((previous) =>
       previous.includes(flag)
@@ -93,16 +108,51 @@ export default function PriorityApplication() {
     );
   };
 
+  const updateFormField = (field, value) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const validatePatientForm = () => {
+    const age = form.age === "" ? null : Number(form.age);
+    const symptoms = form.symptoms.trim();
+    const clinicalNote = form.clinicalNote.trim();
+
+    if (form.age !== "" && (!Number.isFinite(age) || age < 0 || age > 120)) {
+      return "Age must be between 0 and 120.";
+    }
+
+    if (!symptoms) {
+      return "Presenting symptoms are required.";
+    }
+    if (symptoms.length < 8) {
+      return "Add a little more symptom detail.";
+    }
+
+    if (!clinicalNote) {
+      return "Clinical note is required.";
+    }
+    if (clinicalNote.length < 12) {
+      return "Clinical note must include enough detail to classify.";
+    }
+
+    return "";
+  };
+
   const handleClassify = async () => {
-    if (!form.clinicalNote.trim()) {
-      setError("Clinical note is required before classification.");
+    const validationError = validatePatientForm();
+    if (validationError) {
+      setError(validationError);
+      window.alert(validationError);
       return;
     }
+
     setLoading(true);
     setError("");
     setSeverityResult(null);
     setAssignedMO(null);
     setExtractResult(null);
+    setOverrideSeverity("");
+    setOverrideReason("");
 
     try {
       const extractRes = await fetch(`${API_BASE_URL}/api/severity/extract`, {
@@ -179,6 +229,8 @@ export default function PriorityApplication() {
 
       setSeverityResult(classifyData);
       setAssignedMO(mo);
+      setOverrideSeverity(classifyData.severity);
+      setOverrideReason("");
       setExtractResult({
         conditionGroup,
         specialty,
@@ -197,7 +249,17 @@ export default function PriorityApplication() {
       setError("Classify severity before submitting.");
       return;
     }
-    if (!severityResult.should_queue) {
+    const finalSeverity = overrideSeverity || severityResult.severity;
+    const hasOverride = finalSeverity !== severityResult.severity;
+
+    if (hasOverride && !overrideReason) {
+      const message = "Select a clinical override reason before submitting.";
+      setError(message);
+      window.alert(message);
+      return;
+    }
+
+    if (!severityResult.should_queue && !hasOverride) {
       setError(severityResult.queue_description);
       return;
     }
@@ -206,9 +268,11 @@ export default function PriorityApplication() {
     const conditionGroup = extractResult?.conditionGroup || "General Practice";
     const specialty = extractResult?.specialty || "General Practice";
 
-    if (assignedMO) {
+    const routedMO = routeMO(currentSession.mos, finalSeverity, specialty);
+
+    if (routedMO) {
       currentSession.mos = currentSession.mos.map((mo) =>
-        mo.id === assignedMO.id
+        mo.id === routedMO.id
           ? { ...mo, queueDepth: (mo.queueDepth || 0) + 1 }
           : mo
       );
@@ -225,9 +289,12 @@ export default function PriorityApplication() {
       recommended_action: severityResult.recommended_action,
       queue_reason: severityResult.queue_reason,
       queue_reason_text: severityResult.queue_reason_text,
-      display_note: severityResult.display_note,
+      display_note: hasOverride
+        ? `Clinician override applied: ${severityResult.severity} changed to ${finalSeverity}.`
+        : severityResult.display_note,
       source: session?.camp?.type?.toUpperCase() || "TRIAGE",
-      severity: severityResult.severity,
+      severity: finalSeverity,
+      ai_severity: severityResult.severity,
       scores: severityResult.scores,
       risk_score: severityResult.risk_score,
       priority_score: severityResult.priority_score,
@@ -239,8 +306,16 @@ export default function PriorityApplication() {
       specialty,
       extracted_symptoms: extractResult?.extractedSymptoms || [],
       camp: session?.camp || null,
-      assigned_mo_id: assignedMO?.id || null,
-      assigned_mo_name: assignedMO?.name || null,
+      assigned_mo_id: routedMO?.id || null,
+      assigned_mo_name: routedMO?.name || null,
+      clinician_override: hasOverride
+        ? {
+            from: severityResult.severity,
+            to: finalSeverity,
+            reason: overrideReason,
+            created_at: new Date().toISOString(),
+          }
+        : null,
       critical_trigger: severityResult.critical_trigger,
       matched_rules: severityResult.matched_rules,
     };
@@ -253,8 +328,6 @@ export default function PriorityApplication() {
 
   return (
     <div className="priority-application-page">
-      <Navigation />
-
       <main className="priority-application-container">
         <section className="priority-application-header">
           <span>{session.camp.code} - {session.camp.name}</span>
@@ -276,7 +349,7 @@ export default function PriorityApplication() {
                 min="0"
                 max="120"
                 value={form.age}
-                onChange={(event) => setForm({ ...form, age: event.target.value })}
+                onChange={(event) => updateFormField("age", event.target.value)}
                 placeholder="e.g. 45"
               />
             </div>
@@ -287,7 +360,7 @@ export default function PriorityApplication() {
                 id="symptoms"
                 rows={3}
                 value={form.symptoms}
-                onChange={(event) => setForm({ ...form, symptoms: event.target.value })}
+                onChange={(event) => updateFormField("symptoms", event.target.value)}
                 placeholder="e.g. Shortness of breath, chest tightness, dizziness"
                 required
               />
@@ -343,7 +416,7 @@ export default function PriorityApplication() {
                 id="clinicalNote"
                 rows={5}
                 value={form.clinicalNote}
-                onChange={(event) => setForm({ ...form, clinicalNote: event.target.value })}
+                onChange={(event) => updateFormField("clinicalNote", event.target.value)}
                 placeholder="Enter detailed clinical note for ML severity classification"
                 required
               />
@@ -391,6 +464,60 @@ export default function PriorityApplication() {
 
                 <p className="priority-result-note">{severityResult.display_note}</p>
 
+                <div className="priority-ai-review-note">
+                  This classification is AI-assisted. The assigned MO should review and override
+                  if clinically inappropriate before confirming.
+                </div>
+
+                {!severityResult.critical_trigger && (
+                  <div className="priority-override-panel">
+                    <div className="priority-override-head">
+                      <span>Clinical Override</span>
+                      <strong>
+                        {overrideSeverity === severityResult.severity
+                          ? "AI result kept"
+                          : `${severityResult.severity} -> ${overrideSeverity}`}
+                      </strong>
+                    </div>
+                    <div className="priority-override-buttons">
+                      {["HIGH", "MEDIUM", "LOW"].map((severity) => (
+                        <button
+                          key={severity}
+                          type="button"
+                          className={`priority-override-btn ${overrideSeverity === severity ? "selected" : ""}`}
+                          onClick={() => {
+                            setOverrideSeverity(severity);
+                            if (severity === severityResult.severity) {
+                              setOverrideReason("");
+                            }
+                          }}
+                          style={{
+                            borderColor: overrideSeverity === severity ? SEV_COLOR[severity] : undefined,
+                            color: overrideSeverity === severity ? SEV_COLOR[severity] : undefined,
+                            background: overrideSeverity === severity ? SEV_BG[severity] : undefined,
+                          }}
+                        >
+                          {severity}
+                        </button>
+                      ))}
+                    </div>
+                    {overrideSeverity !== severityResult.severity && (
+                      <select
+                        className="priority-override-select"
+                        value={overrideReason}
+                        onChange={(event) => setOverrideReason(event.target.value)}
+                      >
+                        <option value="">Select override reason...</option>
+                        {OVERRIDE_REASONS.map((reason) => (
+                          <option key={reason} value={reason}>
+                            {reason}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
                 {severityResult.critical_trigger && (
                   <p className="priority-result-critical">
                     Critical trigger: {severityResult.critical_trigger}
@@ -426,7 +553,6 @@ export default function PriorityApplication() {
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }

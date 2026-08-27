@@ -98,7 +98,7 @@ Encapsulates domain business logic, Pydantic input validation, and business rule
 - **`NotificationService`**: Asynchronously coordinates emergency alerts to nearby responders (police, hospitals, designated relief contacts).
 
 ### 2.4 Layer 4: ML Inference & Analytical Tier
-- **Lifecycle Management:** Pre-trained Random Forest model binaries (`.joblib`) and standardization scalers are loaded once into memory during application lifespan startup (`app.main:lifespan`).
+- **Lifecycle Management:** Pre-trained Random Forest model binaries (`.joblib`) and standardization scalers are loaded once into memory during application lifespan startup (`app.models.main:lifespan`).
 - **Zero-Latency Serving:** Model inference calls are purely synchronous memory operations, eliminating disk I/O per request and preventing model reload overhead.
 
 ### 2.5 Layer 5: Data Persistence Tier

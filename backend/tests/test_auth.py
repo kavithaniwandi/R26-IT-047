@@ -210,7 +210,7 @@ class TestMe:
 # Add a temporary probe route to the app ONLY during tests
 from fastapi import Depends
 from app.core.security import require_role, TokenPayload
-from app.main import app
+from app.models.main import app
 
 
 @app.get("/api/v1/_test/admin-only", include_in_schema=False)

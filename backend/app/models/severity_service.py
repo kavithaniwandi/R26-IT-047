@@ -31,6 +31,14 @@ def _compute_risk_score(normalized_scores: dict[str, float]) -> int:
     )
 
 
+def _display_risk_score(result: dict, normalized_scores: dict[str, float]) -> int:
+    priority_score = result.get("priority_score")
+    if isinstance(priority_score, (int, float)):
+        return round(max(0, min(100, priority_score)))
+
+    return _compute_risk_score(normalized_scores)
+
+
 def _build_queue_policy(
     severity: str,
     risk_score: int,
@@ -122,13 +130,13 @@ def _build_queue_policy(
 
 def _display_note(severity: str, risk_score: int, reason: str, source: str) -> str:
     if severity == "CRITICAL":
-        return f"Risk score {risk_score} / 100 - Immediate {source} review required."
+        return f"Risk score {risk_score} / 100 - Immediate medical review required."
     if severity == "HIGH":
-        return f"Risk score {risk_score} / 100 - Prompt {source} review required."
+        return f"Risk score {risk_score} / 100 - Prompt clinical review required."
     if severity == "MEDIUM":
-        return f"Risk score {risk_score} / 100 - Standard {source} review workflow."
+        return f"Risk score {risk_score} / 100 - Standard clinical review workflow."
     if reason == "audit_sample":
-        return f"Risk score {risk_score} / 100 - {source} audit/sample item."
+        return f"Risk score {risk_score} / 100 - Audit sample, verify classification."
     return f"Risk score {risk_score} / 100 - No queue action required."
 
 
@@ -171,7 +179,7 @@ def classify_note(
         result = rule_result
 
     normalized_scores = _normalize_scores(result["scores"])
-    risk_score = _compute_risk_score(normalized_scores)
+    risk_score = _display_risk_score(result, normalized_scores)
     queue_policy = _build_queue_policy(
         result["severity"],
         risk_score,

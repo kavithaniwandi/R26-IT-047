@@ -24,7 +24,7 @@ graph TD
     end
 
     subgraph Phase_3 ["Phase 3: Service Launch"]
-        P3_Back["Terminal 1: Start FastAPI Engine<br/>uvicorn app.main:app --port 8000 --reload"]
+        P3_Back["Terminal 1: Start FastAPI Engine<br/>uvicorn app.models.main:app --port 8000 --reload"]
         P3_Front["Terminal 2: Start 5 React Portals<br/>npm run dev:all (Ports 5173 - 5177)"]
     end
 
@@ -262,7 +262,7 @@ cd "D:\My research\SDM Project refine\backend"
 .\venv\Scripts\Activate.ps1
 
 # 3. Start Uvicorn ASGI server with live reloading
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.models.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 #### Verification Endpoints:
@@ -322,7 +322,7 @@ For day-to-day work, copy and paste this quick sequence:
 # ==========================================
 cd "D:\My research\SDM Project refine\backend"
 .\venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.models.main:app --host 127.0.0.1 --port 8000 --reload
 
 # ==========================================
 # Terminal 2: Frontend Portals

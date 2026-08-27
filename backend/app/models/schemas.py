@@ -78,7 +78,6 @@ class SeverityClassifyRequest(BaseModel):
     mode: Literal["rule_based", "ml"] = "rule_based"
     source: str = "TRIAGE"
 
-    # ML-only optional fields; ignored in rule_based mode.
     condition_group: str = "Unknown"
     vitals: dict | None = None
     has_red_flag: int = Field(default=0, ge=0, le=1)
