@@ -878,33 +878,31 @@ def _diagnose_weaknesses(appeal_text: str, language: str = "English") -> list[di
 
 def _build_improvement_prompt(appeal_text: str, language: str, issues: list[dict]) -> str:
     issue_lines = "\n".join(
-        f"- {item['dimension']}: {item['issue']} Target: {item['target']}"
+        f"- {item['issue']} Target: {item['target']}"
         for item in issues
     )
     word_count = len(appeal_text.split())
+    min_words = max(120, word_count * 2)
     return f"""\
-TASK: Rewrite the appeal below to improve its donation effectiveness.
+TASK: Write a substantially better version of the appeal below.
 
-ORIGINAL APPEAL:
+ORIGINAL APPEAL ({word_count} words):
 {appeal_text}
 
-IDENTIFIED WEAKNESSES:
+PROBLEMS TO FIX:
 {issue_lines}
 
-IMPROVEMENT INSTRUCTIONS:
-1. Fix each identified weakness directly.
-2. Keep all factual content. Do not add invented details.
-3. Maintain the same language ({language}) and general topic.
-4. Improve sentence structure to average 10-14 words per sentence.
-5. Ensure a clear, specific call to action is present.
-6. Remove any repeated phrases.
-7. Add a concrete impact statement if missing.
-8. LENGTH BALANCE: Preserve the original word count when there is enough
-   factual content to do so. Do not add generic filler just to match length.
-   A shorter factual appeal is better than padded text.
-   Original word count: approximately {word_count} words.
+STRICT REQUIREMENTS FOR THE NEW VERSION:
+1. Must be at least {min_words} words. The original is too short.
+2. Do not reuse or rearrange sentences from the original. Write fresh.
+3. Open with a specific situation statement using the location and need when present.
+4. Include a concrete impact statement: exactly what will donations provide?
+5. Include one community or human element: who is affected and how.
+6. End with a strong, specific call to action, not just "donate today".
+7. No invented names, ages, statistics, dates, or details not in the original.
+8. Write entirely in {language}.
 
-Output ONLY the improved appeal text in {language}. No preamble.
+Output ONLY the improved appeal. Nothing else.
 """
 
 
@@ -917,13 +915,59 @@ def _fallback_improved_appeal(appeal_text: str) -> str:
     return f"{text} Please donate today to provide verified support where it is needed most."
 
 
+def _is_weak_improvement(original_text: str, improved_text: str) -> bool:
+    original_words = original_text.split()
+    improved_words = improved_text.split()
+    min_words = max(120, len(original_words) * 2)
+
+    if len(improved_words) < min_words:
+        return True
+
+    original_sentences = {
+        re.sub(r"\s+", " ", sentence.strip().lower())
+        for sentence in re.split(r"[.!?]+", original_text)
+        if len(sentence.split()) >= 4
+    }
+    improved_lower = re.sub(r"\s+", " ", improved_text.lower())
+    reused_sentences = sum(
+        1
+        for sentence in original_sentences
+        if sentence and sentence in improved_lower
+    )
+
+    return reused_sentences > 0
+
+
 async def improve_appeal_text(appeal_text: str, language: str = "English") -> dict:
     original = score_text(appeal_text, language)
     issues = _diagnose_weaknesses(appeal_text, language)
     prompt = _build_improvement_prompt(appeal_text, language, issues)
 
-    result = await call_gemini_with_key_fallback(prompt, temp=0.35, language=language)
-    improved_text = (result.get("appeal_text") or "").strip() if result else ""
+    result = {}
+    improved_text = ""
+
+    async def _generate_improvement_with_retry() -> tuple[dict, str]:
+        result = await call_gemini_with_key_fallback(prompt, temp=0.35, language=language)
+        improved_text = (result.get("appeal_text") or "").strip() if result else ""
+        if improved_text and _is_weak_improvement(appeal_text, improved_text):
+            retry_prompt = (
+                f"{prompt}\n\n"
+                "The previous rewrite was too short or too similar. Rewrite again with "
+                "new sentence structure, richer factual explanation, and the required "
+                "minimum word count. Do not copy original sentences."
+            )
+            result = await call_gemini_with_key_fallback(retry_prompt, temp=0.45, language=language)
+            improved_text = (result.get("appeal_text") or "").strip() if result else ""
+        return result or {}, improved_text
+
+    try:
+        result, improved_text = await asyncio.wait_for(
+            _generate_improvement_with_retry(),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        print("Improvement generation timed out - using fallback")
+
     if not improved_text:
         improved_text = _fallback_improved_appeal(appeal_text)
 

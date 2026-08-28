@@ -103,7 +103,7 @@ Encapsulates domain business logic, Pydantic input validation, and business rule
 
 ### 2.5 Layer 5: Data Persistence Tier
 - **ORM:** SQLAlchemy 2.0 with strict foreign key constraints and type-safe Declarative Base models.
-- **Storage Engine:** MySQL 8.0 (Docker, via PyMySQL driver) for containerized deployments; SQLite for local development. The engine auto-detects the scheme from `DATABASE_URL` — `mysql+pymysql://` activates connection pooling (`pool_size=10`, `pool_recycle=3600`, `pool_pre_ping=True`); `sqlite:///` activates `check_same_thread=False`. Switch between modes by editing `.env.docker` (Docker) or `backend/.env` (local).
+- **Storage Engine:** MySQL 8.0 (Docker, via PyMySQL driver) for containerized deployments; SQLite for local development. The engine auto-detects the scheme from `DATABASE_URL` — `mysql+pymysql://` activates connection pooling (`pool_size=10`, `pool_recycle=3600`, `pool_pre_ping=True`); `sqlite:///` activates `check_same_thread=False`. Switch between modes by editing `.env.docker` (Docker) or `backend/.env2` (local).
 
 ---
 

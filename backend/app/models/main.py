@@ -39,7 +39,18 @@ from app.models.schemas import (
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
-    yield
+    try:
+        from app.services.mongo_service import connect_mongo
+
+        await connect_mongo()
+    except Exception as exc:
+        print(f"MongoDB connection failed: {exc}")
+    try:
+        yield
+    finally:
+        from app.services.mongo_service import close_mongo
+
+        await close_mongo()
 
 
 app = FastAPI(
@@ -130,13 +141,17 @@ async def analyse_appeal(payload: dict) -> dict:
         from app.models.quality_service import get_quality_score
 
         quality = get_quality_score(appeal_text, language=language)
-        return {
+        result = {
             "score": quality["score"],
             "label": quality["status"],
             "confidence": quality["confidence"],
             "method": quality["method"],
             "issues": _diagnose_weaknesses(appeal_text, language),
         }
+        from app.services.mongo_service import log_appeal_analysis
+
+        await log_appeal_analysis(appeal_text, language, result)
+        return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Appeal analysis failed.") from exc
 
@@ -153,7 +168,16 @@ async def improve_appeal(payload: dict) -> dict:
     try:
         from app.models.gemini_service import improve_appeal_text
 
-        return await improve_appeal_text(appeal_text, language)
+        result = await improve_appeal_text(appeal_text, language)
+        from app.services.mongo_service import log_appeal_analysis
+
+        await log_appeal_analysis(
+            appeal_text,
+            language,
+            result,
+            event_type="improvement",
+        )
+        return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Appeal improvement failed.") from exc
 
@@ -164,7 +188,22 @@ async def generate_appeal(request: GenerateAppealRequest) -> GenerateAppealRespo
     try:
         from app.models.gemini_service import generate_donation_appeal
 
-        appeal_text = generate_donation_appeal(request.model_dump())
+        campaign_data = request.model_dump()
+        appeal_text = generate_donation_appeal(campaign_data)
+        from app.services.mongo_service import log_appeal_generation
+
+        await log_appeal_generation(
+            campaign_data,
+            [
+                {
+                    "appeal_text": appeal_text,
+                    "quality_score": None,
+                    "quality_label": None,
+                    "provider": None,
+                    "style": "single",
+                }
+            ],
+        )
         return GenerateAppealResponse(appeal_text=appeal_text)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -180,7 +219,11 @@ async def generate_appeal_variants_endpoint(
     try:
         from app.models.gemini_service import generate_appeal_variants
 
-        variants = await generate_appeal_variants(request.model_dump(), top_n=3)
+        campaign_data = request.model_dump()
+        variants = await generate_appeal_variants(campaign_data, top_n=3)
+        from app.services.mongo_service import log_appeal_generation
+
+        await log_appeal_generation(campaign_data, variants)
         return GenerateAppealVariantsResponse(variants=variants)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

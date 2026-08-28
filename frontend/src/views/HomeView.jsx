@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   ShieldAlert, 
   Activity, 
@@ -187,6 +188,9 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
           <a href="#helplines" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.84rem', fontWeight: '600', transition: 'color 0.15s' }}>
             Emergency Helplines
           </a>
+          <Link to="/donation-appeal" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.84rem', fontWeight: '600', transition: 'color 0.15s' }}>
+            Donation Appeals
+          </Link>
         </div>
 
         {/* Right CTA buttons */}

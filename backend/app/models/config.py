@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env2", extra="ignore")
 
     MODEL_DIR: Path = Path("ml_models")
     DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal"
@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY11: str | None = None
     GEMINI_MODEL: str = "gemini-3.6-flash"
     HF_API_KEY: str | None = None
+    MONGODB_URI: str | None = None
+    MONGODB_DB_NAME: str = "Research047"
 
     def model_path(self, filename: str) -> Path:
         model_dir = self.MODEL_DIR

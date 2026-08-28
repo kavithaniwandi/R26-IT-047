@@ -197,12 +197,12 @@ Check that the following files are populated in `backend/ml_models/`:
 
 ---
 
-## 6. Environment Configuration (`.env`)
+## 6. Environment Configuration (`.env2`)
 
-The backend reads configuration settings from `backend/.env`. A default local configuration is already provided:
+The backend reads configuration settings from `backend/.env2`. A default local configuration is already provided:
 
 ```ini
-# backend/.env
+# backend/.env2
 SECRET_KEY=disaster-relief-super-secret-key-change-in-production-2026
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60

@@ -31,3 +31,5 @@ sentence-transformers
 pandas
 google-genai
 huggingface_hub
+pymongo
+motor

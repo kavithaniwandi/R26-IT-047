@@ -9,6 +9,7 @@ lerna-debug.log*
 
 # Environment variables
 .env
+.env2
 .env.*
 !.env.example
 *.local
