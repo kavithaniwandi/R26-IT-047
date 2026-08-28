@@ -1,0 +1,258 @@
+id,district,ds_division,gn_division,address,disaster_type,affected_families,affected_people
+1,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2,7
+2,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,1,4
+3,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,Kadawala,Landslide,1,1
+4,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"Kadusirigama, Peragolla, Ginigathhena",Landslide,1,5
+5,Nuwara Eliya,Ambagamuwa Korale,316 C Kalugala,"Kalugala, Ptawala",Landslide,4,9
+6,Nuwara Eliya,Ambagamuwa Korale,316 C Kalugala,"Gasnagaldeniya, Kalugala, Pitawala",Landslide,1,2
+7,Nuwara Eliya,Ambagamuwa Korale,316 D Pitawala,Yahida Janapadaya,Landslide,5,15
+8,Nuwara Eliya,Ambagamuwa Korale,316 E Millagahamula,Millagahamulla,Landslide,4,13
+9,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,2,7
+10,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Weralugsthenna, Lakshapana",Landslide,1,4
+11,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,7,22
+12,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya",Landslide,1,3
+13,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Babaragala, Koththalhena, Hatton",Landslide,1,4
+14,Nuwara Eliya,Ambagamuwa Korale,316 D Pitawala,Yahida Road,Landslide,1,4
+15,Nuwara Eliya,Ambagamuwa Korale,316 D Pitawala,Samangiri Janapadaya,Landslide,2,7
+16,Nuwara Eliya,Ambagamuwa Korale,316 D Pitawala,Pitawala,Landslide,1,3
+17,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Katakithula, Lakshapana",Landslide,1,4
+18,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"4 Kanuwa, Lakshapana",Landslide,1,3
+19,Nuwara Eliya,Ambagamuwa Korale,318 B Gagarapitiya,"Gagarapitiya, Hatton",Landslide,16,47
+20,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Gadumawatta, Koththalhena, Hatton",Landslide,9,22
+21,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,3,11
+22,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,2,9
+23,Nuwara Eliya,Ambagamuwa Korale,318 E Koththalhena,"Miyanapalawa, Koththalhena",Landslide,1,5
+24,Nuwara Eliya,Ambagamuwa Korale,318 E Koththalhena,"Koththalhena, Hatton",Landslide,2,9
+25,Nuwara Eliya,Ambagamuwa Korale,318 E Koththalhena,"Thebaton, Norton bridge",Landslide,1,4
+26,Nuwara Eliya,Ambagamuwa Korale,314 B Abagamuwa North,"Coolborn road, Udubulathgama",Landslide,2,7
+27,Nuwara Eliya,Ambagamuwa Korale,314 B Abagamuwa North,"Peradeniya House, Coolborn Road, Abagamuwa",Landslide,2,10
+28,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Dehigastenna, Ambagamuwa",Landslide,1,4
+29,Nuwara Eliya,Ambagamuwa Korale,314 C Sellipigama,Sellipigama,Landslide,1,7
+30,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1,5
+31,Nuwara Eliya,Ambagamuwa Korale,314 D Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,2,11
+32,Nuwara Eliya,Ambagamuwa Korale,314 D Homagama,"Kelanigama, Homagama, Ginigathhena",Landslide,1,6
+33,Nuwara Eliya,Ambagamuwa Korale,314 E Kalaweldeniya,"Abradine 2, Widulipura",Landslide,3,12
+34,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,3,12
+35,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Horakada, Ginigathhena",Landslide,1,5
+36,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"Kenilworth 04, Ginigathhena",Landslide,1,4
+37,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,Ginigathhena,Landslide,1,3
+38,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"No 227, Peragahamula, Hatton Road, Ginigathhena",Landslide,1,4
+39,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"Peragahamula, Ginigathhena",Landslide,1,5
+40,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"Kadawala, Ginigathhena",Landslide,1,4
+41,Nuwara Eliya,Ambagamuwa Korale,315 A Ginigathhena,"Pawalamale, Ginigathhena",Landslide,1,3
+42,Nuwara Eliya,Ambagamuwa Korale,315 C Widulipura South,"Akkarawatta, Norton",Landslide,1,1
+43,Nuwara Eliya,Ambagamuwa Korale,315 D Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1,4
+44,Nuwara Eliya,Ambagamuwa Korale,316 Bulathgama,Bulathgama,Landslide,1,3
+45,Nuwara Eliya,Ambagamuwa Korale,316 Bulathgama,"Badhupola, Ginigathhena",Landslide,1,5
+46,Nuwara Eliya,Ambagamuwa Korale,316 B Gonawala,"Pahala Kadawala, Ginigathhena",Landslide,5,18
+47,Nuwara Eliya,Ambagamuwa Korale,316 B Gonawala,"Madilla, Ginigathhena",Landslide,1,5
+48,Nuwara Eliya,Ambagamuwa Korale,316 B Gonawala,"Gonawala, Ginigathhena",Landslide,2,7
+49,Nuwara Eliya,Ambagamuwa Korale,317 Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,2,9
+50,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2,8
+51,Nuwara Eliya,Ambagamuwa Korale,317 A Lakshapana,"Kuburuhena, Lakshapana",Landslide,1,3
+52,Nuwara Eliya,Ambagamuwa Korale,317 C Morahenagama,"Kiriwelhinna, Morahenagama, Hatton",Landslide,3,10
+53,Nuwara Eliya,Ambagamuwa Korale,317 C Morahenagama,"Kolhena, Morahenagama, Hatton",Landslide,3,12
+54,Nuwara Eliya,Ambagamuwa Korale,317 B Waggama,"Udabage, Lakshapana",Landslide,1,2
+55,Nuwara Eliya,Ambagamuwa Korale,317 B Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,4
+56,Nuwara Eliya,Ambagamuwa Korale,318 Polpitiya,"Polopitiya, Pitawala",Landslide,4,15
+57,Nuwara Eliya,Ambagamuwa Korale,318 A Hitigegama,"Hitigegama, Hatton",Landslide,3,11
+58,Nuwara Eliya,Ambagamuwa Korale,318 C Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1,5
+59,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,1,4
+60,Nuwara Eliya,Ambagamuwa Korale,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1,2
+61,Nuwara Eliya,Ambagamuwa Korale,320 F Watawala,"Samanpura Janapadaya, Watawala",Landslide,1,4
+62,Nuwara Eliya,Ambagamuwa Korale,314 Abagamuwa South,"Abagamuwa, Udubulathgama",Landslide,4,13
+63,Nuwara Eliya,Ambagamuwa Korale,314 Abagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,2,7
+64,Nuwara Eliya,Ambagamuwa Korale,Millagamula,"Kaluwagala, Millagahamula, Pitawala",Landslide,1,5
+65,Nuwara Eliya,Ambagamuwa Korale,Pitawala,"Yahida Janapadaya, Pitawala, Nawalapitiya",Landslide,1,4
+66,Nuwara Eliya,Ambagamuwa Korale,Lakshapana,"Katakithula, Lakshapana",Landslide,1,4
+67,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Muruthathenna, Norton Bridge",Landslide,1,4
+68,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1,6
+69,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1,4
+70,Nuwara Eliya,Ambagamuwa Korale,Ginigathhena,"Sri Abhinavaramaya, Ginigathhena",Landslide,1,3
+71,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1,4
+72,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"No. 07, Dehigasthenna, Abathalawa, giigathhena",Landslide,1,5
+73,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1,6
+74,Nuwara Eliya,Ambagamuwa Korale,Millagamula,"Millagahamulla, Pitawala",Landslide,1,4
+75,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Dagampitiya, Pitawala",Landslide,1,4
+76,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,5
+77,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1,4
+78,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"berdine 2, Widulipura",Landslide,1,8
+79,Nuwara Eliya,Ambagamuwa Korale,Kehelwarawa,"Aditri morahenagama, Hatton",Landslide,1,5
+80,Nuwara Eliya,Ambagamuwa Korale,Gonawala,"Madilla, Ginigathhena",Landslide,1,5
+81,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Koslallamula, Habbakanda, Ginigathhena",Landslide,1,4
+82,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Horakada, Ginigathhena",Landslide,1,4
+83,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Kelanigama, Dagampitiya, Ginigathhena",Landslide,2,13
+84,Nuwara Eliya,Ambagamuwa Korale,Hitigegama,"Hitigegama, Hatton",Landslide,1,5
+85,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1,4
+86,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1,6
+87,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Polwatta, Dagampitiya, Ginigathhena",Landslide,1,4
+88,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,1,3
+89,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Kelanigama, Ginigathhena",Landslide,2,9
+90,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1,6
+91,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Paratalwa, Polpitiya, Pitawala",Landslide,1,5
+92,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2,14
+93,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,4
+94,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,4
+95,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polopitiya, Pitawala",Landslide,3,18
+96,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Pallewatta, Pitawala",Landslide,1,2
+97,Nuwara Eliya,Ambagamuwa Korale,Koththallena,"Koththalhena, Hatton",Landslide,2,10
+98,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa East,"212, Panvilagodella, Abagamuwa",Landslide,1,5
+99,Nuwara Eliya,Ambagamuwa Korale,Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1,4
+100,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polopitiya, Pitawala",Landslide,1,6
+101,Nuwara Eliya,Ambagamuwa Korale,Kehelwarawa,"Galgodahinna, Morathotiyawatta, Morahenagama, Hatton",Landslide,1,5
+102,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"No 19, Abagamuwa, Udubulathgama",Landslide,1,4
+103,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,C Collany,Landslide,1,1
+104,Nuwara Eliya,Ambagamuwa Korale,Ginigathhena,"Kadawala Watta, Watawala",Landslide,4,21
+105,Nuwara Eliya,Ambagamuwa Korale,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1,6
+106,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Pallegedara, Ambagamuwa, Udubulathgama",Landslide,1,5
+107,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Coolborn Road, Ambagamuwa, Udubulathgama",Landslide,1,4
+108,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Wattegedara, Koththelhena, Hatton",Landslide,1,8
+109,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,5
+110,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,6
+111,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Dagampitiya, Kelanigama",Landslide,2,12
+112,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Pitawala",Landslide,1,3
+113,Nuwara Eliya,Ambagamuwa Korale,Gonawala,"Thennakoon House, Gonawala, Ginigathhena",Landslide,1,7
+114,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polopitiya, Pitawala",Landslide,1,4
+115,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Wellethenna, pitawala",Landslide,1,5
+116,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,2
+117,Nuwara Eliya,Ambagamuwa Korale,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1,4
+118,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1,5
+119,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,4
+120,Nuwara Eliya,Ambagamuwa Korale,Lakshapana,"4 Kanuwa, Lakshapana, Nortonbridge",Landslide,1,5
+121,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Ambagamuwa Kada weediya, Ambagamuwa, Udubulathgama",Landslide,6,35
+122,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Pitawala",Landslide,3,15
+123,Nuwara Eliya,Ambagamuwa Korale,Gonawala,"Wedilla, Gonawala, Ginigathhena",Landslide,1,4
+124,Nuwara Eliya,Ambagamuwa Korale,Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,1,3
+125,Nuwara Eliya,Ambagamuwa Korale,Widulipura South,"Babaragala, Norton Bridge",Landslide,11,51
+126,Nuwara Eliya,Ambagamuwa Korale,Widulipura South,Wimalasurendragama,Landslide,1,5
+127,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1,6
+128,Nuwara Eliya,Ambagamuwa Korale,Hagarapitiya,"Hagarapitiya, Hatton",Landslide,1,5
+129,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Diyagala, Watawala",Landslide,1,4
+130,Nuwara Eliya,Ambagamuwa Korale,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1,5
+131,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa East,"Panvilagodella, Abagamuwa",Landslide,2,9
+132,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa East,"Racepitiya, Abagamuwa",Landslide,1,3
+133,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,5
+134,Nuwara Eliya,Ambagamuwa Korale,Pitawala,"Pitawala, Nawalapitiya",Landslide,2,9
+135,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1,4
+136,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,5
+137,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,2,10
+138,Nuwara Eliya,Ambagamuwa Korale,Koththallena,"Denihena, Koththelhena, Hatton",Landslide,1,4
+139,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,4,17
+140,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,2,8
+141,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1,5
+142,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Templestore Janapadaya, Watawala",Landslide,1,4
+143,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Gnananadagama, Watawala",Landslide,3,17
+144,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1,5
+145,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Udabage, Lakshapana",Landslide,1,7
+146,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,2,9
+147,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa East,"Ambalanowita, Abagamuwa",Landslide,2,11
+148,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"No 82, Horakada, Ginigathhena",Landslide,1,4
+149,Nuwara Eliya,Ambagamuwa Korale,Thiniyagala,"Hiriyapitiya, Ginigathhena",Landslide,1,4
+150,Nuwara Eliya,Ambagamuwa Korale,Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,1,3
+151,Nuwara Eliya,Ambagamuwa Korale,Minuwandeniya,"Pitakanda, Hitigegama, Hatton",Landslide,7,42
+152,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"Dehigasthenna, Abathalawa, Ginigathhena",Landslide,1,4
+153,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1,4
+154,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"Sirisewana, Abathalawa",Landslide,1,5
+155,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,6,32
+156,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1,2
+157,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Pitawala",Landslide,4,25
+158,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Udapa Kotuwe Gedara, Abagamuwa",Landslide,1,4
+159,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Coolborn Watta, Abagamuwa, Udubulathgama",Landslide,1,2
+160,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Mahapathana, Abagamuwa, Udubulathgama",Landslide,4,18
+161,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4,22
+162,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa  South,"No 03 Part, Kenilworth Watta",Landslide,3,45
+163,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Abagamuwa Market Street, Abagamuwa, Udubulathgama",Landslide,1,5
+164,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4,21
+165,Nuwara Eliya,Ambagamuwa Korale,Rampadeniya,"Hathlaha, Giniathhena",Landslide,1,2
+166,Nuwara Eliya,Ambagamuwa Korale,Rampadeniya,"No 01, Keniworth watta, Ginigathhena",Landslide,6,68
+167,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Pitawala",Landslide,1,4
+168,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Horakada, Ginigathhena",Landslide,1,5
+169,Nuwara Eliya,Ambagamuwa Korale,Gonawala,"Gonawala, Ginigathhena",Landslide,1,6
+170,Nuwara Eliya,Ambagamuwa Korale,Morahenagama,"Morahenagama, Pitawala",Landslide,1,5
+171,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1,4
+172,Nuwara Eliya,Ambagamuwa Korale,Lakshapana,"Lakshapana, Nortonbridge",Landslide,1,3
+173,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"77, Kadusirigama, Abathalawa, Ginigathhena",Landslide,1,7
+174,Nuwara Eliya,Ambagamuwa Korale,Millagamula,"Sadasirigama, Millagamula, Pitawala",Landslide,1,6
+175,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1,5
+176,Nuwara Eliya,Ambagamuwa Korale,Homagama,"Homagama, Kalaweldeniya",Landslide,1,5
+177,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2,10
+178,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Pitawala",Landslide,1,1
+179,Nuwara Eliya,Ambagamuwa Korale,Widulipura South,"Babaragala, Norton Bridge",Landslide,3,19
+180,Nuwara Eliya,Ambagamuwa Korale,Koththallena,"Aluoya Janapadaya, Widulipura",Landslide,1,3
+181,Nuwara Eliya,Ambagamuwa Korale,Kiriwaneliya,"3 Kanuwa, Lakshapana",Landslide,1,5
+182,Nuwara Eliya,Ambagamuwa Korale,Lakshapana,"Weralugasthenna, Lakshapana",Landslide,1,4
+183,Nuwara Eliya,Ambagamuwa Korale,Minuwandeniya,"Gowalwatta, Htigegama, Hatton",Landslide,1,4
+184,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1,5
+185,Nuwara Eliya,Ambagamuwa Korale,Gonawala,"257/1, Kotahela Janapadaya, Ginigathhena",Landslide,1,6
+186,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1,4
+187,Nuwara Eliya,Ambagamuwa Korale,Hitigegama,"Galapalhena, Hagarapitiya, Hatton",Landslide,1,4
+188,Nuwara Eliya,Ambagamuwa Korale,Rampadeniya,"Hathlaga, Warakagahamula",Landslide,1,6
+189,Nuwara Eliya,Ambagamuwa Korale,Widulipura south,"Babaragala, Norton Bridge",Landslide,1,4
+190,Nuwara Eliya,Ambagamuwa Korale,Millagahamula,"Kadusirigama, Dillagahamula",Landslide,1,5
+191,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1,4
+192,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Mawussawatta, Lakshapana",Landslide,1,5
+193,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1,5
+194,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Templestore Janapadaya, Watawala",Landslide,2,15
+195,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"D 23 Abagamuwa, Udubulathgama",Landslide,1,7
+196,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,1,5
+197,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1,4
+198,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Abagamuwa, Udubulathgama",Landslide,1,6
+199,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1,5
+200,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Ambagamuwa, Udubulathgama",Landslide,1,4
+201,Nuwara Eliya,Ambagamuwa Korale,Sellipigama,"New St Clive Janapadaya, Abagamuwa, Udubulathgama",Landslide,1,5
+202,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,1,5
+203,Nuwara Eliya,Ambagamuwa Korale,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,1,4
+204,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1,5
+205,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,1,5
+206,Nuwara Eliya,Ambagamuwa Korale,Ambagamuwa North,"Coolborn Road, Abagamuwa, Udubulathgama",Landslide,1,4
+207,Nuwara Eliya,Ambagamuwa Korale,Kalugala,"Yatiberiya, Pitawla",Landslide,1,6
+208,Nuwara Eliya,Ambagamuwa Korale,Kalugala,"Pitawala, Nawalapitiya",Landslide,1,6
+209,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Kaluduriyapaluwa, Pallewatta, Pitawala",Landslide,1,5
+210,Nuwara Eliya,Ambagamuwa Korale,Kalugala,"Kalugala, Pitawala, Nawalapitiya",Landslide,1,7
+211,Nuwara Eliya,Ambagamuwa Korale,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1,6
+212,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Gadumawatta, Koththalhena, Hatton",Landslide,1,5
+213,Nuwara Eliya,Ambagamuwa Korale,Dehigasthenna,"New house, Abathalawa, Ginigathhena",Landslide,1,7
+214,Nuwara Eliya,Ambagamuwa Korale,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1,5
+215,Nuwara Eliya,Ambagamuwa Korale,Waggama,"Haddala, Morahenagama",Landslide,1,5
+216,Nuwara Eliya,Ambagamuwa Korale,Ginigathhena,"Kadawawatta, Watawala",Landslide,2,15
+217,Nuwara Eliya,Ambagamuwa Korale,Watawala,"Agarawatta, Watawala",Landslide,1,7
+218,Nuwara Eliya,Ambagamuwa Korale,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1,6
+219,Nuwara Eliya,Ambagamuwa Korale,Dagampitiya,"Nilawatta, Pallewatta, Pitawala",Landslide,1,6
+220,Nuwara Eliya,Ambagamuwa Korale,Watawala,"101 Janapadaya, Watawala",Landslide,1,5
+221,Nuwara Eliya,Ambagamuwa Korale,Widulipura North,"Taplo Janapadaya, Widulipura, North",Landslide,1,9
+222,Nuwara Eliya,Ambagamuwa Korale,Polpitiya,"Polpitiya, Hatton",Landslide,1,6
+223,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,5,30
+224,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2,14
+225,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Ambagamuwa, Market Street",Landslide,4,26
+226,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Abagawwa, Udubulathgama",Landslide,1,5
+227,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2,11
+228,Nuwara Eliya,Ambagamuwa Korale,314 Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1,8
+229,Nuwara Eliya,Ambagamuwa Korale,314 A Ambagamuwa East,"Panvilagodella, Abagamuwa, Udubulathgama",Landslide,1,7
+230,Nuwara Eliya,Ambagamuwa Korale,314 B Abagamuwa North,"Ambagamuwa, Udubulathgama",Landslide,12,73
+231,Nuwara Eliya,Ambagamuwa Korale,314 C Sellipigama,Sellipigama,Landslide,1,9
+232,Nuwara Eliya,Ambagamuwa Korale,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,2,11
+233,Nuwara Eliya,Ambagamuwa Korale,314 D Homagama,"Homagama, Kalaweldeniya, Ginigathhena",Landslide,2,13
+234,Nuwara Eliya,Ambagamuwa Korale,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1,7
+235,Nuwara Eliya,Ambagamuwa Korale,314 E Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,6,37
+236,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1,6
+237,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"2 Kanuwa, Atlas",Landslide,1,4
+238,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1,6
+239,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Ellauda Village, Upper part, Sadaham Sisila Temple",Landslide,1,7
+240,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Ambathalawa, Ginigathhena",Landslide,1,6
+241,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Dehigasthenna, Galayatawatta",Landslide,1,5
+242,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Mallika Janapada, Abathalawa",Landslide,1,4
+243,Nuwara Eliya,Ambagamuwa Korale,314 F Dehigasthenna,"Godagedara, Abathalawa",Landslide,1,5
+244,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Godagedara, Abathalawa",Landslide,1,8
+245,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Horakada, Abathalawa",Landslide,1,6
+246,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Badullawatta, Habbakanda",Landslide,1,7
+247,Nuwara Eliya,Ambagamuwa Korale,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,1,8
+248,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Wagurawatta, Ginigathhena",Landslide,2,9
+249,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1,5
+250,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"148/1 Alagala, Ginigathhena",Landslide,1,4
+251,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,2,11
+252,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Nawalapitiya Road, Ginigathhena",Landslide,1,5
+253,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1,4
+254,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Kadurusima, Peragahamula",Landslide,2,11
+255,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1,6
+256,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,"Pawalamale, Ginigathhena",Landslide,1,7
+257,Nuwara Eliya,Ambagamuwa Korale,315 Thiniyagala,Ginigathhena,Landslide,2,12
