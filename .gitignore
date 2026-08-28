@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-# Python
-=======
 # Logs
 logs
 *.log
@@ -14,63 +11,46 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
-
-node_modules
-dist
-dist-ssr
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Python cache
->>>>>>> Stashed changes
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
-
-<<<<<<< Updated upstream
-# Environment variables
-.env
-*.env
+venv/
+.venv/
+env/
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
 
-# Python virtual environments
-venv/
-.venv/
-env/
-
 # Node
 node_modules/
 frontend/node_modules/
-
-# Build files
+dist
+dist-ssr
 frontend/dist/
 
-# IDE
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
 .idea/
-.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-=======
+# Package files
 package.json
 package-lock.json
 !backend/package.json
->>>>>>> Stashed changes
+
+# Local monitor state
+backend/app/services/credit_monitor_state.json

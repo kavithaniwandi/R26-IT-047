@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logo.png";
+import CreditStatusBar from "./CreditStatusBar";
 import "./Navigation.css";
 
 
@@ -149,18 +150,6 @@ function Navigation() {
 
 
           <Link
-            to="/donation-appeal"
-            className="nav-link"
-            onClick={closeMenu}
-          >
-            Donation Appeal
-          </Link>
-
-
-
-
-
-          <Link
             to="/contacts"
             className="nav-link"
             onClick={closeMenu}
@@ -217,6 +206,8 @@ function Navigation() {
             )
 
           }
+
+          <CreditStatusBar />
 
           <Link
             to="/sos"

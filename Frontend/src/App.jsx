@@ -32,6 +32,7 @@ import SignIn from './pages/SignIn';
 import SOS from './pages/SOS';
 import Profile from './pages/Profile';
 import Donation_Appeal from './pages/Donation_Appeal';
+import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
 import CampSetup from './pages/CampSetup';
 import PriorityApplication from './pages/PriorityApplication';
 import PriorityQueue from './pages/PriorityQueue';
@@ -494,6 +495,7 @@ export function App() {
           <Route path="/sos-public" element={<SOS />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/donation-appeal" element={<Donation_Appeal />} />
+          <Route path="/donation-appeal-analyzer" element={<DonationAppealAnalyzer />} />
           <Route
             path="/camp-setup"
             element={

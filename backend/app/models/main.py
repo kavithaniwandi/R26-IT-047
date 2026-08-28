@@ -59,7 +59,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,6 +114,48 @@ async def evaluate_quality(request: QualityScoreRequest) -> QualityScoreResponse
             status_code=500,
             detail="Quality evaluation failed.",
         ) from exc
+
+
+@app.post("/api/quality/analyse")
+async def analyse_appeal(payload: dict) -> dict:
+    """Pure ML quality evaluation plus structured issue diagnosis."""
+    appeal_text = (payload.get("appeal_text") or "").strip()
+    language = payload.get("language") or "English"
+
+    if not appeal_text:
+        raise HTTPException(status_code=422, detail="appeal_text is required.")
+
+    try:
+        from app.models.gemini_service import _diagnose_weaknesses
+        from app.models.quality_service import get_quality_score
+
+        quality = get_quality_score(appeal_text, language=language)
+        return {
+            "score": quality["score"],
+            "label": quality["status"],
+            "confidence": quality["confidence"],
+            "method": quality["method"],
+            "issues": _diagnose_weaknesses(appeal_text, language),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Appeal analysis failed.") from exc
+
+
+@app.post("/api/quality/improve")
+async def improve_appeal(payload: dict) -> dict:
+    """Generate an improved donation appeal after ML issue diagnosis."""
+    appeal_text = (payload.get("appeal_text") or "").strip()
+    language = payload.get("language") or "English"
+
+    if not appeal_text:
+        raise HTTPException(status_code=422, detail="appeal_text is required.")
+
+    try:
+        from app.models.gemini_service import improve_appeal_text
+
+        return await improve_appeal_text(appeal_text, language)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Appeal improvement failed.") from exc
 
 
 @app.post("/api/generate-appeal", response_model=GenerateAppealResponse)
@@ -216,6 +263,28 @@ async def classify_severity(request: SeverityClassifyRequest) -> SeverityClassif
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Severity classification failed.") from exc
+
+
+@app.get("/api/system/credit-status", tags=["System"])
+async def credit_status() -> dict:
+    """Return real-time in-memory status of all LLM API providers."""
+    from app.services.credit_monitor import get_status
+    return get_status()
+
+
+@app.post("/api/system/credit-reset", tags=["System"])
+async def credit_reset(payload: dict | None = None) -> dict:
+    """Reset one provider or all provider credit state."""
+    from app.services.credit_monitor import get_status, reset_all, reset_provider
+
+    payload = payload or {}
+    provider = payload.get("provider")
+    if provider:
+        reset_provider(provider)
+        return {"reset": provider, "status": get_status()}
+
+    reset_all()
+    return {"reset": "all", "status": get_status()}
 
 
 if __name__ == "__main__":

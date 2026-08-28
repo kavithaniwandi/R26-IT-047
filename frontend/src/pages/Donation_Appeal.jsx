@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import Navigation from "../components/Navigation";
-import Footer from "../components/Footer";
+import { Link } from "react-router-dom";
+import CreditStatusBar from "../components/CreditStatusBar";
 import "./Donation_Appeal.css";
 
 
@@ -241,15 +241,24 @@ function Donation_Appeal() {
 
   return (
     <div className="donation-appeal-page">
-      <Navigation />
-
       <main className="donation-appeal-container">
         <section className="donation-appeal-header">
-          <span>Appeal Quality Evaluation</span>
-          <h1>Donation Appeal Generator</h1>
-          <p>
-            Enter campaign details, generate an appeal, and evaluate its quality score.
-          </p>
+          <div>
+            <span>Appeal Quality Evaluation</span>
+            <h1>Donation Appeal Generator</h1>
+            <p>
+              Enter campaign details, generate an appeal, and evaluate its quality score.
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <CreditStatusBar />
+            <Link
+              className="appeal-analyzer-button"
+              to="/donation-appeal-analyzer"
+            >
+              Donation Appeal Analyzer
+            </Link>
+          </div>
         </section>
 
         <div className="donation-appeal-layout">
@@ -541,8 +550,6 @@ function Donation_Appeal() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

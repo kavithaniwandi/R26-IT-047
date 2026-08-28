@@ -13,7 +13,10 @@ from __future__ import annotations
 from functools import lru_cache
 import re
 
-import spacy
+try:
+    import spacy
+except Exception:
+    spacy = None
 
 
 SPECIALTY_MAP: list[tuple[list[str], str]] = [
@@ -289,9 +292,12 @@ MEDICAL_ABBREVIATIONS: frozenset[str] = frozenset({
 
 @lru_cache(maxsize=1)
 def _load_model():
+    if spacy is None:
+        return None
+
     try:
         return spacy.load("en_core_sci_sm")
-    except OSError:
+    except Exception:
         return None
 
 
