@@ -14,6 +14,7 @@ import { CampsView } from './views/CampsView';
 import { DonationsView } from './views/DonationsView';
 import { NotificationsView } from './views/NotificationsView';
 import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
+import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -24,12 +25,12 @@ import { VolunteerPortalView } from './views/VolunteerPortalView';
 
 import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
 import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';
-import { 
-  playEmergencyBeep, 
-  playSuccessChime, 
-  playNotificationPing, 
-  toggleSound, 
-  isSoundEnabled 
+import {
+  playEmergencyBeep,
+  playSuccessChime,
+  playNotificationPing,
+  toggleSound,
+  isSoundEnabled
 } from './utils/audioAlert';
 import { ShieldAlert, AlertTriangle, Radio, Activity, Sparkles } from 'lucide-react';
 
@@ -131,13 +132,13 @@ export function App() {
     setUser(loggedInUser);
     playSuccessChime();
     addToast(`Authenticated as ${loggedInUser.full_name} (${loggedInUser.role.toUpperCase()})`, 'success', 'Login Verified');
-    
+
     if (loggedInUser.role === 'victim') setCurrentPortal('victim');
     else if (loggedInUser.role === 'authority') setCurrentPortal('authority');
     else if (loggedInUser.role === 'donor') setCurrentPortal('donor');
     else if (loggedInUser.role === 'volunteer') setCurrentPortal('volunteer');
     else setCurrentPortal('admin');
-    
+
     fetchStats();
   };
 
@@ -156,24 +157,29 @@ export function App() {
   const getPortalTitle = () => {
     switch (currentPortal) {
       case 'victim':
-        return { 
-          title: 'Victim & Public Emergency SOS Portal', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} · Satellite GPS Telemetry & Multi-Channel Alert Dispatch` 
+        return {
+          title: 'Victim & Public Emergency SOS Portal',
+          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} · Satellite GPS Telemetry & Multi-Channel Alert Dispatch`
         };
       case 'authority':
-        return { 
-          title: 'Medical Authority Command Console', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} · Ministry of Health (MOH): Triage, Camp Approval & ML Analytics` 
+        return {
+          title: 'Medical Authority Command Console',
+          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} · Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
         };
       case 'donor':
-        return { 
-          title: 'Relief Donor & Supply Matching Marketplace', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} · Priority Medical Demands & Verified Pledges` 
+        return {
+          title: 'Relief Donor & Supply Matching Marketplace',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} · Priority Medical Demands & Verified Pledges`
         };
       case 'volunteer':
-        return { 
-          title: 'Field Volunteer & Rapid Responder Client', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} · On-Ground Rescue Missions & GPS Navigation` 
+        return {
+          title: 'Field Volunteer & Rapid Responder Client',
+          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} · On-Ground Rescue Missions & GPS Navigation`
+        };
+      case 'volunteer_dash':
+        return {
+          title: 'Volunteer Field Command Dashboard',
+          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer_dash.port} · Shelter Population, AI Estimation & Relief Requests`
         };
       default:
         switch (currentTab) {
@@ -336,6 +342,18 @@ export function App() {
                     <AnalyticsDashboardView stats={stats} onAddToast={addToast} />
                   )}
                 </>
+              )}
+
+              {/* 6. Volunteer Field Command Dashboard */}
+              {currentPortal === 'volunteer_dash' && (
+                <VolunteerDashboardView
+                  currentUser={user}
+                  onNavigate={(tab) => {
+                    setCurrentPortal('admin');
+                    setCurrentTab(tab);
+                  }}
+                  onAddToast={addToast}
+                />
               )}
             </div>
           </main>
