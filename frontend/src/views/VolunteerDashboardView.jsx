@@ -10,28 +10,27 @@ import {
   HeartHandshake, 
   PhoneCall, 
   Compass, 
-  CheckCircle2, 
   RefreshCw,
   LayoutDashboard
 } from 'lucide-react';
 import { api } from '../api';
+import { ReliefCampDetailView } from './ReliefCampDetailView';
 
 export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) {
   const [camps, setCamps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDs, setSelectedDs] = useState('All');
+  const [selectedCampId, setSelectedCampId] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchCamps = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch camps using system API client
       const data = await api.getCamps({ status_filter: 'approved' });
       setCamps(data || []);
     } catch (err) {
-      // Fallback/Error capture
       setError(err.message || 'Failed to load assigned relief camps.');
     } finally {
       setLoading(false);
@@ -41,6 +40,17 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
   useEffect(() => {
     fetchCamps();
   }, []);
+
+  if (selectedCampId) {
+    return (
+      <ReliefCampDetailView
+        campId={selectedCampId}
+        onBack={() => setSelectedCampId(null)}
+        currentUser={currentUser}
+        onAddToast={onAddToast}
+      />
+    );
+  }
 
   const dsAreas = ['All', ...new Set(camps.map((c) => c.ds_division || c.dsArea).filter(Boolean))];
 
@@ -206,7 +216,6 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     gap: '16px',
-                    transition: 'border-color 0.2s, transform 0.2s',
                   }}
                 >
                   <div>
@@ -247,9 +256,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => {
-                      if (onAddToast) onAddToast(`Opening field station telemetry for ${camp.name}`, 'info', 'Shelter Selected');
-                    }}
+                    onClick={() => setSelectedCampId(camp.id)}
                   >
                     <span>Enter Field Station</span>
                     <ArrowRight size={14} />
