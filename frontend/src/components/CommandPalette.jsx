@@ -98,6 +98,15 @@ export function CommandPalette({
       color: 'amber',
       action: () => { onSelectPortal('volunteer'); onClose(); }
     },
+    {
+      category: 'Dedicated Portals',
+      id: 'portal-volunteer-dashboard',
+      title: 'Volunteer Field Command Dashboard',
+      subtitle: `Port :${PORTAL_CONFIG.volunteer_dash.port} · Shelter population and relief requests`,
+      icon: Layers,
+      color: 'amber',
+      action: () => { onSelectPortal('volunteer_dash'); onClose(); }
+    },
 
     // Admin Console Views
     {
