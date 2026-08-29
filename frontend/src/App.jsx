@@ -15,6 +15,7 @@ import { CampsView } from './views/CampsView';
 import { DonationsView } from './views/DonationsView';
 import { NotificationsView } from './views/NotificationsView';
 import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
+import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -40,12 +41,12 @@ import { AuthProvider } from './context/AuthContext';
 
 import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
 import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';
-import { 
-  playEmergencyBeep, 
-  playSuccessChime, 
-  playNotificationPing, 
-  toggleSound, 
-  isSoundEnabled 
+import {
+  playEmergencyBeep,
+  playSuccessChime,
+  playNotificationPing,
+  toggleSound,
+  isSoundEnabled
 } from './utils/audioAlert';
 import { ShieldAlert, AlertTriangle, Radio, Activity, Sparkles } from 'lucide-react';
 
@@ -147,13 +148,13 @@ function DashboardApp() {
     setUser(loggedInUser);
     playSuccessChime();
     addToast(`Authenticated as ${loggedInUser.full_name} (${loggedInUser.role.toUpperCase()})`, 'success', 'Login Verified');
-    
+
     if (loggedInUser.role === 'victim') setCurrentPortal('victim');
     else if (loggedInUser.role === 'authority') setCurrentPortal('authority');
     else if (loggedInUser.role === 'donor') setCurrentPortal('donor');
     else if (loggedInUser.role === 'volunteer') setCurrentPortal('volunteer');
     else setCurrentPortal('admin');
-    
+
     fetchStats();
   };
 
@@ -352,6 +353,18 @@ function DashboardApp() {
                     <AnalyticsDashboardView stats={stats} onAddToast={addToast} />
                   )}
                 </>
+              )}
+
+              {/* 6. Volunteer Field Command Dashboard */}
+              {currentPortal === 'volunteer_dash' && (
+                <VolunteerDashboardView
+                  currentUser={user}
+                  onNavigate={(tab) => {
+                    setCurrentPortal('admin');
+                    setCurrentTab(tab);
+                  }}
+                  onAddToast={addToast}
+                />
               )}
             </div>
           </main>
