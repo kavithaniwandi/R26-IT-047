@@ -107,6 +107,24 @@ export function CommandPalette({
       color: 'amber',
       action: () => { onSelectPortal('volunteer_dash'); onClose(); }
     },
+    {
+      category: 'Dedicated Portals',
+      id: 'portal-officer-dashboard',
+      title: 'Disaster Officer Console',
+      subtitle: `Port :${PORTAL_CONFIG.officer_dash.port} · Verify incoming donor supplies & trigger AI-targeted outreach`,
+      icon: ShieldCheck,
+      color: 'blue',
+      action: () => { onSelectPortal('officer_dash'); onClose(); }
+    },
+    {
+      category: 'Dedicated Portals',
+      id: 'portal-donation-requests',
+      title: 'Disaster Donation Requests',
+      subtitle: `Port :${PORTAL_CONFIG.donation_req_dash.port} · Coordinate population crowd estimation & supply requests`,
+      icon: HeartHandshake,
+      color: 'rose',
+      action: () => { onSelectPortal('donation_req_dash'); onClose(); }
+    },
 
     // Admin Console Views
     {

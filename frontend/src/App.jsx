@@ -15,6 +15,8 @@ import { DonationsView } from './views/DonationsView';
 import { NotificationsView } from './views/NotificationsView';
 import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
 import { VolunteerDashboardView } from './views/VolunteerDashboardView';
+import { DisasterOfficerDashboardView } from './views/DisasterOfficerDashboardView';
+import { DisasterDonationRequestView } from './views/DisasterDonationRequestView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -180,6 +182,16 @@ export function App() {
         return {
           title: 'Volunteer Field Command Dashboard',
           sub: `Dedicated Port :${PORTAL_CONFIG.volunteer_dash.port} · Shelter Population, AI Estimation & Relief Requests`
+        };
+      case 'officer_dash':
+        return {
+          title: 'Disaster Officer Command Console',
+          sub: `Dedicated Port :${PORTAL_CONFIG.officer_dash.port} · Verify incoming donor supplies & trigger AI-targeted outreach`
+        };
+      case 'donation_req_dash':
+        return {
+          title: 'Disaster Donation Requests Manager',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donation_req_dash.port} · Coordinate population crowd estimation & supply requests`
         };
       default:
         switch (currentTab) {
@@ -352,6 +364,22 @@ export function App() {
                     setCurrentPortal('admin');
                     setCurrentTab(tab);
                   }}
+                  onAddToast={addToast}
+                />
+              )}
+
+              {/* 7. Disaster Officer Console */}
+              {currentPortal === 'officer_dash' && (
+                <DisasterOfficerDashboardView
+                  currentUser={user}
+                  onAddToast={addToast}
+                />
+              )}
+
+              {/* 8. Disaster Donation Requests Manager */}
+              {currentPortal === 'donation_req_dash' && (
+                <DisasterDonationRequestView
+                  currentUser={user}
                   onAddToast={addToast}
                 />
               )}
