@@ -1,0 +1,164 @@
+{
+  "model_version": "v2_camp_relabelled",
+  "dataset": "nhamcs_2022_camp_relabeled_v2.csv",
+  "label_column": "camp_triage_label_final",
+  "classes": [
+    "LOW",
+    "MEDIUM",
+    "HIGH"
+  ],
+  "label_map": {
+    "LOW": 0,
+    "MEDIUM": 1,
+    "HIGH": 2
+  },
+  "n_base_models": 5,
+  "n_folds": 5,
+  "threshold_high": 0.47,
+  "threshold_low": 0.46,
+  "test_balanced_acc": 0.8944,
+  "test_macro_f1": 0.8887,
+  "test_high_recall": 0.9596,
+  "test_med_recall": 0.7814,
+  "test_low_recall": 0.9423,
+  "high_to_low_errors": 0,
+  "override_layers": {
+    "layer_1": "red_flag text match \u2192 floor to HIGH",
+    "layer_2": "dx_resus / dx_intubate / dx_centline \u2192 force HIGH",
+    "layer_3": "complaint pattern match \u2192 force HIGH"
+  },
+  "high_complaint_patterns": [
+    "crush injury",
+    "head trauma",
+    "heart failure",
+    "pregnancy complication",
+    "traumatic brain injury",
+    "head injury",
+    "drowning",
+    "electric shock",
+    "gunshot wound",
+    "stab wound",
+    "chest trauma",
+    "spinal injury",
+    "paralysis weakness one side",
+    "stroke",
+    "seizure convulsion",
+    "anaphylaxis"
+  ],
+  "dx_override_cols": [
+    "dx_resus",
+    "dx_intubate",
+    "dx_centline"
+  ],
+  "vital_medians": {
+    "0": {
+      "vital_hr": 84.0,
+      "vital_spo2": 98.0,
+      "vital_sbp": 133.0,
+      "vital_rr": 18.0,
+      "vital_temp": 36.7,
+      "pain_score": 1.0
+    },
+    "1": {
+      "vital_hr": 86.0,
+      "vital_spo2": 98.0,
+      "vital_sbp": 137.5,
+      "vital_rr": 18.0,
+      "vital_temp": 36.7,
+      "pain_score": 8.0
+    },
+    "2": {
+      "vital_hr": 101.0,
+      "vital_spo2": 98.0,
+      "vital_sbp": 129.0,
+      "vital_rr": 20.0,
+      "vital_temp": 36.9,
+      "pain_score": 2.0
+    }
+  },
+  "condition_groups": [
+    "CARDIOVASCULAR",
+    "ENDOCRINE_METABOLIC",
+    "GASTROINTESTINAL",
+    "INFECTION_SYSTEMIC",
+    "NEUROLOGIC",
+    "OBSTETRIC_GYNECOLOGIC",
+    "OTHER_EMERGENCY",
+    "RENAL_URINARY",
+    "RESPIRATORY",
+    "TRAUMA"
+  ],
+  "high_rate_map": {
+    "CARDIOVASCULAR": 0.3772,
+    "ENDOCRINE_METABOLIC": 0.3604,
+    "GASTROINTESTINAL": 0.2191,
+    "INFECTION_SYSTEMIC": 0.4079,
+    "NEUROLOGIC": 0.3071,
+    "OBSTETRIC_GYNECOLOGIC": 0.2537,
+    "OTHER_EMERGENCY": 0.2319,
+    "RENAL_URINARY": 0.2574,
+    "RESPIRATORY": 0.5043,
+    "TRAUMA": 0.1394
+  },
+  "med_rate_map": {
+    "CARDIOVASCULAR": 0.2811,
+    "ENDOCRINE_METABOLIC": 0.2703,
+    "GASTROINTESTINAL": 0.427,
+    "INFECTION_SYSTEMIC": 0.2461,
+    "NEUROLOGIC": 0.3929,
+    "OBSTETRIC_GYNECOLOGIC": 0.2537,
+    "OTHER_EMERGENCY": 0.3428,
+    "RENAL_URINARY": 0.2827,
+    "RESPIRATORY": 0.2261,
+    "TRAUMA": 0.3684
+  },
+  "low_rate_map": {
+    "CARDIOVASCULAR": 0.3416,
+    "ENDOCRINE_METABOLIC": 0.3694,
+    "GASTROINTESTINAL": 0.3539,
+    "INFECTION_SYSTEMIC": 0.346,
+    "NEUROLOGIC": 0.3,
+    "OBSTETRIC_GYNECOLOGIC": 0.4925,
+    "OTHER_EMERGENCY": 0.4253,
+    "RENAL_URINARY": 0.4599,
+    "RESPIRATORY": 0.2696,
+    "TRAUMA": 0.4922
+  },
+  "vf_cols": [
+    "vf_bradycardia",
+    "vf_hypox_severe",
+    "vf_hypox_moderate",
+    "vf_hypotension",
+    "vf_hypertension_crit",
+    "vf_tachypnea_severe",
+    "vf_bradypnea",
+    "vf_hypothermia",
+    "vf_high_fever",
+    "vf_pain_severe",
+    "vf_pain_none",
+    "vf_elderly",
+    "vf_child",
+    "vf_pain_low",
+    "vf_critical_vital",
+    "vf_any_danger",
+    "vf_elder_x_pain"
+  ],
+  "rf_cols": [
+    "has_red_flag",
+    "red_flag_count",
+    "rf_breathing_difficulty",
+    "rf_chest_pain",
+    "rf_focal_neurologic_deficit",
+    "rf_active_bleeding",
+    "rf_syncope",
+    "rf_seizure"
+  ],
+  "vital_cols": [
+    "vital_hr",
+    "vital_spo2",
+    "vital_sbp",
+    "vital_rr",
+    "vital_temp",
+    "pain_score"
+  ]
+}

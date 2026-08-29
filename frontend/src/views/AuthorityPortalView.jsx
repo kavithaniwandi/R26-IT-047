@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
   Activity, 
@@ -18,6 +19,7 @@ import {
 import { api } from '../api';
 
 export function AuthorityPortalView({ currentUser, onAddToast }) {
+  const navigate = useNavigate();
   const [sosList, setSosList] = useState([]);
   const [camps, setCamps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -189,6 +191,13 @@ export function AuthorityPortalView({ currentUser, onAddToast }) {
           {proposedCamps.length > 0 && (
             <span className="nav-badge blue">{proposedCamps.length} Pending</span>
           )}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => navigate('/camp-setup')}
+        >
+          <Users size={16} />
+          <span>Camp Severity Queue</span>
         </button>
       </div>
 

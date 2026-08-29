@@ -73,6 +73,13 @@ export const PORTAL_CONFIG = {
     defaultPassword: 'Volunteer@2026!',
     color: 'amber',
     badge: 'Port :5177',
+  },
+  volunteer_dash: {
+    port: 5178,
+    name: 'Volunteer Field Command',
+    badge: 'Field Station',
+    color: 'amber',
+    defaultRole: 'volunteer',
   }
 };
 
@@ -122,7 +129,7 @@ export function getPortalUrl(portalId) {
 
   const hostname = window.location.hostname || 'localhost';
   const protocol = window.location.protocol || 'http:';
-  
+
   // If running in dev mode or distinct ports
   return `${protocol}//${hostname}:${cfg.port}${cfg.path}`;
 }

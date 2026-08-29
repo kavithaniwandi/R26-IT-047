@@ -1,0 +1,461 @@
+.navigation {
+
+    position: fixed;
+
+    top:0;
+
+    left:0;
+
+    width:100%;
+
+    z-index:1000;
+
+    padding:20px 0;
+
+    background:transparent;
+
+    transition:0.3s ease;
+
+}
+
+
+
+
+.navigation.scrolled {
+
+    background:white;
+
+    box-shadow:
+    0 5px 25px rgba(0,0,0,0.08);
+
+    padding:14px 0;
+
+}
+
+
+
+
+
+.nav-container {
+
+
+    width:90%;
+
+    max-width:1200px;
+
+    margin:auto;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+
+}
+
+
+
+
+
+/* LOGO */
+
+
+.nav-logo {
+
+    display:flex;
+
+    align-items:center;
+
+}
+
+
+
+.logo-image {
+
+
+    width:190px;
+
+    height:auto;
+
+    object-fit:contain;
+
+
+}
+
+
+
+
+
+
+/* NAV LINKS */
+
+
+.nav-links {
+
+
+    display:flex;
+
+    align-items:center;
+
+    gap:30px;
+
+
+}
+
+
+
+
+.nav-link {
+
+
+    text-decoration:none;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    transition:0.3s;
+
+
+}
+
+
+
+.navigation.scrolled .nav-link {
+
+
+    color:#1E293B;
+
+
+}
+
+
+
+
+.nav-link:hover {
+
+
+    color:#1565C0;
+
+
+}
+
+
+
+
+
+
+
+/* PROFILE */
+
+
+.profile-link {
+
+
+    cursor:pointer;
+
+
+}
+
+
+
+
+
+
+
+/* LOGOUT */
+
+
+.logout-button {
+
+
+    background:none;
+
+    border:none;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:600;
+
+
+}
+
+
+
+.navigation.scrolled .logout-button {
+
+
+    color:#1E293B;
+
+
+}
+
+
+
+.logout-button:hover {
+
+
+    color:#D32F2F;
+
+
+}
+
+
+
+
+
+
+
+/* SOS BUTTON */
+
+
+.sos-button {
+
+
+    text-decoration:none;
+
+    background:#D32F2F;
+
+    color:white;
+
+    padding:12px 28px;
+
+    border-radius:8px;
+
+    font-weight:700;
+
+    transition:.3s;
+
+
+}
+
+
+
+
+.sos-button:hover {
+
+
+    background:#B71C1C;
+
+    transform:translateY(-3px);
+
+
+}
+
+
+
+
+
+
+
+/* MOBILE BUTTON */
+
+
+.mobile-menu-button {
+
+
+    display:none;
+
+    border:none;
+
+    background:none;
+
+    cursor:pointer;
+
+
+}
+
+
+
+
+.hamburger {
+
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:6px;
+
+
+}
+
+
+
+
+.hamburger span {
+
+
+    width:30px;
+
+    height:3px;
+
+    background:white;
+
+    border-radius:10px;
+
+    transition:.3s;
+
+
+}
+
+
+
+.navigation.scrolled .hamburger span {
+
+
+    background:#0F4C81;
+
+
+}
+
+
+
+
+
+
+/* MOBILE MENU */
+
+
+@media(max-width:900px){
+
+
+
+.mobile-menu-button {
+
+
+    display:block;
+
+
+}
+
+
+
+
+.nav-links {
+
+
+    position:fixed;
+
+    top:0;
+
+    right:-100%;
+
+    width:75%;
+
+    height:100vh;
+
+    background:white;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    gap:35px;
+
+    transition:.3s;
+
+    box-shadow:
+    -5px 0 25px rgba(0,0,0,.1);
+
+
+}
+
+
+
+.nav-links.open {
+
+
+    right:0;
+
+
+}
+
+
+
+
+.nav-link {
+
+
+    color:#1E293B;
+
+    font-size:18px;
+
+
+}
+
+
+
+
+.logout-button {
+
+
+    color:#1E293B;
+
+
+}
+
+
+
+.sos-button {
+
+
+    padding:14px 35px;
+
+
+}
+
+
+
+
+.logo-image {
+
+
+    width:150px;
+
+
+}
+
+
+
+}
+
+
+
+
+
+/* MOBILE HAMBURGER ANIMATION */
+
+
+.hamburger.active span:nth-child(1){
+
+    transform:
+    rotate(45deg)
+    translate(7px,7px);
+
+}
+
+
+
+.hamburger.active span:nth-child(2){
+
+    opacity:0;
+
+}
+
+
+
+.hamburger.active span:nth-child(3){
+
+    transform:
+    rotate(-45deg)
+    translate(7px,-7px);
+
+}
