@@ -1,6 +1,6 @@
 """
-FLOOD STEP 3 (with model comparison): Train and compare models, save the best.
-Run: python flood_step3_train.py
+FLOOD STEP 3 (with model comparispython flood_step3_train.pyon): Train and compare models, save the best.
+Run: 
 Input:  data/flood_training_data.csv
 Output: models/flood_model.pkl, models/flood_model_comparison.png
 

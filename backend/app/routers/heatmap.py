@@ -31,14 +31,46 @@ _landslide_encoder = None
 _gnd_risk_data = None
 _dsd_risk_data = None
 
+
+def _patch_sklearn_compat(model) -> None:
+    """
+    Back-fill the ``monotonic_cst`` attribute that sklearn >= 1.4 expects on
+    every DecisionTree node but that is absent when a model was serialised
+    under sklearn 1.3.x.  The patch is applied in-place and is a no-op when
+    the attribute already exists (i.e. models retrained on sklearn >= 1.4).
+    """
+    from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+    trees = []
+    # Ensemble models expose their individual estimators here
+    if hasattr(model, "estimators_"):
+        trees = model.estimators_
+        if trees and isinstance(trees[0], list):   # multi-output forests
+            trees = [t for row in trees for t in row]
+    elif isinstance(model, (DecisionTreeClassifier, DecisionTreeRegressor)):
+        trees = [model]
+
+    for tree in trees:
+        if not hasattr(tree, "monotonic_cst"):
+            tree.monotonic_cst = None
+        # The compiled Cython Tree object also needs the attribute
+        if hasattr(tree, "tree_") and not hasattr(tree.tree_, "monotonic_cst"):
+            try:
+                tree.tree_.monotonic_cst = None
+            except AttributeError:
+                pass  # read-only Cython slot – already set internally
+
+
 def get_ml_models():
     global _flood_model, _flood_scaler, _landslide_model, _landslide_scaler, _landslide_encoder, _gnd_risk_data, _dsd_risk_data
     if _flood_model is None:
         if (MODEL_DIR / "flood_risk_model.joblib").exists():
             _flood_model = joblib.load(MODEL_DIR / "flood_risk_model.joblib")
+            _patch_sklearn_compat(_flood_model)
             _flood_scaler = joblib.load(MODEL_DIR / "flood_risk_scaler.joblib")
         if (MODEL_DIR / "landslide_risk_model.joblib").exists():
             _landslide_model = joblib.load(MODEL_DIR / "landslide_risk_model.joblib")
+            _patch_sklearn_compat(_landslide_model)
             _landslide_scaler = joblib.load(MODEL_DIR / "landslide_risk_scaler.joblib")
             _landslide_encoder = joblib.load(MODEL_DIR / "landslide_gn_encoder.joblib")
         if (MODEL_DIR / "gnd_landslide_risk_table.json").exists():
@@ -248,9 +280,11 @@ def get_camp_and_priority_models():
     if _camp_model is None:
         if (MODEL_DIR / "camp_suitability_model.joblib").exists():
             _camp_model = joblib.load(MODEL_DIR / "camp_suitability_model.joblib")
+            _patch_sklearn_compat(_camp_model)
             _camp_scaler = joblib.load(MODEL_DIR / "camp_suitability_scaler.joblib")
         if (MODEL_DIR / "priority_score_model.joblib").exists():
             _priority_model = joblib.load(MODEL_DIR / "priority_score_model.joblib")
+            _patch_sklearn_compat(_priority_model)
             _priority_scaler = joblib.load(MODEL_DIR / "priority_score_scaler.joblib")
     return _camp_model, _camp_scaler, _priority_model, _priority_scaler
 
