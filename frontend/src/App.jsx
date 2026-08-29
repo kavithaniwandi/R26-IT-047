@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { LoginModal } from './components/LoginModal';
 import { CommandPalette } from './components/CommandPalette';
@@ -23,6 +24,21 @@ import { AuthorityPortalView } from './views/AuthorityPortalView';
 import { DonorPortalView } from './views/DonorPortalView';
 import { VolunteerPortalView } from './views/VolunteerPortalView';
 
+// Public and specialized workflow pages
+import Home from './pages/Home';
+import Map from './pages/Map';
+import Donations from './pages/Donations';
+import Contacts from './pages/Contacts';
+import SignIn from './pages/SignIn';
+import SOS from './pages/SOS';
+import Profile from './pages/Profile';
+import Donation_Appeal from './pages/Donation_Appeal';
+import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
+import CampSetup from './pages/CampSetup';
+import PriorityApplication from './pages/PriorityApplication';
+import PriorityQueue from './pages/PriorityQueue';
+import { AuthProvider } from './context/AuthContext';
+
 import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
 import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';
 import {
@@ -34,7 +50,7 @@ import {
 } from './utils/audioAlert';
 import { ShieldAlert, AlertTriangle, Radio, Activity, Sparkles } from 'lucide-react';
 
-export function App() {
+function DashboardApp() {
   const [currentPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
   const [currentTab, setCurrentTab] = useState('overview');
   const [user, setUser] = useState(null);
@@ -157,33 +173,28 @@ export function App() {
   const getPortalTitle = () => {
     switch (currentPortal) {
       case 'victim':
-        return {
-          title: 'Victim & Public Emergency SOS Portal',
-          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} · Satellite GPS Telemetry & Multi-Channel Alert Dispatch`
+        return { 
+          title: 'Victim & Public Emergency SOS Portal', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} - Satellite GPS Telemetry & Multi-Channel Alert Dispatch`
         };
       case 'authority':
-        return {
-          title: 'Medical Authority Command Console',
-          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} · Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
+        return { 
+          title: 'Medical Authority Command Console', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} - Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
         };
       case 'donor':
-        return {
-          title: 'Relief Donor & Supply Matching Marketplace',
-          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} · Priority Medical Demands & Verified Pledges`
+        return { 
+          title: 'Relief Donor & Supply Matching Marketplace', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Priority Medical Demands & Verified Pledges`
         };
       case 'volunteer':
-        return {
-          title: 'Field Volunteer & Rapid Responder Client',
-          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} · On-Ground Rescue Missions & GPS Navigation`
-        };
-      case 'volunteer_dash':
-        return {
-          title: 'Volunteer Field Command Dashboard',
-          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer_dash.port} · Shelter Population, AI Estimation & Relief Requests`
+        return { 
+          title: 'Field Volunteer & Rapid Responder Client', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} - On-Ground Rescue Missions & GPS Navigation`
         };
       default:
         switch (currentTab) {
-          case 'overview': return { title: 'Executive Disaster Relief Command Center', sub: `Dedicated Port :${PORTAL_CONFIG.admin.port} · National Triage & Resource Allocation` };
+          case 'overview': return { title: 'Executive Disaster Relief Command Center', sub: `Dedicated Port :${PORTAL_CONFIG.admin.port} - National Triage & Resource Allocation` };
           case 'sos': return { title: 'Emergency SOS Incident Triage Queue', sub: 'Real-Time Alert Dispatch & Model 4 Urgency Scoring' };
           case 'heatmap': return { title: 'Geospatial Hazard Heatmap & ML Inference', sub: 'Kelani Basin Flood & Nuwara Eliya Landslide Predictors' };
           case 'camps': return { title: 'Temporary Medical Camps Planning Hub', sub: 'Model 3 Spatial Suitability Scoring & Official Approvals' };
@@ -251,7 +262,7 @@ export function App() {
                   <span>LIVE ADVISORY</span>
                 </span>
                 <span className="ticker-message">
-                  Kelani River Basin Alert: Moderate Risk upstream · 14 Medical Camps active in Western & Central Provinces · Model 4 Urgency Triage Online
+                  Kelani River Basin Alert: Moderate Risk upstream - 14 Medical Camps active in Western & Central Provinces - Model 4 Urgency Triage Online
                 </span>
               </div>
               <div className="ticker-stats">
@@ -381,6 +392,160 @@ export function App() {
       {/* Global Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
+  );
+}
+
+function SystemWorkflowShell({ children, title, subtitle }) {
+  const navigate = useNavigate();
+  const [currentPortal, setCurrentPortal] = useState('authority');
+  const [currentTab, setCurrentTab] = useState('camps');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [soundActive, setSoundActive] = useState(() => isSoundEnabled());
+  const [toasts, setToasts] = useState([]);
+  const user = getStoredUser() || {
+    full_name: 'Dr. Nihal Jayasinghe (MOH Officer)',
+    role: 'authority',
+  };
+
+  const addToast = useCallback((message, type = 'info', toastTitle = null) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type, title: toastTitle }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 4500);
+  }, []);
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const handlePortalSelect = (portal) => {
+    setCurrentPortal(portal);
+    navigate('/');
+  };
+
+  const handleTabSelect = (tab) => {
+    setCurrentPortal('admin');
+    setCurrentTab(tab);
+    navigate('/');
+  };
+
+  const handleToggleSound = () => {
+    const nextState = toggleSound();
+    setSoundActive(nextState);
+    addToast(
+      nextState ? 'Emergency sound alerts enabled' : 'Audio alert effects muted',
+      'info',
+      nextState ? 'Audio Active' : 'Audio Muted'
+    );
+  };
+
+  return (
+    <div className="app-container">
+      <Sidebar
+        currentPortal={currentPortal}
+        setPortal={handlePortalSelect}
+        currentTab={currentTab}
+        setTab={handleTabSelect}
+        user={user}
+        onLogout={() => navigate('/')}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+      />
+      <main className="main-content">
+        <div className="emergency-broadcast-ticker">
+          <div className="ticker-left">
+            <span className="ticker-beacon">
+              <Radio size={12} />
+              <span>LIVE ADVISORY</span>
+            </span>
+            <span className="ticker-message">
+              Medical camp severity queue setup - MO routing and patient triage session control
+            </span>
+          </div>
+        </div>
+        <Header
+          title={title}
+          subtitle={subtitle}
+          portalId="authority"
+          onRefresh={() => addToast('Camp severity workflow refreshed.', 'info', 'Workflow Synced')}
+          isRefreshing={false}
+          user={user}
+          onSwitchUserClick={() => navigate('/')}
+          onOpenCommandPalette={() => setShowCommandPalette(true)}
+          onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+          soundEnabled={soundActive}
+          onToggleSound={handleToggleSound}
+        />
+        <div className="view-body">{children}</div>
+      </main>
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onSelectPortal={handlePortalSelect}
+        onSelectTab={handleTabSelect}
+        onOpenLoginModal={() => navigate('/')}
+        onToggleSound={handleToggleSound}
+        soundEnabled={soundActive}
+      />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<DashboardApp />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/map" element={<Map />} />
+          <Route path="/donations" element={<Donations />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/sos-public" element={<SOS />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/donation-appeal" element={<Donation_Appeal />} />
+          <Route path="/donation-appeal-analyzer" element={<DonationAppealAnalyzer />} />
+          <Route
+            path="/camp-setup"
+            element={
+              <SystemWorkflowShell
+                title="Camp Severity Queue Setup"
+                subtitle="Activate a medical camp, register MOs, and open the severity triage workflow"
+              >
+                <CampSetup />
+              </SystemWorkflowShell>
+            }
+          />
+          <Route
+            path="/priority-application"
+            element={
+              <SystemWorkflowShell
+                title="Patient Severity Application"
+                subtitle="Classify clinical notes, assign medical officers, and submit cases to the camp queue"
+              >
+                <PriorityApplication />
+              </SystemWorkflowShell>
+            }
+          />
+          <Route
+            path="/priority-queue"
+            element={
+              <SystemWorkflowShell
+                title="Camp Severity Queue"
+                subtitle="Review assigned patient queues by medical officer and severity level"
+              >
+                <PriorityQueue />
+              </SystemWorkflowShell>
+            }
+          />
+          <Route path="*" element={<DashboardApp />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

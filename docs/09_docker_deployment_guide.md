@@ -144,7 +144,7 @@ docker-compose ps
 ```text
 NAME                      IMAGE                  COMMAND                  SERVICE   STATUS                    PORTS
 disaster_relief_adminer   adminer:latest         "entrypoint.sh docke…"   adminer   running                   0.0.0.0:8080->8080/tcp
-disaster_relief_backend   sdm-backend            "uvicorn app.main:app…"   backend   running (healthy)         0.0.0.0:8000->8000/tcp
+disaster_relief_backend   sdm-backend            "uvicorn app.models.main:app..."   backend   running (healthy)         0.0.0.0:8000->8000/tcp
 disaster_relief_db        mysql:8.0              "docker-entrypoint.s…"   db        running (healthy)         0.0.0.0:3306->3306/tcp
 ```
 

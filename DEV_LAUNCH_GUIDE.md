@@ -15,7 +15,7 @@ If you have already installed dependencies and trained the ML models:
 ```powershell
 cd backend
 .\venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.models.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 * **Swagger API Docs:** [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs)
 * **Health Check:** [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
