@@ -15,6 +15,7 @@ python-dotenv==1.0.0
 python-multipart==0.0.12
 requests==2.32.3
 geopy==2.4.1
+twilio>=9.3.0
 
 # MySQL Drivers
 PyMySQL==1.1.0
