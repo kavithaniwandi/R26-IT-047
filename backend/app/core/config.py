@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "Research047"
 
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).resolve().parents[2] / ".env2",
+        env_file=Path(__file__).resolve().parents[2] / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
