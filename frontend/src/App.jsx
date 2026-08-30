@@ -42,20 +42,7 @@ import PriorityApplication from './pages/PriorityApplication';
 import PriorityQueue from './pages/PriorityQueue';
 import { AuthProvider } from './context/AuthContext';
 
-// Public and specialized workflow pages
-import Home from './pages/Home';
-import Map from './pages/Map';
-import Donations from './pages/Donations';
-import Contacts from './pages/Contacts';
-import SignIn from './pages/SignIn';
-import SOS from './pages/SOS';
-import Profile from './pages/Profile';
-import Donation_Appeal from './pages/Donation_Appeal';
-import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
-import CampSetup from './pages/CampSetup';
-import PriorityApplication from './pages/PriorityApplication';
-import PriorityQueue from './pages/PriorityQueue';
-import { AuthProvider } from './context/AuthContext';
+
 
 import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
 import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';

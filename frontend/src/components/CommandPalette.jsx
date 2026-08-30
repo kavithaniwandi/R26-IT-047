@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ShieldAlert,
@@ -12,33 +14,9 @@ import {
   Users,
   Bell,
   BarChart3,
-  Layers,
-  UserCheck,
-  Volume2,
-  VolumeX,
-  X,
-  Search, 
-  ShieldAlert, 
-  Activity, 
-  HeartHandshake, 
-  Truck, 
-  ShieldCheck, 
-  MapPin, 
-  Tent, 
-  Users, 
-  Bell, 
-  BarChart3, 
-  Layers, 
-  UserCheck, 
-  Volume2, 
-  VolumeX, 
-  X,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Gift
-} from 'lucide-react';
-import { PORTAL_CONFIG } from '../portalConfig';
+  Layers
+} from "lucide-react";
+import { PORTAL_CONFIG } from "../portalConfig";
 
 export function CommandPalette({
   isOpen,
