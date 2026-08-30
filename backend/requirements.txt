@@ -1,3 +1,4 @@
+
 fastapi==0.110.0
 uvicorn[standard]==0.29.0
 sqlalchemy==2.0.29
@@ -13,25 +14,22 @@ pytest==8.1.1
 pytest-asyncio==0.23.6
 python-dotenv==1.0.0
 
-# ── MySQL Drivers ─────────────────────────────────────────────
+# MySQL Drivers
 PyMySQL==1.1.0
 mysqlclient==2.2.4
 cryptography==42.0.5
 
-# ── ML Inference ──────────────────────────────────────────────
+# ML Inference
 joblib>=1.3.0
-numpy>=1.24.0,<2.0.0
-scikit-learn>=1.3.0
-
-# ── YOLO and Computer Vision (for my_module) ──────────────────
-ultralytics>=8.0.0
-python-multipart>=0.0.9
-torch>=2.0.0
-torchvision>=0.15.0
-pillow>=10.0.0
-argon2-cffi>=23.1.0
-pyjwt>=2.8.0
-pymongo>=4.6.0
-opencv-python>=4.0.0
-
-
+numpy>=1.26,<2.0
+scikit-learn==1.7.2
+lightgbm
+xgboost
+scispacy
+https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
+sentence-transformers
+pandas
+google-genai
+huggingface_hub
+pymongo
+motor

@@ -4,6 +4,7 @@ app/database.py
 SQLAlchemy engine, session factory, declarative Base, and comprehensive seeder.
 """
 from __future__ import annotations
+import motor.motor_asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from passlib.context import CryptContext
@@ -11,6 +12,47 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ── 1. MongoDB Atlas Async Connection ───────────────────────────────────────
+mongo_uri = settings.MONGODB_URI
+if not mongo_uri:
+    print("⚠️ WARNING: MONGODB_URI not loaded from .env!")
+    
+mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
+mongo_db = mongo_client[settings.MONGODB_DB_NAME]
+
+disaster_requests_collection = mongo_db["disaster_requests"]
+donation_items_collection = mongo_db["donation_items"]
+users_collection = mongo_db["users"]
+
+# ── 2. SQLAlchemy Engine (Preserved for compatibility) ──────────────────────
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+_connect_args = {"check_same_thread": False} if _is_sqlite else {}
+_pool_kwargs = {} if _is_sqlite else {
+    "pool_size": 10,
+    "max_overflow": 20,
+    "pool_recycle": 3600,
+    "pool_pre_ping": True,
+}
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args=_connect_args,
+    echo=False,
+    **_pool_kwargs,
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+class Base(DeclarativeBase):
+    pass
+
+def get_db():
+    db: Session = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 _connect_args = {"check_same_thread": False} if _is_sqlite else {}

@@ -1,27 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  LayoutDashboard, 
   Tent, 
   MapPin, 
   Search, 
   Filter, 
   ArrowRight, 
-  AlertTriangle, 
-  ShieldAlert, 
   HeartHandshake, 
+  ShieldAlert, 
   PhoneCall, 
   Compass, 
-  RefreshCw,
-  LayoutDashboard
+  RefreshCw, 
+  AlertCircle 
 } from 'lucide-react';
 import { api } from '../api';
-import { ReliefCampDetailView } from './ReliefCampDetailView';
 
 export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) {
   const [camps, setCamps] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDs, setSelectedDs] = useState('All');
-  const [selectedCampId, setSelectedCampId] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchCamps = async () => {
@@ -41,29 +39,13 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
     fetchCamps();
   }, []);
 
-  if (selectedCampId) {
-    return (
-      <ReliefCampDetailView
-        campId={selectedCampId}
-        onBack={() => setSelectedCampId(null)}
-        currentUser={currentUser}
-        onAddToast={onAddToast}
-      />
-    );
-  }
-
-  const dsAreas = ['All', ...new Set(camps.map((c) => c.ds_division || c.dsArea).filter(Boolean))];
+  const dsAreas = ['All', ...new Set(camps.map((c) => c.ds_division || c.district).filter(Boolean))];
 
   const filteredCamps = camps.filter((c) => {
-    const dsValue = c.ds_division || c.dsArea || '';
-    const gnValue = c.gn_division || c.gnDivision || '';
+    const dsValue = c.ds_division || c.district || '';
     const nameValue = c.name || '';
-
     const matchesDs = selectedDs === 'All' || dsValue === selectedDs;
-    const matchesSearch =
-      nameValue.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      gnValue.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dsValue.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = nameValue.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesDs && matchesSearch;
   });
 
@@ -96,11 +78,11 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
             <LayoutDashboard size={28} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
               Volunteer Field Command Dashboard
             </h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Manage shelter population, run crowd estimation AI, and publish relief requests for your assigned camps.
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+              Manage shelter population, coordinate field tasks, and publish relief requests.
             </p>
           </div>
         </div>
@@ -112,7 +94,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           border: '1px solid var(--border-subtle)'
         }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>DISPATCH COMMANDER</span>
-          <strong style={{ fontSize: '1.1rem', color: 'var(--accent-amber)' }}>{currentUser?.full_name || 'Volunteer Unit #4'}</strong>
+          <strong style={{ fontSize: '1.1rem', color: 'var(--accent-amber)' }}>{currentUser?.full_name || 'Volunteer Unit'}</strong>
         </div>
       </div>
 
@@ -127,7 +109,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           alignItems: 'center',
           gap: '12px'
         }}>
-          <AlertTriangle size={20} />
+          <AlertCircle size={20} />
           <span>{error}</span>
         </div>
       )}
@@ -136,8 +118,8 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
       <div className="card">
         <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 className="card-title">My Assigned Relief Camps ({filteredCamps.length})</h2>
-            <p className="card-subtitle">Active shelters allocated under your operational jurisdiction</p>
+            <h2 className="card-title">Assigned Camps & Stations ({filteredCamps.length})</h2>
+            <p className="card-subtitle">Active shelters allocated under your operational supervision</p>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -146,7 +128,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
               <input
                 type="text"
                 className="form-input search-input"
-                placeholder="Search camp or GN..."
+                placeholder="Search camp..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ padding: '6px 12px 6px 34px', fontSize: '0.82rem' }}
@@ -159,7 +141,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                 className="form-input"
                 value={selectedDs}
                 onChange={(e) => setSelectedDs(e.target.value)}
-                style={{ padding: '6px 12px', fontSize: '0.82rem', width: '130px' }}
+                style={{ padding: '6px 12px', fontSize: '0.82rem', width: '140px' }}
               >
                 {dsAreas.map((ds) => (
                   <option key={ds} value={ds}>{ds}</option>
@@ -177,32 +159,27 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
             Loading assigned relief camps...
           </div>
-        ) : camps.length === 0 ? (
+        ) : filteredCamps.length === 0 ? (
           <div style={{
             backgroundColor: 'var(--bg-secondary)',
             borderRadius: 'var(--radius-lg)',
-            padding: '40px 20px',
+            padding: '48px 20px',
             textAlign: 'center',
             border: '1px dashed var(--border-subtle)',
             margin: '10px 0'
           }}>
-            <Tent size={40} style={{ color: 'var(--accent-amber)', marginBottom: '12px' }} />
+            <Tent size={40} style={{ color: 'var(--accent-amber)', marginBottom: '12px', opacity: 0.8 }} />
             <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0 0 6px' }}>No Relief Camps Assigned</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '480px', margin: '0 auto' }}>
-              You have not been allocated to any relief camp yet. Please contact your system administrator to assign a shelter station to your profile.
+              You have not been allocated to any relief camp yet. Please contact your system administrator to assign a shelter station.
             </p>
-          </div>
-        ) : filteredCamps.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--text-muted)' }}>
-            No assigned camps match your search filter.
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
             {filteredCamps.map((camp) => {
-              const currentPop = camp.current_occupancy ?? camp.currentPopulation ?? 0;
-              const maxCap = camp.estimated_capacity ?? camp.maxCapacityPersons ?? 100;
+              const currentPop = camp.current_occupancy ?? 0;
+              const maxCap = camp.estimated_capacity ?? 100;
               const fillPct = Math.min(100, Math.round((currentPop / (maxCap || 1)) * 100));
-              const isFull = fillPct >= 95;
 
               return (
                 <div
@@ -214,53 +191,37 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                     padding: '20px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '16px',
+                    gap: '14px'
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <span className={`badge ${isFull ? 'badge-critical' : fillPct > 70 ? 'badge-medium' : 'badge-low'}`}>
-                        {isFull ? 'Near Capacity' : `${fillPct}% Occupied`}
-                      </span>
-                      <span className="font-mono" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                        {camp.ds_division || camp.dsArea || 'Western Zone'}
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className={`badge ${fillPct >= 90 ? 'badge-critical' : 'badge-low'}`}>
+                      {fillPct}% Occupied
+                    </span>
+                    <span className="font-mono" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {camp.district}
+                    </span>
+                  </div>
 
-                    <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                       {camp.name}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       <MapPin size={12} style={{ color: 'var(--accent-rose)' }} />
-                      <span>{camp.gn_division || camp.gnDivision || camp.district}</span>
+                      <span>{camp.gn_division || camp.ds_division || camp.district}</span>
                     </div>
                   </div>
 
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                      <span>Sheltered: <strong style={{ color: 'var(--text-primary)' }}>{currentPop}</strong></span>
-                      <span>Capacity: <strong style={{ color: 'var(--text-primary)' }}>{maxCap}</strong></span>
+                  <div style={{ backgroundColor: 'var(--bg-card)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                      <span>Occupancy: <strong>{currentPop} / {maxCap}</strong></span>
+                      <strong>{fillPct}%</strong>
                     </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-card)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${fillPct}%`,
-                        height: '100%',
-                        backgroundColor: isFull ? 'var(--accent-rose)' : fillPct > 60 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-                        borderRadius: '999px',
-                        transition: 'width 0.3s ease'
-                      }} />
+                    <div className="progress-bar-bg">
+                      <div className="progress-bar-fill" style={{ width: `${fillPct}%`, backgroundColor: 'var(--accent-amber)' }} />
                     </div>
                   </div>
-
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', justifyContent: 'center' }}
-                    onClick={() => setSelectedCampId(camp.id)}
-                  >
-                    <span>Enter Field Station</span>
-                    <ArrowRight size={14} />
-                  </button>
                 </div>
               );
             })}
@@ -276,7 +237,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           </div>
           <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>Disaster Appeals Overview</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            View all active disaster supply requests and match donor pledges across the province.
+            View active disaster supply requests and match donor pledges.
           </p>
           <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('donations')}>
             <span>All Requests</span>
@@ -290,7 +251,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           </div>
           <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>SOS Emergency Queue</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            Respond to active emergency distress beacons and dispatch rescue tasks in real time.
+            Respond to active emergency distress beacons and dispatch rescue tasks.
           </p>
           <button className="btn btn-danger btn-sm" onClick={() => onNavigate && onNavigate('sos')}>
             <span>View SOS Tasks</span>
@@ -308,20 +269,6 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           </p>
           <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('heatmap')}>
             <span>Open Map</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--accent-amber-subtle)', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PhoneCall size={20} />
-          </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>Emergency Contacts</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            Access directory of DS officers, MOH medical teams, and emergency hotlines.
-          </p>
-          <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('users')}>
-            <span>View Directory</span>
             <ArrowRight size={14} />
           </button>
         </div>

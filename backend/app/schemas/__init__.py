@@ -1,1 +1,1 @@
-# schemas package
+# Shared API schema package.

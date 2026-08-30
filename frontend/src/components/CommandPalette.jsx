@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, 
-  ShieldAlert, 
-  Activity, 
-  HeartHandshake, 
-  Truck, 
-  ShieldCheck, 
-  MapPin, 
-  Tent, 
-  Users, 
-  Bell, 
-  BarChart3, 
-  Layers, 
-  UserCheck, 
-  Volume2, 
-  VolumeX, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Search,
+  ShieldAlert,
+  Activity,
+  HeartHandshake,
+  Truck,
+  ShieldCheck,
+  MapPin,
+  Tent,
+  Users,
+  Bell,
+  BarChart3,
+  Layers,
+  UserCheck,
+  Volume2,
+  VolumeX,
   X,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Shield,
+  Gift
 } from 'lucide-react';
 import { PORTAL_CONFIG } from '../portalConfig';
 
@@ -30,6 +33,7 @@ export function CommandPalette({
   onToggleSound,
   soundEnabled
 }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -109,21 +113,21 @@ export function CommandPalette({
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-officer-dashboard',
-      title: 'Disaster Officer Console',
-      subtitle: `Port :${PORTAL_CONFIG.officer_dash.port} · Verify incoming donor supplies & trigger AI-targeted outreach`,
-      icon: ShieldCheck,
+      id: 'portal-disaster-officer',
+      title: 'Disaster Officer Portal',
+      subtitle: `Port :${PORTAL_CONFIG.disaster_officer?.port || 5179} · Camp triage, MO routing & patient severity queue`,
+      icon: Shield,
       color: 'blue',
-      action: () => { onSelectPortal('officer_dash'); onClose(); }
+      action: () => { onSelectPortal('disaster_officer'); onClose(); }
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-donation-requests',
-      title: 'Disaster Donation Requests',
-      subtitle: `Port :${PORTAL_CONFIG.donation_req_dash.port} · Coordinate population crowd estimation & supply requests`,
-      icon: HeartHandshake,
-      color: 'rose',
-      action: () => { onSelectPortal('donation_req_dash'); onClose(); }
+      id: 'portal-disaster-donation',
+      title: 'Disaster Donation Hub',
+      subtitle: `Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} · Medical appeals, inventory shortages & public pledges`,
+      icon: Gift,
+      color: 'emerald',
+      action: () => { onSelectPortal('disaster_donation'); onClose(); }
     },
 
     // Admin Console Views
@@ -180,6 +184,15 @@ export function CommandPalette({
       icon: HeartHandshake,
       color: 'emerald',
       action: () => { onSelectPortal('admin'); onSelectTab('donations'); onClose(); }
+    },
+    {
+      category: 'Command Center Views',
+      id: 'tab-donation-appeal',
+      title: 'Donation Appeal Studio',
+      subtitle: 'Generate donor-facing appeal copy and open the analyzer',
+      icon: Sparkles,
+      color: 'emerald',
+      action: () => { navigate('/donation-appeal'); onClose(); }
     },
     {
       category: 'Command Center Views',

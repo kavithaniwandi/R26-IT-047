@@ -2,11 +2,12 @@
 app/core/config.py
 ------------------
 Centralised settings loaded from the .env file via Pydantic-Settings.
-All other modules import from here — never call os.getenv() directly.
 """
 from pathlib import Path
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from pydantic_settings import BaseSettings
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -23,10 +24,16 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
 
-    class Config:
-        # Load from backend/.env when running from the backend/ directory
-        env_file = Path(__file__).resolve().parents[2] / ".env"
-        env_file_encoding = "utf-8"
+    # MongoDB Atlas Settings (accepts MONGODB_URL or MONGODB_URI)
+    MONGODB_URI: str | None = Field(default=None, validation_alias="MONGODB_URL")
+    MONGODB_DB_NAME: str = Field(default="Research047", validation_alias="DATABASE_NAME")
+
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
 
 settings = Settings()

@@ -75,26 +75,38 @@ export const PORTAL_CONFIG = {
     badge: 'Port :5177',
   },
   volunteer_dash: {
-    port: 5178,
+    id: 'volunteer_dash',
     name: 'Volunteer Field Command',
-    badge: 'Field Station',
+    port: 5178,
+    path: '/volunteer-dash',
+    defaultRole: 'volunteer',
+    defaultEmail: 'volunteer@relief.lk',
+    defaultPassword: 'Volunteer@2026!',
+    badge: 'Port :5178',
     color: 'amber',
-    defaultRole: 'volunteer',
   },
-  officer_dash: {
+  disaster_officer: {
+    id: 'disaster_officer',
+    name: 'Disaster Officer Portal',
     port: 5179,
-    name: 'Disaster Officer Console',
-    badge: 'DS Command',
+    path: '/disaster-officer',
+    defaultRole: 'authority',
+    defaultEmail: 'authority@moh.gov.lk',
+    defaultPassword: 'Authority@2026!',
+    badge: 'Port :5179',
     color: 'blue',
-    defaultRole: 'disaster_officer',
   },
-  donation_req_dash: {
+  disaster_donation: {
+    id: 'disaster_donation',
+    name: 'Disaster Donation Portal',
     port: 5180,
-    name: 'Disaster Donation Requests',
-    badge: 'Appeals',
-    color: 'rose',
-    defaultRole: 'volunteer',
-  }
+    path: '/disaster-donation',
+    defaultRole: 'donor',
+    defaultEmail: 'donor@redcross.lk',
+    defaultPassword: 'Donor@2026!',
+    badge: 'Port :5180',
+    color: 'emerald',
+  },
 };
 
 /**
