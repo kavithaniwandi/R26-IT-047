@@ -42,6 +42,21 @@ import PriorityApplication from './pages/PriorityApplication';
 import PriorityQueue from './pages/PriorityQueue';
 import { AuthProvider } from './context/AuthContext';
 
+// Public and specialized workflow pages
+import Home from './pages/Home';
+import Map from './pages/Map';
+import Donations from './pages/Donations';
+import Contacts from './pages/Contacts';
+import SignIn from './pages/SignIn';
+import SOS from './pages/SOS';
+import Profile from './pages/Profile';
+import Donation_Appeal from './pages/Donation_Appeal';
+import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
+import CampSetup from './pages/CampSetup';
+import PriorityApplication from './pages/PriorityApplication';
+import PriorityQueue from './pages/PriorityQueue';
+import { AuthProvider } from './context/AuthContext';
+
 import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
 import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';
 import {
@@ -51,7 +66,7 @@ import {
   toggleSound,
   isSoundEnabled
 } from './utils/audioAlert';
-import { ShieldAlert, AlertTriangle, Radio, Activity, Sparkles } from 'lucide-react';
+import { Radio } from 'lucide-react';
 
 function DashboardApp() {
   const [currentPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
@@ -209,6 +224,24 @@ function DashboardApp() {
         return {
           title: 'Disaster Relief Donation & Resource Matchmaking',
           sub: `Dedicated Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} - Shortage Appeals, Verified Pledges & Drop-Off Tracking`
+        return { 
+          title: 'Victim & Public Emergency SOS Portal', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} - Satellite GPS Telemetry & Multi-Channel Alert Dispatch`
+        };
+      case 'authority':
+        return { 
+          title: 'Medical Authority Command Console', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} - Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
+        };
+      case 'donor':
+        return { 
+          title: 'Relief Donor & Supply Matching Marketplace', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Priority Medical Demands & Verified Pledges`
+        };
+      case 'volunteer':
+        return { 
+          title: 'Field Volunteer & Rapid Responder Client', 
+          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} - On-Ground Rescue Missions & GPS Navigation`
         };
       default:
         switch (currentTab) {

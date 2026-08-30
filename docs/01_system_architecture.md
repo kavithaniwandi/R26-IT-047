@@ -98,12 +98,12 @@ Encapsulates domain business logic, Pydantic input validation, and business rule
 - **`NotificationService`**: Asynchronously coordinates emergency alerts to nearby responders (police, hospitals, designated relief contacts).
 
 ### 2.4 Layer 4: ML Inference & Analytical Tier
-- **Lifecycle Management:** Pre-trained Random Forest model binaries (`.joblib`) and standardization scalers are loaded once into memory during application lifespan startup (`app.main:lifespan`).
+- **Lifecycle Management:** Pre-trained Random Forest model binaries (`.joblib`) and standardization scalers are loaded once into memory during application lifespan startup (`app.models.main:lifespan`).
 - **Zero-Latency Serving:** Model inference calls are purely synchronous memory operations, eliminating disk I/O per request and preventing model reload overhead.
 
 ### 2.5 Layer 5: Data Persistence Tier
 - **ORM:** SQLAlchemy 2.0 with strict foreign key constraints and type-safe Declarative Base models.
-- **Storage Engine:** MySQL 8.0 (Docker, via PyMySQL driver) for containerized deployments; SQLite for local development. The engine auto-detects the scheme from `DATABASE_URL` — `mysql+pymysql://` activates connection pooling (`pool_size=10`, `pool_recycle=3600`, `pool_pre_ping=True`); `sqlite:///` activates `check_same_thread=False`. Switch between modes by editing `.env.docker` (Docker) or `backend/.env` (local).
+- **Storage Engine:** MySQL 8.0 (Docker, via PyMySQL driver) for containerized deployments; SQLite for local development. The engine auto-detects the scheme from `DATABASE_URL` — `mysql+pymysql://` activates connection pooling (`pool_size=10`, `pool_recycle=3600`, `pool_pre_ping=True`); `sqlite:///` activates `check_same_thread=False`. Switch between modes by editing `.env.docker` (Docker) or `backend/.env2` (local).
 
 ---
 
