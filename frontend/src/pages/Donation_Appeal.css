@@ -590,3 +590,104 @@
     width: 100%;
   }
 }
+
+.low-confidence-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #78350f;
+}
+
+.low-confidence-banner strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: #92400e;
+}
+
+.low-confidence-banner p {
+  margin: 0;
+  line-height: 1.45;
+  color: #78350f;
+}
+
+.low-confidence-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.confidence-low {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.status-pill.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.appeal-error-box {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.appeal-error-box strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.appeal-error-box p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.appeal-error-box.validation {
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  color: #78350f;
+}
+
+.appeal-error-box.validation strong {
+  color: #92400e;
+}
+
+.appeal-error-box.api {
+  background-color: #fef2f2;
+  border: 1px solid #f87171;
+  border-left: 4px solid #ef4444;
+  color: #7f1d1d;
+}
+
+.appeal-error-box.api strong {
+  color: #991b1b;
+}
+
+.remaining-loading {
+  color: #6b7280;
+  font-size: 0.8em;
+  animation: remaining-variants-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes remaining-variants-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}

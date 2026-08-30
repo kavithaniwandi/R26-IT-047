@@ -5,6 +5,7 @@ FastAPI application entry point registering all system routers and local ML endp
 """
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -40,6 +41,12 @@ from app.models.schemas import (
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
+    try:
+        from app.models.quality_service import warm_up
+
+        warm_up()
+    except Exception as exc:
+        print(f"Quality model warmup failed: {exc}")
     try:
         from app.services.mongo_service import connect_mongo
 
@@ -121,7 +128,10 @@ async def evaluate_quality(request: QualityScoreRequest) -> QualityScoreResponse
             confidence=result["confidence"],
             confidence_normalised=result["confidence_normalised"],
             confidence_display=result["confidence_display"],
+            low_confidence=result["low_confidence"],
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -147,13 +157,18 @@ async def analyse_appeal(payload: dict) -> dict:
             "score": quality["score"],
             "label": quality["status"],
             "confidence": quality["confidence"],
+            "low_confidence": quality["low_confidence"],
             "method": quality["method"],
             "issues": _diagnose_weaknesses(appeal_text, language),
         }
         from app.services.mongo_service import log_appeal_analysis
 
-        await log_appeal_analysis(appeal_text, language, result)
+        asyncio.create_task(
+            log_appeal_analysis(appeal_text, language, result, source="analyser")
+        )
         return result
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Appeal analysis failed.") from exc
 
@@ -213,16 +228,36 @@ async def generate_appeal(request: GenerateAppealRequest) -> GenerateAppealRespo
         raise HTTPException(status_code=500, detail="Appeal generation failed.") from exc
 
 
+@app.post("/api/generate-appeal-variants/remaining", response_model=GenerateAppealVariantsResponse)
+async def generate_remaining_appeal_variants_endpoint(
+    request: GenerateAppealRequest,
+) -> GenerateAppealVariantsResponse:
+    """Generate the remaining donation appeal variants from campaign details."""
+    try:
+        from app.models.gemini_service import generate_remaining_appeal_variants
+
+        campaign_data = request.model_dump()
+        variants = await generate_remaining_appeal_variants(campaign_data, skip_styles=1)
+        return GenerateAppealVariantsResponse(variants=variants)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Remaining appeal variant generation failed.",
+        ) from exc
+
+
 @app.post("/api/generate-appeal-variants", response_model=GenerateAppealVariantsResponse)
 async def generate_appeal_variants_endpoint(
     request: GenerateAppealRequest,
 ) -> GenerateAppealVariantsResponse:
-    """Generate multiple donation appeal variants from campaign details."""
+    """Generate the first donation appeal variant from campaign details."""
     try:
-        from app.models.gemini_service import generate_appeal_variants
+        from app.models.gemini_service import generate_first_appeal_variant
 
         campaign_data = request.model_dump()
-        variants = await generate_appeal_variants(campaign_data, top_n=3)
+        variants = await generate_first_appeal_variant(campaign_data)
         from app.services.mongo_service import log_appeal_generation
 
         await log_appeal_generation(campaign_data, variants)
