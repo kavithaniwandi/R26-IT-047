@@ -338,6 +338,62 @@
   opacity: 0.75;
 }
 
+.cs-shift-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.8fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-shift-control select {
+  min-width: 0;
+}
+
+.cs-shift-separator {
+  color: #64748b;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.cs-shift-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cs-shift-preset,
+.cs-shift-clear {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 32px;
+  padding: 0.35rem 0.75rem;
+}
+
+.cs-shift-preset:hover,
+.cs-shift-clear:hover {
+  border-color: #1565c0;
+  color: #1565c0;
+}
+
+.cs-shift-preset.selected {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #075985;
+}
+
+.cs-shift-clear {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
 .cs-req,
 .cs-hint-warn {
   color: #b91c1c;
