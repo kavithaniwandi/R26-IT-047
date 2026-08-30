@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   Send, 
@@ -14,11 +15,13 @@ import {
   Plus, 
   X,
   Layers,
-  Search
+  Search,
+  HeartHandshake
 } from 'lucide-react';
 import { api } from '../api';
 
 export function NotificationsView() {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
   const [smsLogs, setSmsLogs] = useState([]);
   const [gatewayStatus, setGatewayStatus] = useState(null);
@@ -188,6 +191,13 @@ export function NotificationsView() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => navigate('/donation-appeal')}
+            >
+              <HeartHandshake size={14} />
+              <span>Donation Appeal</span>
+            </button>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setShowDirectSMSModal(true)}

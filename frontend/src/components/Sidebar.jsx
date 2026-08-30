@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Cpu,
   Database,
-  Home
+  Home,
+  LayoutDashboard
 } from 'lucide-react';
 import { PORTAL_CONFIG, getPortalUrl } from '../portalConfig';
 
@@ -40,6 +41,7 @@ export function Sidebar({
     { id: 'authority', label: 'Medical Authority', icon: Activity, color: 'blue', port: PORTAL_CONFIG.authority.port },
     { id: 'donor', label: 'Donor Marketplace', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'volunteer', label: 'Volunteer Dispatch', icon: Truck, color: 'amber', port: PORTAL_CONFIG.volunteer.port },
+    { id: 'volunteer_dash', label: 'Volunteer Dashboard', icon: LayoutDashboard, color: 'amber', port: PORTAL_CONFIG.volunteer_dash.port },
   ];
 
   const adminNavItems = [

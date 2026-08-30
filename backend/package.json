@@ -1,0 +1,8 @@
+{
+  "name": "mo-auth-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m app.models.main"
+  }
+}
