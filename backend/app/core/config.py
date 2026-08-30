@@ -1,12 +1,12 @@
 """
 app/core/config.py
 ------------------
-Centralised settings loaded from the .env file via Pydantic-Settings.
+Centralised settings loaded from the .env2 file via Pydantic-Settings.
 All other modules import from here — never call os.getenv() directly.
 """
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -22,11 +22,14 @@ class Settings(BaseSettings):
     APP_TITLE: str = "Disaster Relief Medical Donation Module API"
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
+    MONGODB_URI: str | None = None
+    MONGODB_DB_NAME: str = "Research047"
 
-    class Config:
-        # Load from backend/.env when running from the backend/ directory
-        env_file = Path(__file__).resolve().parents[2] / ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

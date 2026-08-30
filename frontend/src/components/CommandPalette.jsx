@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   ShieldAlert, 
@@ -30,6 +31,7 @@ export function CommandPalette({
   onToggleSound,
   soundEnabled
 }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -180,6 +182,15 @@ export function CommandPalette({
       icon: HeartHandshake,
       color: 'emerald',
       action: () => { onSelectPortal('admin'); onSelectTab('donations'); onClose(); }
+    },
+    {
+      category: 'Command Center Views',
+      id: 'tab-donation-appeal',
+      title: 'Donation Appeal Studio',
+      subtitle: 'Generate donor-facing appeal copy and open the analyzer',
+      icon: Sparkles,
+      color: 'emerald',
+      action: () => { navigate('/donation-appeal'); onClose(); }
     },
     {
       category: 'Command Center Views',
