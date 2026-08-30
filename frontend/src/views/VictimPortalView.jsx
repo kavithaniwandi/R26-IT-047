@@ -235,27 +235,76 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
     );
   };
 
-  // Automatic broadcast to 4 emergency contacts
-  const triggerEmergencyBroadcastToContacts = (sosId, priority) => {
+  // Send real SMS alerts to all emergency contacts (any number ≥ 1)
+  const triggerEmergencyBroadcastToContacts = async (sosId, priority) => {
     const timestamp = new Date().toLocaleTimeString('en-GB');
-    const logs = emergencyContacts.map((c) => {
-      const messageText = `[EMERGENCY SOS ALERT] ${user?.full_name || 'Victim'} has triggered Distress Beacon #${sosId} at ${formData.gn_division}, ${formData.district} (${formData.latitude.toFixed(4)}°N, ${formData.longitude.toFixed(4)}°E). Urgent medical relief/rescue needed! Priority: ${priority}/100. Emergency services (119/1990) dispatched.`;
-      return {
-        id: c.id,
-        name: c.name,
-        relation: c.relation,
-        phone: c.phone,
-        message: messageText,
-        time: timestamp,
-        status: 'DELIVERED (ACK 200 OK)',
-        provider: 'DIALOG_SMSC / SATELLITE_RELAY',
-        whatsappLink: `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(messageText)}`
-      };
-    });
+    const contactsToAlert = emergencyContacts.filter(c => c.phone && c.phone.trim());
 
-    setLatestBroadcastLog(logs);
+    if (!contactsToAlert.length) {
+      setLatestBroadcastLog([]);
+      setShowBroadcastModal(true);
+      return;
+    }
+
+    // Build local preview log immediately (will update with real status after API call)
+    const previewLog = contactsToAlert.map((c) => ({
+      id: c.id,
+      name: c.name,
+      relation: c.relation,
+      phone: c.phone,
+      time: timestamp,
+      status: 'SENDING...',
+      provider: 'DIALOG_SMSC / SATELLITE_RELAY',
+      whatsappLink: `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+        `[EMERGENCY SOS ALERT] ${user?.full_name || 'Victim'} has triggered Distress Beacon #${sosId} at ${formData.gn_division}, ${formData.district}. Priority: ${priority}/100. Emergency services (119/1990) dispatched.`
+      )}`
+    }));
+    setLatestBroadcastLog(previewLog);
     setShowBroadcastModal(true);
+
+    // Fire real SMS dispatch to backend
+    try {
+      const result = await api.sendSOSAlertToContacts({
+        sos_id: sosId,
+        priority_score: priority,
+        victim_name: user?.full_name || 'Victim',
+        location_text: `${formData.gn_division || ''}${formData.gn_division ? ', ' : ''}${formData.district || 'Sri Lanka'}`,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        contacts: contactsToAlert.map(c => ({
+          name: c.name,
+          phone: c.phone,
+          relation: c.relation,
+        })),
+      });
+
+      // Update log with real dispatch status from backend
+      const dispatched = result.dispatch_log || [];
+      const updatedLog = previewLog.map((log) => {
+        const match = dispatched.find(d => d.phone.replace(/\s/g, '') === log.phone.replace(/\s/g, ''));
+        return {
+          ...log,
+          status: match?.status === 'sent' ? 'DELIVERED (ACK 200 OK)' : (match?.status || 'ERROR'),
+        };
+      });
+      setLatestBroadcastLog(updatedLog);
+
+      if (onAddToast) {
+        onAddToast(
+          `SMS alert sent to ${result.contacts_alerted}/${result.total_contacts} emergency contacts.`,
+          'success',
+          '📱 Contacts Alerted'
+        );
+      }
+    } catch (err) {
+      // Mark all as error in the log
+      setLatestBroadcastLog(previewLog.map(l => ({ ...l, status: 'ERROR - Check network' })));
+      if (onAddToast) {
+        onAddToast('SMS dispatch to contacts failed: ' + (err.message || 'Unknown error'), 'error', 'SMS Error');
+      }
+    }
   };
+
 
   // SOS Trigger Handler
   const handleSOSTrigger = async (e) => {
@@ -462,7 +511,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
             onClick={() => setActiveTab('emergency_contacts')}
           >
             <Users size={16} />
-            <span>Emergency Contacts (4)</span>
+            <span>Emergency Contacts ({emergencyContacts.length})</span>
           </button>
 
           <button
@@ -591,7 +640,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                     Immediate Disaster Rescue & Medical Assistance
                   </h1>
                   <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.6' }}>
-                    Click the <strong>Emergency SOS button</strong> below to instantly dispatch your exact satellite coordinates to the Ministry of Health, 1990 Suwa Seriya Ambulances, and <strong>automatically alert all 4 of your registered emergency contacts</strong> via SMS.
+                    Click the <strong>Emergency SOS button</strong> below to instantly dispatch your exact satellite coordinates to the Ministry of Health, 1990 Suwa Seriya Ambulances, and <strong>automatically alert all your registered emergency contacts</strong> via SMS.
                   </p>
                 </div>
 
@@ -659,7 +708,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                   <Users size={20} style={{ color: 'var(--accent-emerald)' }} />
                   <div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '800' }}>EMERGENCY CONTACTS</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: '900', color: 'var(--accent-emerald)' }}>4 Contacts Set</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '900', color: 'var(--accent-emerald)' }}>{emergencyContacts.length} Contact{emergencyContacts.length !== 1 ? 's' : ''} Set</div>
                   </div>
                 </div>
               </div>
@@ -1064,9 +1113,9 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
             <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
               <div className="card-header">
                 <div>
-                  <h2 className="card-title" style={{ fontSize: '1.25rem' }}>My 4 SOS Emergency Contacts</h2>
+                  <h2 className="card-title" style={{ fontSize: '1.25rem' }}>My SOS Emergency Contacts ({emergencyContacts.length})</h2>
                   <p className="card-subtitle">
-                    These 4 trusted contacts will be <strong>automatically notified via SMS & WhatsApp</strong> the moment you trigger your SOS beacon during a disaster.
+                    These trusted contacts will be <strong>automatically notified via SMS & WhatsApp</strong> the moment you trigger your SOS beacon during a disaster. Add as many as you need — no minimum required.
                   </p>
                 </div>
 
@@ -1277,10 +1326,10 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
               <Users size={36} />
             </div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '10px' }}>
-              Add Your 4 Emergency Contacts
+              Add Your Emergency Contacts
             </h2>
             <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
-              You can add <strong>4 emergency contacts</strong> to your SOS when you need it in disaster time. If you want to add them now, please click the button below.
+              You can add <strong>emergency contacts</strong> to your SOS profile. When you trigger SOS, all added contacts will receive an automatic SMS alert. Add as many or as few as you need.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1293,7 +1342,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                 }}
               >
                 <Users size={18} />
-                <span>Add 4 Emergency Contacts Now</span>
+                <span>Add Emergency Contacts Now</span>
               </button>
 
               <button
@@ -1323,7 +1372,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                 </div>
                 <div>
                   <h2 className="modal-title">Emergency Alert Broadcast Confirmation</h2>
-                  <p className="card-subtitle">Automated Multi-Channel Dispatch to 4 Emergency Contacts</p>
+                  <p className="card-subtitle">Automated Multi-Channel Dispatch to Emergency Contacts</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowBroadcastModal(false)}>
@@ -1334,7 +1383,11 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
             <div className="broadcast-log-card">
               <div style={{ fontSize: '0.84rem', fontWeight: '800', color: 'var(--accent-emerald)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <CheckCircle2 size={16} />
-                <span>4 / 4 Emergency Contacts Alerted via Satellite Gateway</span>
+                <span>
+                  {latestBroadcastLog.filter(l => l.status !== 'SENDING...').length > 0
+                    ? `${latestBroadcastLog.filter(l => l.status.startsWith('DELIVERED')).length} / ${latestBroadcastLog.length} Emergency Contacts Alerted`
+                    : `Sending alerts to ${latestBroadcastLog.length} contact${latestBroadcastLog.length !== 1 ? 's' : ''}...`}
+                </span>
               </div>
 
               {latestBroadcastLog.map((log) => (

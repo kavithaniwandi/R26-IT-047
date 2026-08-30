@@ -18,6 +18,7 @@ import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
 import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 import { DisasterOfficerDashboardView } from './views/DisasterOfficerDashboardView';
 import { DisasterDonationRequestView } from './views/DisasterDonationRequestView';
+import { SMSGatewayView } from './views/SMSGatewayView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -214,6 +215,7 @@ function DashboardApp() {
           case 'users': return { title: 'Stakeholder Role & Access Control Directory', sub: '5-Role Claims-Based Authorization Management' };
           case 'notifications': return { title: 'Multi-Channel Alert Dispatch Audit Trail', sub: 'Logged SMS Broadcasts & Emergency Transmissions' };
           case 'analytics': return { title: 'Predictive ML Intelligence Dashboard', sub: '4 Machine Learning Models: Outbreak, Camps, Demands & Urgency' };
+          case 'sms': return { title: 'Telecom SMS Gateway Command Console', sub: 'Twilio Integration · SOS Parsing · Inbound/Outbound · Broadcast Alerts' };
           default: return { title: 'Admin Command Panel', sub: 'Disaster Relief System' };
         }
     }
@@ -363,6 +365,10 @@ function DashboardApp() {
 
                   {currentTab === 'analytics' && (
                     <AnalyticsDashboardView stats={stats} onAddToast={addToast} />
+                  )}
+
+                  {currentTab === 'sms' && (
+                    <SMSGatewayView onAddToast={addToast} />
                   )}
                 </>
               )}
