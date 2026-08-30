@@ -10,7 +10,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import math
 
-from app.core.security import require_role, get_current_user_payload, TokenPayload
+from app.core.security import require_role, TokenPayload
 from app.database import relief_camp_collection
 from app.models.relief_camp import (
     ReliefCampCreate,
@@ -104,7 +104,9 @@ async def bulk_create_camps(
 async def get_all_camps(
     dsArea: Optional[str] = None,
     gnDivision: Optional[str] = None,
-    current_user: TokenPayload = Depends(get_current_user_payload),
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer", "volunteer"])
+    ),
 ):
     query = {}
     if current_user.role == "volunteer":
@@ -157,7 +159,9 @@ async def assign_volunteers_to_camp(
 async def update_camp_population(
     camp_id: str,
     payload: ReliefCampUpdate,
-    current_user: TokenPayload = Depends(get_current_user_payload),
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "disaster_officer", "volunteer"])
+    ),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")
@@ -165,6 +169,12 @@ async def update_camp_population(
     camp = await relief_camp_collection.find_one({"_id": ObjectId(camp_id)})
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
+
+    if current_user.role == "volunteer" and current_user.sub not in camp.get("assignedVolunteerIds", []):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this relief camp",
+        )
 
     now = datetime.now(timezone.utc)
     update_set = {"lastUpdated": now}
@@ -226,7 +236,10 @@ async def delete_relief_camp(
 
 # 7. POPULATION PREDICTION MODEL
 @router.post("/predict-population", response_model=PopulationPredictionResponse)
-async def predict_population_progression(req: PopulationPredictionRequest):
+async def predict_population_progression(
+    req: PopulationPredictionRequest,
+    _current_user: TokenPayload = Depends(require_role(["admin", "volunteer", "disaster_officer"])),
+):
     K = req.maxCapacity
     P0 = max(1, req.currentPopulation)
 
@@ -269,7 +282,9 @@ async def predict_population_progression(req: PopulationPredictionRequest):
 @router.get("/{camp_id}", response_model=ReliefCampResponse)
 async def get_relief_camp_by_id(
     camp_id: str,
-    current_user: TokenPayload = Depends(get_current_user_payload),
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer", "volunteer"])
+    ),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")

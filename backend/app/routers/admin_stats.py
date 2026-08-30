@@ -19,7 +19,7 @@ from app.models.notification import Notification
 
 router = APIRouter(prefix="/admin", tags=["Admin Analytics"])
 
-@router.get("/stats", dependencies=[Depends(require_role(["admin", "authority", "donor", "volunteer", "victim"]))])
+@router.get("/stats", dependencies=[Depends(require_role(["admin", "authority", "donor", "volunteer", "victim", "disaster_officer"]))])
 def get_admin_stats(db: Session = Depends(get_db)):
     """Aggregate high-level system metrics for the Admin Dashboard."""
     total_users = db.query(User).count()

@@ -198,7 +198,7 @@ export function CommandPalette({
       category: 'Command Center Views',
       id: 'tab-users',
       title: 'Stakeholder User Directory',
-      subtitle: '5-Role RBAC authorization & permissions',
+      subtitle: '6-Role RBAC authorization & permissions',
       icon: Users,
       color: 'blue',
       action: () => { onSelectPortal('admin'); onSelectTab('users'); onClose(); }

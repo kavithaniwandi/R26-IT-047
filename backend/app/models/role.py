@@ -32,6 +32,7 @@ class RoleEnum(str, enum.Enum):
     donor = "donor"
     authority = "authority"
     volunteer = "volunteer"
+    disaster_officer = "disaster_officer"
 
 
 class Role(Base):

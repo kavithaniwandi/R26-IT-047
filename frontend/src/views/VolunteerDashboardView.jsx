@@ -8,12 +8,12 @@ import {
   ArrowRight, 
   HeartHandshake, 
   ShieldAlert, 
-  PhoneCall, 
   Compass, 
   RefreshCw, 
   AlertCircle 
 } from 'lucide-react';
 import { api } from '../api';
+import { ReliefCampDetailView } from './ReliefCampDetailView';
 
 export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) {
   const [camps, setCamps] = useState([]);
@@ -21,12 +21,13 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDs, setSelectedDs] = useState('All');
   const [error, setError] = useState(null);
+  const [selectedCampId, setSelectedCampId] = useState(null);
 
   const fetchCamps = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getCamps({ status_filter: 'approved' });
+      const data = await api.getReliefCamps();
       setCamps(data || []);
     } catch (err) {
       setError(err.message || 'Failed to load assigned relief camps.');
@@ -39,15 +40,31 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
     fetchCamps();
   }, []);
 
-  const dsAreas = ['All', ...new Set(camps.map((c) => c.ds_division || c.district).filter(Boolean))];
+  const dsAreas = ['All', ...new Set(camps.map((c) => c.dsArea || c.ds_division || c.district).filter(Boolean))];
 
   const filteredCamps = camps.filter((c) => {
-    const dsValue = c.ds_division || c.district || '';
+    const dsValue = c.dsArea || c.ds_division || c.district || '';
+    const gnValue = c.gnDivision || c.gn_division || '';
     const nameValue = c.name || '';
     const matchesDs = selectedDs === 'All' || dsValue === selectedDs;
-    const matchesSearch = nameValue.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = [nameValue, dsValue, gnValue].some((value) => value.toLowerCase().includes(query));
     return matchesDs && matchesSearch;
   });
+
+  if (selectedCampId) {
+    return (
+      <ReliefCampDetailView
+        campId={selectedCampId}
+        currentUser={currentUser}
+        onBack={() => {
+          setSelectedCampId(null);
+          fetchCamps();
+        }}
+        onAddToast={onAddToast}
+      />
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -177,8 +194,8 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
             {filteredCamps.map((camp) => {
-              const currentPop = camp.current_occupancy ?? 0;
-              const maxCap = camp.estimated_capacity ?? 100;
+              const currentPop = camp.currentPopulation ?? camp.current_occupancy ?? 0;
+              const maxCap = camp.maxCapacityPersons ?? camp.estimated_capacity ?? 100;
               const fillPct = Math.min(100, Math.round((currentPop / (maxCap || 1)) * 100));
 
               return (
@@ -199,7 +216,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                       {fillPct}% Occupied
                     </span>
                     <span className="font-mono" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      {camp.district}
+                      {camp.dsArea || camp.district}
                     </span>
                   </div>
 
@@ -209,7 +226,7 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       <MapPin size={12} style={{ color: 'var(--accent-rose)' }} />
-                      <span>{camp.gn_division || camp.ds_division || camp.district}</span>
+                      <span>{camp.gnDivision || camp.gn_division || camp.dsArea || camp.ds_division || camp.district}</span>
                     </div>
                   </div>
 
@@ -222,6 +239,13 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
                       <div className="progress-bar-fill" style={{ width: `${fillPct}%`, backgroundColor: 'var(--accent-amber)' }} />
                     </div>
                   </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setSelectedCampId(camp.id)}
+                  >
+                    <span>Enter Field Station</span>
+                    <ArrowRight size={14} />
+                  </button>
                 </div>
               );
             })}

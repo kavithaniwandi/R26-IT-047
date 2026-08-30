@@ -108,8 +108,12 @@ function DashboardApp() {
   useEffect(() => {
     const initSession = async () => {
       const stored = getStoredUser();
-      const detected = detectCurrentPortal();
-      const portalConfig = PORTAL_CONFIG[detected] || PORTAL_CONFIG.admin;
+      const portalConfig = PORTAL_CONFIG[currentPortal] || PORTAL_CONFIG.admin;
+
+      if (!portalConfig.defaultRole) {
+        setUser(stored);
+        return;
+      }
 
       if (stored && stored.role === portalConfig.defaultRole) {
         setUser(stored);
@@ -154,11 +158,15 @@ function DashboardApp() {
     playSuccessChime();
     addToast(`Authenticated as ${loggedInUser.full_name} (${loggedInUser.role.toUpperCase()})`, 'success', 'Login Verified');
 
-    if (loggedInUser.role === 'victim') setCurrentPortal('victim');
-    else if (loggedInUser.role === 'authority') setCurrentPortal('authority');
-    else if (loggedInUser.role === 'donor') setCurrentPortal('donor');
-    else if (loggedInUser.role === 'volunteer') setCurrentPortal('volunteer');
-    else setCurrentPortal('admin');
+    const activePortalRole = PORTAL_CONFIG[currentPortal]?.defaultRole;
+    if (loggedInUser.role !== activePortalRole) {
+      if (loggedInUser.role === 'victim') setCurrentPortal('victim');
+      else if (loggedInUser.role === 'authority') setCurrentPortal('authority');
+      else if (loggedInUser.role === 'donor') setCurrentPortal('donor');
+      else if (loggedInUser.role === 'volunteer') setCurrentPortal('volunteer');
+      else if (loggedInUser.role === 'disaster_officer') setCurrentPortal('disaster_officer');
+      else setCurrentPortal('admin');
+    }
 
     fetchStats();
   };
@@ -242,7 +250,7 @@ function DashboardApp() {
           case 'users':
             return {
               title: 'Stakeholder Role & Access Control Directory',
-              sub: '5-Role Claims-Based Authorization Management'
+              sub: '6-Role Claims-Based Authorization Management'
             };
           case 'notifications':
             return {

@@ -106,6 +106,9 @@ All portals run concurrently on independent local ports:
 | **Medical Authority Console** | [http://localhost:5175](http://localhost:5175) | `authority@moh.gov.lk` | `Authority@2026!` | `authority` |
 | **Relief Donor Marketplace** | [http://localhost:5176](http://localhost:5176) | `donor@redcross.lk` | `Donor@2026!` | `donor` |
 | **Field Volunteer Dispatch** | [http://localhost:5177](http://localhost:5177) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
+| **Volunteer Field Dashboard** | [http://localhost:5178](http://localhost:5178) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
+| **Disaster Officer Hub** | [http://localhost:5179](http://localhost:5179) | `officer@disaster.relief.lk` | `Officer@2026!` | `disaster_officer` |
+| **Disaster Donation Requests** | [http://localhost:5180](http://localhost:5180) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
 
 ---
 
@@ -113,7 +116,7 @@ All portals run concurrently on independent local ports:
 
 | Action | Command | Working Directory |
 | :--- | :--- | :--- |
-| **Run All 5 Portals** | `npm run dev:all` | `frontend/` |
+| **Run All 8 Portals** | `npm run dev:all` | `frontend/` |
 | **Run Single Portal (e.g. Admin)** | `npm run dev:admin` | `frontend/` |
 | **Run Single Portal (Victim)** | `npm run dev:victim` | `frontend/` |
 | **Run Single Portal (Authority)** | `npm run dev:authority` | `frontend/` |

@@ -10,8 +10,10 @@ from bson import ObjectId
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.security import require_role, get_current_user_payload, TokenPayload
-from app.database import disaster_requests_collection, users_collection
+from app.core.security import require_role, TokenPayload
+from app.database import disaster_requests_collection, get_db
+from app.models.user import User
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/disaster-donation-requests", tags=["Disaster Officer (MongoDB)"])
 
@@ -157,14 +159,22 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
 # ── Route Endpoints ──────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[DisasterRequestGroupOut])
-async def get_all_disaster_requests():
+async def get_all_disaster_requests(
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
+):
     cursor = disaster_requests_collection.find()
     docs = await cursor.to_list(length=200)
     return [format_mongo_doc(d) for d in docs]
 
 
 @router.get("/officer/pledges", response_model=List[OfficerPledgeItemOut])
-async def get_officer_pending_pledges():
+async def get_officer_pending_pledges(
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
+):
     cursor = disaster_requests_collection.find({"donations.status": "pledged"})
     docs = await cursor.to_list(length=200)
 
@@ -200,7 +210,9 @@ async def get_officer_pending_pledges():
 async def accept_donation_at_ds_office(
     req_id: str,
     donation_id: str,
-    token_payload: TokenPayload = Depends(get_current_user_payload),
+    token_payload: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
@@ -225,7 +237,12 @@ async def accept_donation_at_ds_office(
 
             for itm in items:
                 if itm.get("itemName") == don.get("itemName"):
-                    itm["donatedQuantity"] = float(itm.get("donatedQuantity", 0)) + float(don.get("quantity", 0))
+                    transfer_quantity = float(don.get("quantity", 0))
+                    itm["pledgedQuantity"] = max(
+                        0.0,
+                        float(itm.get("pledgedQuantity", 0)) - transfer_quantity,
+                    )
+                    itm["donatedQuantity"] = float(itm.get("donatedQuantity", 0)) + transfer_quantity
                     if itm["donatedQuantity"] >= float(itm.get("neededQuantity", 0)):
                         itm["status"] = "fulfilled"
             break
@@ -233,19 +250,29 @@ async def accept_donation_at_ds_office(
     if not updated:
         raise HTTPException(status_code=404, detail="Donation record not found in request")
 
+    request_status = (
+        "fulfilled"
+        if items and all(item.get("status") == "fulfilled" for item in items)
+        else "active"
+    )
+
     await disaster_requests_collection.update_one(
         {"_id": ObjectId(req_id)},
-        {"$set": {"donations": donations, "items": items}}
+        {"$set": {"donations": donations, "items": items, "status": request_status}}
     )
 
     return {"message": "Donation verified and accepted at DS Office.", "donationId": donation_id}
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_disaster_request(payload: DisasterDonationRequestCreate):
+async def create_disaster_request(
+    payload: DisasterDonationRequestCreate,
+    token_payload: TokenPayload = Depends(require_role(["admin", "volunteer"])),
+):
     doc = payload.model_dump()
     doc["createdAt"] = datetime.now(timezone.utc)
     doc["status"] = "active"
+    doc["createdBy"] = token_payload.sub
     doc["donations"] = []
 
     for itm in doc.get("items", []):
@@ -259,7 +286,12 @@ async def create_disaster_request(payload: DisasterDonationRequestCreate):
 
 
 @router.post("/{req_id}/pledge", status_code=status.HTTP_201_CREATED)
-async def add_pledge_to_request(req_id: str, payload: BatchPledgeCreate):
+async def add_pledge_to_request(
+    req_id: str,
+    payload: BatchPledgeCreate,
+    token_payload: TokenPayload = Depends(require_role(["admin", "donor"])),
+    db: Session = Depends(get_db),
+):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
@@ -271,23 +303,50 @@ async def add_pledge_to_request(req_id: str, payload: BatchPledgeCreate):
     new_donations = []
     items = doc.get("items", [])
 
+    sql_user = db.query(User).filter(User.id == int(token_payload.sub)).first()
+    donor_name = sql_user.full_name if sql_user else "Verified Donor"
+    donor_phone = sql_user.phone if sql_user else None
+
     for p in payload.pledges:
+        target_item = next(
+            (
+                item for item in items
+                if (p.itemId and item.get("itemId") == p.itemId)
+                or item.get("itemName", "").casefold() == p.itemName.casefold()
+            ),
+            None,
+        )
+        if target_item is None:
+            raise HTTPException(status_code=404, detail=f"Requested item '{p.itemName}' was not found")
+        available = max(
+            0.0,
+            float(target_item.get("neededQuantity", 0))
+            - float(target_item.get("pledgedQuantity", 0))
+            - float(target_item.get("donatedQuantity", 0)),
+        )
+        if float(p.quantity) > available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {available:g} {target_item.get('unit', 'units')} remain for {p.itemName}",
+            )
+
         donation_entry = {
             "donationId": str(ObjectId()),
-            "donorId": "donor_01",
-            "donorName": "Sri Lanka Red Cross",
-            "donorPhone": "+94 77 123 4567",
+            "donorId": token_payload.sub,
+            "donorName": donor_name,
+            "donorPhone": donor_phone,
+            "donorEmail": sql_user.email if sql_user else None,
+            "itemId": target_item.get("itemId"),
             "itemName": p.itemName,
             "quantity": float(p.quantity),
             "dsArea": doc.get("dsArea", "Western Sector"),
+            "reliefCamp": doc.get("reliefCamp"),
             "status": "pledged",
             "donatedAt": now,
         }
         new_donations.append(donation_entry)
 
-        for itm in items:
-            if itm.get("itemName") == p.itemName:
-                itm["pledgedQuantity"] = float(itm.get("pledgedQuantity", 0)) + float(p.quantity)
+        target_item["pledgedQuantity"] = float(target_item.get("pledgedQuantity", 0)) + float(p.quantity)
 
     await disaster_requests_collection.update_one(
         {"_id": ObjectId(req_id)},

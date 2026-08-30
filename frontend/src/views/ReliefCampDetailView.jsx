@@ -19,13 +19,13 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { api } from '../api';
+import { API_BASE_URL, getAuthToken } from '../api';
 
 const DISASTER_TYPES = ['Flood', 'Landslide', 'Tsunami', 'Drought', 'Fire', 'Other'];
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
 
 export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }) {
-  const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+  const token = getAuthToken() || '';
 
   // Relief Camp & Requests State
   const [camp, setCamp] = useState(null);
@@ -72,9 +72,9 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       const authHeaders = { Authorization: `Bearer ${token}` };
 
       const [campRes, reqsRes, itemsRes] = await Promise.all([
-        fetch(`http://127.0.0.1:8000/relief-camps/${campId}`, { headers: authHeaders }),
-        fetch('http://127.0.0.1:8000/disaster-donation-requests', { headers: authHeaders }),
-        fetch('http://127.0.0.1:8000/donation-items', { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/relief-camps/${campId}`, { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/disaster-donation-requests`, { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/donation-items`, { headers: authHeaders }),
       ]);
 
       if (!campRes.ok) {
@@ -131,7 +131,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!camp) return;
     setSavingManual(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/relief-camps/${camp.id}/population`, {
+      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -182,8 +182,9 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         const formData = new FormData();
         formData.append('file', current.file);
 
-        const res = await fetch('http://127.0.0.1:8000/population/count', {
+        const res = await fetch(`${API_BASE_URL}/population/count`, {
           method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
 
@@ -227,7 +228,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     }
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/relief-camps/${camp.id}/population`, {
+      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -278,7 +279,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!camp) return;
     setPredicting(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/relief-camps/predict-population', {
+      const res = await fetch(`${API_BASE_URL}/relief-camps/predict-population`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -310,7 +311,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!predictionResult || !camp) return;
     setApplyingPrediction(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/relief-camps/${camp.id}/population`, {
+      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -373,7 +374,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
 
     setSubmittingRequest(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/disaster-donation-requests', {
+      const res = await fetch(`${API_BASE_URL}/disaster-donation-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

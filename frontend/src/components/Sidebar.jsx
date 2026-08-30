@@ -65,6 +65,7 @@ export function Sidebar({
       case 'authority': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
       case 'donor': return { bg: 'var(--accent-emerald-subtle)', text: 'var(--accent-emerald)', border: 'hsla(150, 84%, 42%, 0.35)' };
       case 'volunteer': return { bg: 'var(--accent-amber-subtle)', text: 'var(--accent-amber)', border: 'hsla(38, 92%, 50%, 0.35)' };
+      case 'disaster_officer': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
       case 'victim': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
       default: return { bg: 'var(--border-subtle)', text: 'var(--text-secondary)', border: 'transparent' };
     }
