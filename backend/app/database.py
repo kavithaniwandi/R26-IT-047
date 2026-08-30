@@ -24,6 +24,7 @@ mongo_db = mongo_client[settings.MONGODB_DB_NAME]
 disaster_requests_collection = mongo_db["disaster_requests"]
 donation_items_collection = mongo_db["donation_items"]
 users_collection = mongo_db["users"]
+relief_camp_collection = mongo_db["relief_camps"]
 
 # ── 2. SQLAlchemy Engine (Preserved for compatibility) ──────────────────────
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")

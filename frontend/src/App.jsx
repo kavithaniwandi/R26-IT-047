@@ -25,6 +25,7 @@ import { VictimPortalView } from './views/VictimPortalView';
 import { AuthorityPortalView } from './views/AuthorityPortalView';
 import { DonorPortalView } from './views/DonorPortalView';
 import { VolunteerPortalView } from './views/VolunteerPortalView';
+import DonorDetailsView from './views/DonorDetailsView';
 
 // Public and specialized workflow pages
 import Home from './pages/Home';
@@ -515,6 +516,17 @@ export function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/donation-appeal" element={<Donation_Appeal />} />
           <Route path="/donation-appeal-analyzer" element={<DonationAppealAnalyzer />} />
+          <Route
+            path="/donor-registry"
+            element={
+              <SystemWorkflowShell
+                title="Verified Donor Registry & Contribution Ledger"
+                subtitle="Inspect donor profiles, cumulative contributions, and itemized handover history"
+              >
+                <DonorDetailsView />
+              </SystemWorkflowShell>
+            }
+          />
           <Route
             path="/camp-setup"
             element={

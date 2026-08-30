@@ -24,6 +24,8 @@ from app.routers import sos as sos_router
 from app.routers import users as users_router
 from app.routers import victims as victims_router
 from app.routers import disaster_officer
+from app.routers import donors as donors_router
+from app.routers import relief_camps as relief_camps_router
 from app.models.schemas import (
     ExtractRequest,
     ExtractResponse,
@@ -96,6 +98,8 @@ app.include_router(notifications_router.router, prefix=API_V1_PREFIX)
 app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
 app.include_router(disaster_officer.router, prefix=API_V1_PREFIX)
+app.include_router(donors_router.router, prefix=API_V1_PREFIX)
+app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"], summary="Liveness probe")

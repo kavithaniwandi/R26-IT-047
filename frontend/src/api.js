@@ -132,4 +132,8 @@ export const api = {
     return apiRequest(`/sms/logs${qs ? `?${qs}` : ''}`);
   },
   getSMSGatewayStatus: () => apiRequest('/sms/gateway-status'),
+
+  // Donors (MongoDB)
+  getDonors: () => apiRequest('/donors'),
+  getDonorDetail: (donorId) => apiRequest(`/donors/${donorId}`),
 };
