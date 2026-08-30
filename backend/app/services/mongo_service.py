@@ -110,3 +110,97 @@ async def log_appeal_analysis(
         "result": result,
     }
     await _db.appeal_analysis_logs.insert_one(document)
+
+
+async def save_triage_session(session_data: dict[str, Any]) -> str | None:
+    """Create a new triage session document in triage_sessions."""
+    if _db is None:
+        return None
+
+    try:
+        document = {
+            "session_id": session_data.get("session_id"),
+            "started_at": _utc_now(),
+            "camp": session_data.get("camp"),
+            "mos": session_data.get("mos", []),
+            "status": "active",
+        }
+        result = await _db.triage_sessions.insert_one(document)
+        return str(result.inserted_id)
+    except Exception as exc:
+        print(f"[mongo] save_triage_session failed: {exc}")
+        return None
+
+
+async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
+    """Store one patient classification record in triage_patients."""
+    if _db is None:
+        return None
+
+    try:
+        document = {
+            "session_id": patient_data.get("session_id"),
+            "patient_id": patient_data.get("id"),
+            "submitted_at": patient_data.get("submittedAt", _utc_now()),
+            "camp": patient_data.get("camp"),
+            "severity": patient_data.get("severity"),
+            "ai_severity": patient_data.get("ai_severity"),
+            "risk_score": patient_data.get("risk_score"),
+            "priority_score": patient_data.get("priority_score"),
+            "method": patient_data.get("method"),
+            "symptoms": patient_data.get("symptoms"),
+            "age": patient_data.get("age"),
+            "red_flags": patient_data.get("red_flags", []),
+            "condition_group": patient_data.get("condition_group"),
+            "specialty": patient_data.get("specialty"),
+            "extracted_symptoms": patient_data.get("extracted_symptoms", []),
+            "assigned_mo_id": patient_data.get("assigned_mo_id"),
+            "assigned_mo_name": patient_data.get("assigned_mo_name"),
+            "queue_reason": patient_data.get("queue_reason"),
+            "queue_reason_text": patient_data.get("queue_reason_text"),
+            "source": patient_data.get("source"),
+            "clinician_override": patient_data.get("clinician_override"),
+            "critical_trigger": patient_data.get("critical_trigger"),
+            "matched_rules": patient_data.get("matched_rules", []),
+            "display_note": patient_data.get("display_note"),
+            "recommended_action": patient_data.get("recommended_action"),
+        }
+        result = await _db.triage_patients.insert_one(document)
+        return str(result.inserted_id)
+    except Exception as exc:
+        print(f"[mongo] save_triage_patient failed: {exc}")
+        return None
+
+
+async def archive_triage_session(
+    session_id: str,
+    session_data: dict[str, Any],
+    patients: list[dict[str, Any]],
+    summary: dict[str, Any],
+) -> str | None:
+    """Archive a completed triage session and mark the active session ended."""
+    if _db is None:
+        return None
+
+    try:
+        ended_at = _utc_now()
+        document = {
+            "session_id": session_id,
+            "camp": session_data.get("camp"),
+            "mos": session_data.get("mos", []),
+            "started_at": session_data.get("started_at") or session_data.get("startedAt"),
+            "ended_at": ended_at,
+            "patients": patients,
+            "summary": summary,
+        }
+        result = await _db.triage_archives.insert_one(document)
+
+        await _db.triage_sessions.update_one(
+            {"session_id": session_id},
+            {"$set": {"status": "ended", "ended_at": ended_at}},
+        )
+
+        return str(result.inserted_id)
+    except Exception as exc:
+        print(f"[mongo] archive_triage_session failed: {exc}")
+        return None

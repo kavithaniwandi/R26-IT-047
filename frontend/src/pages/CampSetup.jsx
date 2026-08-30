@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api";
 import "./CampSetup.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -27,12 +28,12 @@ const SPECIALTIES = [
 
 const SECONDARY_SKILLS = [
   "Cardiovascular", "Respiratory", "Neurological", "Gastrointestinal",
-  "Trauma & Surgery", "Infection & Systemic", "Renal & Urinary",
+  "Trauma & Surgery", "Orthopedic", "Rheumatology", "Infection & Systemic", "Renal & Urinary",
   "Mental & Behavioral", "Obstetric & Gynecologic", "Endocrine & Metabolic",
   "Allergy & Immunology", "Emergency Medicine",
 ];
 
-const ROLES = ["Senior MO", "Medical Officer", "Resident", "Intern"];
+const ROLES = ["Medical Administrator", "Senior MO", "Medical Officer", "Resident", "Intern"];
 const BLANK_MO = {
   name: "",
   staffId: "",
@@ -201,7 +202,18 @@ export default function CampSetup() {
     setMos(updated);
 
     if (moIndex + 1 >= moCount) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ camp: selectedCamp, mos: updated }));
+      const startedAt = new Date().toISOString();
+      const sessionObj = {
+        session_id: `${selectedCamp.code}-${Date.now()}`,
+        startedAt,
+        camp: selectedCamp,
+        mos: updated,
+      };
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
+      api.startTriageSession(sessionObj).catch((error) => {
+        console.warn("[triage] session start:", error);
+      });
       navigate("/priority-application");
       return;
     }
@@ -213,6 +225,7 @@ export default function CampSetup() {
   const initials = (name) =>
     name.trim().split(" ").map((word) => word[0]).slice(0, 2).join("").toUpperCase() || "?";
   const roleClass = {
+    "Medical Administrator": "admin",
     "Senior MO": "senior",
     "Medical Officer": "mo",
     Resident: "resident",

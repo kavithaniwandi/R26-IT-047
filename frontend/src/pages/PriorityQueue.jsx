@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api";
 import "./PriorityQueue.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -148,6 +149,20 @@ export default function PriorityQueue() {
     });
 
     localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+    api.endTriageSession({
+      session_id: session.session_id,
+      session: { ...session, started_at: session.startedAt },
+      patients,
+      summary: {
+        total: patients.length,
+        CRITICAL: counts.CRITICAL,
+        HIGH: counts.HIGH,
+        MEDIUM: counts.MEDIUM,
+        LOW: counts.LOW,
+      },
+    }).catch((error) => {
+      console.warn("[triage] session end:", error);
+    });
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(STORAGE_KEY);
     setShowEndModal(false);
