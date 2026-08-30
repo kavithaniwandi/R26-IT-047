@@ -80,6 +80,20 @@ export const PORTAL_CONFIG = {
     badge: 'Field Station',
     color: 'amber',
     defaultRole: 'volunteer',
+  },
+  officer_dash: {
+    port: 5179,
+    name: 'Disaster Officer Console',
+    badge: 'DS Command',
+    color: 'blue',
+    defaultRole: 'disaster_officer',
+  },
+  donation_req_dash: {
+    port: 5180,
+    name: 'Disaster Donation Requests',
+    badge: 'Appeals',
+    color: 'rose',
+    defaultRole: 'volunteer',
   }
 };
 

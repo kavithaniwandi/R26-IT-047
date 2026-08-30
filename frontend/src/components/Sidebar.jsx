@@ -42,6 +42,8 @@ export function Sidebar({
     { id: 'donor', label: 'Donor Marketplace', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'volunteer', label: 'Volunteer Dispatch', icon: Truck, color: 'amber', port: PORTAL_CONFIG.volunteer.port },
     { id: 'volunteer_dash', label: 'Volunteer Dashboard', icon: LayoutDashboard, color: 'amber', port: PORTAL_CONFIG.volunteer_dash.port },
+    { id: 'officer_dash', label: 'Disaster Officer', icon: ShieldCheck, color: 'blue', port: PORTAL_CONFIG.officer_dash.port },
+    { id: 'donation_req_dash', label: 'Donation Requests', icon: HeartHandshake, color: 'rose', port: PORTAL_CONFIG.donation_req_dash.port },
   ];
 
   const adminNavItems = [
