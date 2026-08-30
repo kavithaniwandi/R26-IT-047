@@ -1,11 +1,18 @@
 """
 app/routers/sms.py
 ------------------
-SMS Gateway router for handling inbound carrier webhooks, interactive test simulations,
-emergency outbound alerts, and multi-subscriber broadcast dispatches.
+SMS Gateway router — handles:
+  POST /sms/webhook              → Carrier SMSC inbound webhook (MO)
+  POST /sms/incoming             → Alias for webhook (backward-compat)
+  POST /sms/simulate-inbound     → Interactive demo / test simulator
+  POST /sms/send                 → Outbound direct SMS (authority/admin/volunteer)
+  POST /sms/broadcast            → Bulk emergency alert broadcast (authority/admin)
+  GET  /sms/logs                 → Paginated SMS transaction logs
+  GET  /sms/gateway-status       → Live Twilio gateway metrics
 """
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -24,88 +31,155 @@ from app.schemas.sms import (
 )
 from app.services import sms_gateway
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sms", tags=["Telecom SMS Gateway"])
 
+
+# ---------------------------------------------------------------------------
+# Carrier Webhook — Inbound SMS (MO)
+# ---------------------------------------------------------------------------
 
 @router.post(
     "/webhook",
     response_model=SMSParsedResultOut,
     status_code=status.HTTP_200_OK,
-    summary="Carrier webhook for inbound SMS messages",
-    description="Receives MO (Mobile Originated) SMS from telecom provider (Dialog/Mobitel/Airtel/Hutch), parses emergency intent, triggers Model 4 priority scoring, and dispatches MT (Mobile Terminated) auto-reply.",
+    summary="Carrier SMSC webhook for inbound SMS (MO)",
+    description=(
+        "Receives Mobile-Originated (MO) SMS from Dialog/Mobitel/Airtel carrier SMSC. "
+        "Parses emergency intent, triggers ML urgency scoring, and dispatches "
+        "Mobile-Terminated (MT) auto-reply via Twilio. "
+        "This endpoint must be registered as the webhook URL in your Twilio console."
+    ),
 )
 def inbound_sms_webhook(
     payload: InboundSMSRequest,
     db: Session = Depends(get_db),
 ):
-    _, result = sms_gateway.process_incoming_sms(
-        sender=payload.sender,
-        message_text=payload.message,
-        recipient=payload.recipient,
-        provider=payload.provider,
-        db=db,
-    )
-    return SMSParsedResultOut(**result)
+    try:
+        _, result = sms_gateway.process_incoming_sms(
+            sender=payload.sender,
+            message_text=payload.message,
+            recipient=payload.recipient,
+            provider=payload.provider,
+            db=db,
+        )
+        return SMSParsedResultOut(**result)
+    except Exception as exc:
+        logger.exception("[SMS-WEBHOOK] Unhandled error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SMS processing failed: {str(exc)}",
+        ) from exc
 
 
 @router.post(
     "/incoming",
     response_model=SMSParsedResultOut,
     status_code=status.HTTP_200_OK,
-    summary="Alternative alias for inbound SMS webhook",
+    summary="Alias for inbound SMS webhook (backward-compatible)",
 )
 def inbound_sms_incoming(
     payload: InboundSMSRequest,
     db: Session = Depends(get_db),
 ):
-    _, result = sms_gateway.process_incoming_sms(
-        sender=payload.sender,
-        message_text=payload.message,
-        recipient=payload.recipient,
-        provider=payload.provider,
-        db=db,
-    )
-    return SMSParsedResultOut(**result)
+    try:
+        _, result = sms_gateway.process_incoming_sms(
+            sender=payload.sender,
+            message_text=payload.message,
+            recipient=payload.recipient,
+            provider=payload.provider,
+            db=db,
+        )
+        return SMSParsedResultOut(**result)
+    except Exception as exc:
+        logger.exception("[SMS-INCOMING] Unhandled error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SMS processing failed: {str(exc)}",
+        ) from exc
 
+
+# ---------------------------------------------------------------------------
+# Simulation endpoint (demo / dev testing)
+# ---------------------------------------------------------------------------
 
 @router.post(
     "/simulate-inbound",
     response_model=SMSParsedResultOut,
     status_code=status.HTTP_200_OK,
-    summary="Simulate incoming SMS from victim for demonstration & testing",
-    description="Interactive endpoint to test emergency SMS parsing (SOS, REG, STATUS, CAMP, HELP) without requiring actual cellular SIM modems.",
+    summary="Simulate incoming SMS from a victim (demo & testing)",
+    description=(
+        "Interactive endpoint to test emergency SMS parsing (SOS, REG, STATUS, CAMP, HELP) "
+        "without requiring actual cellular SIM modems or a Twilio account. "
+        "When TWILIO_ENABLED=false in .env, the auto-reply is logged but not actually sent — "
+        "perfect for development and demonstrations."
+    ),
 )
 def simulate_inbound_sms(
     payload: SimulateInboundSMSRequest,
     db: Session = Depends(get_db),
 ):
-    _, result = sms_gateway.process_incoming_sms(
-        sender=payload.sender,
-        message_text=payload.message,
-        recipient="1919",
-        provider=payload.provider,
-        db=db,
-    )
-    return SMSParsedResultOut(**result)
+    try:
+        _, result = sms_gateway.process_incoming_sms(
+            sender=payload.sender,
+            message_text=payload.message,
+            recipient="1919",
+            provider=payload.provider,
+            db=db,
+        )
+        return SMSParsedResultOut(**result)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("[SMS-SIMULATE] Unhandled error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SMS simulation failed: {str(exc)}",
+        ) from exc
 
+
+# ---------------------------------------------------------------------------
+# Direct outbound SMS
+# ---------------------------------------------------------------------------
 
 @router.post(
     "/send",
     response_model=SMSLogOut,
     dependencies=[Depends(require_role(["authority", "admin", "volunteer"]))],
     status_code=status.HTTP_200_OK,
-    summary="Send direct emergency outbound SMS to a phone number",
+    summary="Send direct outbound emergency SMS to a phone number",
+    description=(
+        "Sends a targeted SMS to a single recipient. "
+        "Phone number must be in E.164 format (e.g. +94771234567). "
+        "Requires authority, admin, or volunteer role."
+    ),
 )
 def send_sms_endpoint(
     payload: SendSMSRequest,
     db: Session = Depends(get_db),
 ):
-    sms = sms_gateway.send_direct_sms(
-        recipient=payload.recipient,
-        message=payload.message,
-        message_type=payload.message_type,
-        db=db,
-    )
+    try:
+        sms = sms_gateway.send_direct_sms(
+            recipient=payload.recipient,
+            message=payload.message,
+            message_type=payload.message_type,
+            db=db,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("[SMS-SEND] Unhandled error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SMS dispatch failed: {str(exc)}",
+        ) from exc
+
     return SMSLogOut(
         id=sms.id,
         direction=sms.direction,
@@ -122,29 +196,52 @@ def send_sms_endpoint(
     )
 
 
+# ---------------------------------------------------------------------------
+# Broadcast SMS
+# ---------------------------------------------------------------------------
+
 @router.post(
     "/broadcast",
     dependencies=[Depends(require_role(["authority", "admin"]))],
     status_code=status.HTTP_200_OK,
     summary="Broadcast critical disaster alert SMS to registered victims/responders",
+    description=(
+        "Sends an emergency broadcast SMS to all registered victims or users in the target district. "
+        "Each recipient gets an individually dispatched message and delivery log entry. "
+        "Requires authority or admin role."
+    ),
 )
 def broadcast_sms_endpoint(
     payload: BroadcastSMSRequest,
     db: Session = Depends(get_db),
 ):
-    dispatched_count = sms_gateway.broadcast_emergency_sms(
-        message=payload.message,
-        district=payload.district,
-        role=payload.role,
-        urgency=payload.urgency,
-        db=db,
-    )
+    try:
+        dispatched_count = sms_gateway.broadcast_emergency_sms(
+            message=payload.message,
+            district=payload.district,
+            role=payload.role,
+            urgency=payload.urgency,
+            db=db,
+        )
+    except Exception as exc:
+        logger.exception("[SMS-BROADCAST] Unhandled error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Broadcast failed: {str(exc)}",
+        ) from exc
+
     return {
         "status": "success",
         "recipients_count": dispatched_count,
-        "message": f"Broadcast alert successfully transmitted to {dispatched_count} recipients via SMS gateway.",
+        "message": (
+            f"Broadcast alert transmitted to {dispatched_count} recipients via SMS gateway."
+        ),
     }
 
+
+# ---------------------------------------------------------------------------
+# SMS Logs
+# ---------------------------------------------------------------------------
 
 @router.get(
     "/logs",
@@ -153,13 +250,16 @@ def broadcast_sms_endpoint(
     summary="List SMS transmission logs with direction and delivery status",
 )
 def get_sms_logs_endpoint(
-    direction: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=500),
+    direction: Optional[str] = Query(None, description="Filter by 'inbound' or 'outbound'"),
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter by status: sent, simulated, failed, received, processed"),
+    limit: int = Query(50, ge=1, le=500, description="Max records to return"),
     db: Session = Depends(get_db),
 ):
     query = db.query(SMSMessageLog)
     if direction:
         query = query.filter(SMSMessageLog.direction == direction)
+    if status_filter:
+        query = query.filter(SMSMessageLog.status == status_filter)
     logs = query.order_by(SMSMessageLog.created_at.desc()).limit(limit).all()
 
     return [
@@ -181,10 +281,14 @@ def get_sms_logs_endpoint(
     ]
 
 
+# ---------------------------------------------------------------------------
+# Gateway Status
+# ---------------------------------------------------------------------------
+
 @router.get(
     "/gateway-status",
     response_model=SMSGatewayStatusOut,
-    summary="Get telecom SMS gateway connection status and metrics",
+    summary="Get live Twilio SMS gateway connection status and metrics",
 )
 def get_sms_gateway_status_endpoint(db: Session = Depends(get_db)):
     status_data = sms_gateway.get_gateway_telecom_status(db)

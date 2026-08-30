@@ -55,6 +55,7 @@ export function Sidebar({
     { id: 'donations', label: 'Supply Matchmaking', icon: HeartHandshake, badge: null },
     { id: 'users', label: 'User RBAC Directory', icon: Users, badge: null },
     { id: 'notifications', label: 'Audit Log Trail', icon: Bell, badge: null },
+    { id: 'sms', label: 'SMS Gateway', icon: Radio, badge: 'Twilio', badgeColor: 'rose' },
   ];
 
   const getRoleBadgeStyle = (role) => {

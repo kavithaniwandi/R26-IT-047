@@ -142,4 +142,9 @@ export const api = {
     return apiRequest(`/sms/logs${qs ? `?${qs}` : ''}`);
   },
   getSMSGatewayStatus: () => apiRequest('/sms/gateway-status'),
+
+  // SOS Emergency Contact Alert (real SMS dispatch to selected contacts)
+  sendSOSAlertToContacts: (payload) =>
+    apiRequest('/sos/alert-contacts', { method: 'POST', body: JSON.stringify(payload) }),
 };
+
