@@ -224,36 +224,51 @@ function DashboardApp() {
         return {
           title: 'Disaster Relief Donation & Resource Matchmaking',
           sub: `Dedicated Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} - Shortage Appeals, Verified Pledges & Drop-Off Tracking`
-        return { 
-          title: 'Victim & Public Emergency SOS Portal', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.victim.port} - Satellite GPS Telemetry & Multi-Channel Alert Dispatch`
-        };
-      case 'authority':
-        return { 
-          title: 'Medical Authority Command Console', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} - Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
-        };
-      case 'donor':
-        return { 
-          title: 'Relief Donor & Supply Matching Marketplace', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Priority Medical Demands & Verified Pledges`
-        };
-      case 'volunteer':
-        return { 
-          title: 'Field Volunteer & Rapid Responder Client', 
-          sub: `Dedicated Port :${PORTAL_CONFIG.volunteer.port} - On-Ground Rescue Missions & GPS Navigation`
         };
       default:
         switch (currentTab) {
-          case 'overview': return { title: 'Executive Disaster Relief Command Center', sub: `Dedicated Port :${PORTAL_CONFIG.admin.port} - National Triage & Resource Allocation` };
-          case 'sos': return { title: 'Emergency SOS Incident Triage Queue', sub: 'Real-Time Alert Dispatch & Model 4 Urgency Scoring' };
-          case 'heatmap': return { title: 'Geospatial Hazard Heatmap & ML Inference', sub: 'Kelani Basin Flood & Nuwara Eliya Landslide Predictors' };
-          case 'camps': return { title: 'Temporary Medical Camps Planning Hub', sub: 'Model 3 Spatial Suitability Scoring & Official Approvals' };
-          case 'donations': return { title: 'Demand-Driven Smart Donation Matching', sub: 'Priority-Ranked Medical Requirements & Pledges' };
-          case 'users': return { title: 'Stakeholder Role & Access Control Directory', sub: '5-Role Claims-Based Authorization Management' };
-          case 'notifications': return { title: 'Multi-Channel Alert Dispatch Audit Trail', sub: 'Logged SMS Broadcasts & Emergency Transmissions' };
-          case 'analytics': return { title: 'Predictive ML Intelligence Dashboard', sub: '4 Machine Learning Models: Outbreak, Camps, Demands & Urgency' };
-          default: return { title: 'Admin Command Panel', sub: 'Disaster Relief System' };
+          case 'overview':
+            return {
+              title: 'Executive Disaster Relief Command Center',
+              sub: `Dedicated Port :${PORTAL_CONFIG.admin.port} - National Triage & Resource Allocation`
+            };
+          case 'sos':
+            return {
+              title: 'Emergency SOS Incident Triage Queue',
+              sub: 'Real-Time Alert Dispatch & Model 4 Urgency Scoring'
+            };
+          case 'heatmap':
+            return {
+              title: 'Geospatial Hazard Heatmap & ML Inference',
+              sub: 'Kelani Basin Flood & Nuwara Eliya Landslide Predictors'
+            };
+          case 'camps':
+            return {
+              title: 'Temporary Medical Camps Planning Hub',
+              sub: 'Model 3 Spatial Suitability Scoring & Official Approvals'
+            };
+          case 'donations':
+            return {
+              title: 'Demand-Driven Smart Donation Matching',
+              sub: 'Priority-Ranked Medical Requirements & Pledges'
+            };
+          case 'users':
+            return {
+              title: 'Stakeholder Role & Access Control Directory',
+              sub: '5-Role Claims-Based Authorization Management'
+            };
+          case 'notifications':
+            return {
+              title: 'Multi-Channel Alert Dispatch Audit Trail',
+              sub: 'Logged SMS Broadcasts & Emergency Transmissions'
+            };
+          case 'analytics':
+            return {
+              title: 'Predictive ML Intelligence Dashboard',
+              sub: '4 Machine Learning Models: Outbreak, Camps, Demands & Urgency'
+            };
+          default:
+            return { title: 'Admin Command Panel', sub: 'Disaster Relief System' };
         }
     }
   };
