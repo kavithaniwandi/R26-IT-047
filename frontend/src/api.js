@@ -93,6 +93,16 @@ export const api = {
   createCamp: (payload) => apiRequest('/camps', { method: 'POST', body: JSON.stringify(payload) }),
   approveCamp: (campId) => apiRequest(`/camps/${campId}/approve`, { method: 'PATCH' }),
 
+  // Triage persistence
+  startTriageSession: (payload) => apiRequest('/triage/session/start', { method: 'POST', body: JSON.stringify(payload) }),
+  saveTriagePatient: (payload) => apiRequest('/triage/patient/save', { method: 'POST', body: JSON.stringify(payload) }),
+  endTriageSession: (payload) => apiRequest('/triage/session/end', { method: 'POST', body: JSON.stringify(payload) }),
+  getTriageArchives: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/triage/archives${qs ? `?${qs}` : ''}`);
+  },
+  getTriageArchive: (sessionId) => apiRequest(`/triage/archives/${sessionId}`),
+
   // Heatmap & ML Inference
   getHeatmap: () => apiRequest('/heatmap'),
   predictFlood: (payload) => apiRequest('/predict/flood', { method: 'POST', body: JSON.stringify(payload) }),

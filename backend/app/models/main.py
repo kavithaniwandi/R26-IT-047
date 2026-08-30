@@ -21,6 +21,7 @@ from app.routers import heatmap as heatmap_router
 from app.routers import notifications as notifications_router
 from app.routers import sms as sms_router
 from app.routers import sos as sos_router
+from app.routers import triage as triage_router
 from app.routers import users as users_router
 from app.routers import victims as victims_router
 from app.models.schemas import (
@@ -94,6 +95,7 @@ app.include_router(donations_router.router, prefix=API_V1_PREFIX)
 app.include_router(notifications_router.router, prefix=API_V1_PREFIX)
 app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
+app.include_router(triage_router.router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"], summary="Liveness probe")
