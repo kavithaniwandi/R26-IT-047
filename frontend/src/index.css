@@ -1,12 +1,12 @@
-﻿/* ==========================================================================
-   DISASTER RELIEF SMART MEDICAL SYSTEM - DESIGN SYSTEM v4.0
-   Blue & White - Clean Minimalist - Professional Dashboard
+/* ==========================================================================
+   DISASTER RELIEF SMART MEDICAL SYSTEM — DESIGN SYSTEM v4.0
+   Blue & White · Clean Minimalist · Professional Dashboard
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Core Palette */
+  /* ── Core Palette ────────────────────────────────────────────── */
   --blue-50:  #eff6ff;
   --blue-100: #dbeafe;
   --blue-200: #bfdbfe;
@@ -18,7 +18,7 @@
   --blue-800: #1e40af;
   --blue-900: #1e3a8a;
 
-  /* Surface Hierarchy */
+  /* ── Surface Hierarchy ───────────────────────────────────────── */
   --bg-app:        #f0f4f8;
   --bg-primary:    #ffffff;
   --bg-secondary:  #f8fafc;
@@ -28,13 +28,13 @@
   --bg-sidebar-hover: #334155;
   --bg-sidebar-active: #2563eb;
 
-  /* Borders */
+  /* ── Borders ─────────────────────────────────────────────────── */
   --border-subtle:  #e2e8f0;
   --border-default: #cbd5e1;
   --border-accent:  #93c5fd;
   --border-focus:   #3b82f6;
 
-  /* Text */
+  /* ── Text ────────────────────────────────────────────────────── */
   --text-primary:   #0f172a;
   --text-secondary: #334155;
   --text-muted:     #64748b;
@@ -42,7 +42,7 @@
   --text-on-dark:   #f1f5f9;
   --text-on-sidebar:#cbd5e1;
 
-  /* Semantic Status Colors */
+  /* ── Semantic Status Colors ──────────────────────────────────── */
   --color-danger:        #ef4444;
   --color-danger-light:  #fef2f2;
   --color-danger-border: #fecaca;
@@ -75,7 +75,7 @@
   --color-amber-light:  #fffbeb;
   --color-amber-border: #fde68a;
 
-  /* Legacy accent aliases (used by components) */
+  /* ── Legacy accent aliases (used by components) ──────────────── */
   --accent-rose:         #ef4444;
   --accent-rose-hover:   #dc2626;
   --accent-rose-subtle:  #fef2f2;
@@ -104,7 +104,7 @@
   --accent-cyan:         #06b6d4;
   --accent-cyan-subtle:  #ecfeff;
 
-  /* Geometry */
+  /* ── Geometry ─────────────────────────────────────────────────  */
   --radius-xs:   4px;
   --radius-sm:   6px;
   --radius-md:   10px;
@@ -112,7 +112,7 @@
   --radius-xl:   20px;
   --radius-full: 9999px;
 
-  /* Elevation */
+  /* ── Elevation ─────────────────────────────────────────────────  */
   --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
@@ -124,7 +124,7 @@
   --shadow-glow-emerald: 0 0 20px rgba(16,185,129,0.18);
   --shadow-glow-amber:   0 0 20px rgba(245,158,11,0.18);
 
-  /* Transitions */
+  /* ── Transitions ──────────────────────────────────────────────  */
   --transition-fast:   0.12s cubic-bezier(0.4,0,0.2,1);
   --transition-smooth: 0.22s cubic-bezier(0.4,0,0.2,1);
 }
