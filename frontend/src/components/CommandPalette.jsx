@@ -1,5 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,7 +12,15 @@ import {
   Users,
   Bell,
   BarChart3,
-  Layers
+  Layers,
+  Shield,
+  Gift,
+  Sparkles,
+  UserCheck,
+  VolumeX,
+  Volume2,
+  X,
+  ArrowRight
 } from "lucide-react";
 import { PORTAL_CONFIG } from "../portalConfig";
 
