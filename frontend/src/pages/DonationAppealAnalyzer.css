@@ -609,3 +609,124 @@
     justify-content: stretch;
   }
 }
+.daa-low-confidence-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #78350f;
+}
+
+.daa-low-confidence-banner strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: #92400e;
+}
+
+.daa-low-confidence-banner p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.daa-low-conf-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.daa-conf-low {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.daa-char-warn {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.daa-char-over {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.daa-textarea-over {
+  border-color: #dc2626 !important;
+}
+
+.daa-error-box {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-top: 0.75rem;
+}
+
+.daa-error-box strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.daa-error-box p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.daa-error-box.validation {
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  color: #78350f;
+}
+
+.daa-error-box.validation strong {
+  color: #92400e;
+}
+
+.daa-error-box.api {
+  background-color: #fef2f2;
+  border: 1px solid #f87171;
+  border-left: 4px solid #ef4444;
+  color: #7f1d1d;
+}
+
+.daa-error-box.api strong {
+  color: #991b1b;
+}
+
+.daa-issue-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.daa-improve-row {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.daa-lang-mismatch {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #78350f;
+  line-height: 1.45;
+}
+
+.daa-lang-mismatch strong {
+  font-weight: 600;
+  color: #92400e;
+}

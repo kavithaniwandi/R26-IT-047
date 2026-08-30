@@ -6,6 +6,10 @@ import "./Donation_Appeal.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+const MIN_APPEAL_LENGTH = 10;
+const MAX_APPEAL_LENGTH = 10_000;
+const LOW_CONFIDENCE_THRESHOLD = 0.50;
+
 const REQUIRED_FIELDS = [
   ["location", "Location"],
   ["verified_need", "Verified Need"],
@@ -16,9 +20,7 @@ const REQUIRED_FIELDS = [
 async function generateAppealVariants(formData) {
   const response = await fetch(`${API_BASE_URL}/api/generate-appeal-variants`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(formData),
   });
 
@@ -32,20 +34,57 @@ async function generateAppealVariants(formData) {
 }
 
 
+async function generateRemainingVariants(formData) {
+  const response = await fetch(`${API_BASE_URL}/api/generate-appeal-variants/remaining`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(formData),
+  });
+
+  if (!response.ok) {
+    console.warn("Remaining variants failed to load.");
+    return [];
+  }
+
+  const data = await response.json();
+  return data.variants || [];
+}
+
+
 async function evaluateAppeal(appealText, language) {
+  const trimmed = (appealText || "").trim();
+  if (!trimmed) {
+    throw new ValidationError("Appeal text is empty and cannot be evaluated.");
+  }
+  if (trimmed.length < MIN_APPEAL_LENGTH) {
+    throw new ValidationError(
+      `Appeal is too short to evaluate (${trimmed.length} characters). Minimum is ${MIN_APPEAL_LENGTH}.`
+    );
+  }
+  if (trimmed.length > MAX_APPEAL_LENGTH) {
+    throw new ValidationError(
+      `Appeal exceeds the maximum length of ${MAX_APPEAL_LENGTH.toLocaleString()} characters.`
+    );
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/quality/evaluate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      appeal_text: appealText,
+      appeal_text: trimmed,
       language,
     }),
   });
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
+    if (response.status === 422) {
+      throw new ValidationError(
+        data?.detail || "The appeal text did not pass quality scoring validation."
+      );
+    }
     throw new Error(data?.detail || "Failed to evaluate appeal quality.");
   }
 
@@ -75,6 +114,14 @@ async function logCopyEvent(variant, language) {
 }
 
 
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+
 function Donation_Appeal() {
   const [formData, setFormData] = useState({
     language: "en",
@@ -91,8 +138,11 @@ function Donation_Appeal() {
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [generatedLanguage, setGeneratedLanguage] = useState(formData.language);
   const [loading, setLoading] = useState(false);
+  const [loadingRemaining, setLoadingRemaining] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
-  const [error, setError] = useState("");
+  const [generateError, setGenerateError] = useState("");
+  const [evaluateError, setEvaluateError] = useState("");
+  const [evaluateErrorIsValidation, setEvaluateErrorIsValidation] = useState(false);
 
   const activeVariant = variants[activeVariantIndex] || null;
   const activeQuality = activeVariant
@@ -105,6 +155,9 @@ function Donation_Appeal() {
           activeVariant.confidence_normalised ?? activeVariant.confidence ?? 0
         ),
         confidenceDisplay: activeVariant.confidence_display,
+        lowConfidence: activeVariant.low_confidence ?? (
+          Number(activeVariant.confidence_normalised ?? activeVariant.confidence ?? 0) < LOW_CONFIDENCE_THRESHOLD
+        ),
       }
     : null;
 
@@ -118,7 +171,7 @@ function Donation_Appeal() {
 
     if (missingFields.length > 0) {
       const message = `Please fill in: ${missingFields.join(", ")}`;
-      setError(message);
+      setGenerateError(message);
       alert(message);
       return false;
     }
@@ -140,32 +193,59 @@ function Donation_Appeal() {
     const requestData = { ...formData };
 
     setLoading(true);
-    setError("");
+    setGenerateError("");
+    setEvaluateError("");
+    setEvaluateErrorIsValidation(false);
+    setLoadingRemaining(false);
     setGeneratedAppeal("");
     setVariants([]);
     setActiveVariantIndex(0);
     setGeneratedLanguage(requestData.language);
 
     try {
-      const generatedVariants = await generateAppealVariants(requestData);
+      const firstVariants = await generateAppealVariants(requestData);
 
-      if (!generatedVariants.length) {
+      if (!firstVariants.length) {
         throw new Error("No appeal variants were generated.");
       }
 
-      setVariants(generatedVariants);
-      setGeneratedAppeal(generatedVariants[0].appeal_text);
-      await handleSelectVariant(generatedVariants[0], requestData.language, 0);
+      setVariants(firstVariants);
+      setGeneratedAppeal(firstVariants[0].appeal_text);
+      setLoading(false);
+
+      await handleSelectVariant(firstVariants[0], requestData.language, 0);
+
+      setLoadingRemaining(true);
+      generateRemainingVariants(requestData)
+        .then((remainingVariants) => {
+          if (remainingVariants.length > 0) {
+            setVariants((previousVariants) => {
+              const existingTexts = new Set(
+                previousVariants.map((variant) => variant.appeal_text.trim())
+              );
+              const newVariants = remainingVariants.filter(
+                (variant) => !existingTexts.has(variant.appeal_text.trim())
+              );
+              return [...previousVariants, ...newVariants];
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Background variant loading failed:", err.message);
+        })
+        .finally(() => {
+          setLoadingRemaining(false);
+        });
     } catch (err) {
-      setError(err.message || "Failed to generate appeal.");
-    } finally {
+      setGenerateError(err.message || "Failed to generate appeal.");
       setLoading(false);
     }
   };
 
   const handleSelectVariant = async (variant, language = generatedLanguage, variantIndex = activeVariantIndex) => {
     setGeneratedAppeal(variant.appeal_text);
-    setError("");
+    setEvaluateError("");
+    setEvaluateErrorIsValidation(false);
     setEvaluating(true);
 
     try {
@@ -180,13 +260,16 @@ function Donation_Appeal() {
                 confidence: quality.confidence,
                 confidence_normalised: quality.confidence_normalised,
                 confidence_display: quality.confidence_display,
+                low_confidence: quality.low_confidence ?? false,
                 quality_method: quality.method,
               }
             : item
         )
       );
     } catch (err) {
-      setError(err.message || "Failed to evaluate appeal.");
+      const isValidation = err instanceof ValidationError;
+      setEvaluateError(err.message || "Failed to evaluate appeal.");
+      setEvaluateErrorIsValidation(isValidation);
     } finally {
       setEvaluating(false);
     }
@@ -238,6 +321,10 @@ function Donation_Appeal() {
 
     return "";
   };
+
+  const confidenceRatio = activeQuality
+    ? (activeQuality.confidenceNormalised ?? activeQuality.confidence ?? 0)
+    : 0;
 
   return (
     <div className="donation-appeal-page">
@@ -392,7 +479,11 @@ function Donation_Appeal() {
               {loading ? "Generating..." : "Generate Appeal"}
             </button>
 
-            {error && <p className="appeal-error">{error}</p>}
+            {generateError && (
+              <p className="appeal-error" role="alert">
+                {generateError}
+              </p>
+            )}
           </section>
 
           <div className="appeal-output-layout">
@@ -425,6 +516,11 @@ function Donation_Appeal() {
                     </button>
                     <span className="variant-count">
                       {activeVariantIndex + 1}/{variants.length}
+                      {loadingRemaining && (
+                        <span className="remaining-loading" title="Loading more variants...">
+                          {" "}...
+                        </span>
+                      )}
                     </span>
                     <button
                       aria-label="Next appeal variant"
@@ -496,8 +592,33 @@ function Donation_Appeal() {
                 </p>
               )}
 
+              {evaluateError && !evaluating && (
+                <div
+                  className={`appeal-error-box ${evaluateErrorIsValidation ? "validation" : "api"}`}
+                  role="alert"
+                >
+                  <strong>
+                    {evaluateErrorIsValidation ? "Validation issue" : "Evaluation failed"}
+                  </strong>
+                  <p>{evaluateError}</p>
+                </div>
+              )}
+
               {activeQuality && (
                 <div className="quality-box">
+                  {activeQuality.lowConfidence && (
+                    <div className="low-confidence-banner" role="alert">
+                      <span className="low-confidence-icon">!</span>
+                      <div>
+                        <strong>Low confidence score</strong>
+                        <p>
+                          The model is uncertain about this appeal's quality rating.
+                          Consider reviewing it manually before publishing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="score-hero">
                     <div>
                       <span className="score-hero-number">
@@ -534,16 +655,21 @@ function Donation_Appeal() {
                       <div className="confidence-bar">
                         <div
                           className="confidence-fill"
-                          style={{
-                            width: activeQuality.confidenceDisplay
-                              ? activeQuality.confidenceDisplay
-                              : `${Math.round(activeQuality.confidenceNormalised * 100)}%`,
-                          }}
+                          style={{ width: `${Math.round(confidenceRatio * 100)}%` }}
                         />
                       </div>
-                      <strong>{getConfidence()}</strong>
+                      <strong className={activeQuality.lowConfidence ? "confidence-low" : ""}>
+                        {getConfidence()}
+                      </strong>
                     </div>
                   </div>
+
+                  {activeQuality.lowConfidence && (
+                    <div className="quality-row">
+                      <span>Review recommended</span>
+                      <strong className="status-pill warning">Yes</strong>
+                    </div>
+                  )}
                 </div>
               )}
             </section>

@@ -7,6 +7,7 @@ MONGODB_URI is configured. Failures are logged and do not block API responses.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
 from typing import Any
 
 from app.models.config import settings
@@ -21,6 +22,7 @@ else:
 
 _client: Any = None
 _db: Any = None
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -92,24 +94,47 @@ async def log_appeal_analysis(
     result: dict[str, Any],
     *,
     event_type: str = "analysis",
+    source: str | None = None,
 ) -> None:
-    """Store one analysis/improvement event in appeal_analysis_logs."""
-    if _db is None:
-        return
+    """Log one appeal quality scoring event to MongoDB."""
+    try:
+        if _db is None:
+            return
 
-    document = {
-        "timestamp": _utc_now(),
-        "event_type": event_type,
-        "language": language,
-        "appeal_text": appeal_text,
-        "score": result.get("score") or result.get("improved_score"),
-        "label": result.get("label") or result.get("improved_label"),
-        "confidence": result.get("confidence") or result.get("improved_confidence"),
-        "method": result.get("method"),
-        "issues": result.get("issues"),
-        "result": result,
-    }
-    await _db.appeal_analysis_logs.insert_one(document)
+        quality_label = (
+            result.get("quality_label")
+            or result.get("status")
+            or result.get("label")
+            or result.get("improved_label")
+        )
+        quality_score = (
+            result.get("quality_score")
+            or result.get("score")
+            or result.get("improved_score")
+        )
+        confidence = result.get("confidence")
+        if confidence is None:
+            confidence = result.get("improved_confidence", 0.0)
+
+        document = {
+            "appeal_text": (appeal_text or "")[:1_000],
+            "language": language,
+            "quality_label": quality_label,
+            "quality_score": quality_score,
+            "confidence": confidence,
+            "low_confidence": result.get("low_confidence", False),
+            "method": result.get("method", "unknown"),
+            "source": source or event_type,
+            "event_type": event_type,
+            "char_count": len(appeal_text or ""),
+            "word_count": len((appeal_text or "").split()),
+            "timestamp": _utc_now(),
+            "issues": result.get("issues"),
+            "result": result,
+        }
+        await _db.appeal_analysis_logs.insert_one(document)
+    except Exception as exc:
+        logger.warning("Failed to log appeal analysis to MongoDB: %s", exc)
 
 
 async def save_triage_session(session_data: dict[str, Any]) -> str | None:
