@@ -229,3 +229,228 @@ async def archive_triage_session(
     except Exception as exc:
         print(f"[mongo] archive_triage_session failed: {exc}")
         return None
+
+
+async def get_triage_stats(camp_id: str | None = None) -> dict:
+    """Aggregate analytics over archived triage sessions (triage_archives)."""
+    if _db is None:
+        return {"camps": [], "patients": {}}
+
+    match = {"camp.id": camp_id} if camp_id else {}
+
+    # 1) Session/camp level
+    camp_pipeline = [
+        {"$match": match},
+        {
+            "$group": {
+                "_id": "$camp.id",
+                "camp_name": {"$first": "$camp.name"},
+                "district": {"$first": "$camp.district"},
+                "sessions": {"$sum": 1},
+                "patients": {"$sum": "$summary.total"},
+                "CRITICAL": {"$sum": {"$ifNull": ["$summary.CRITICAL", 0]}},
+                "HIGH": {"$sum": {"$ifNull": ["$summary.HIGH", 0]}},
+                "MEDIUM": {"$sum": {"$ifNull": ["$summary.MEDIUM", 0]}},
+                "LOW": {"$sum": {"$ifNull": ["$summary.LOW", 0]}},
+                "avg_session_minutes": {
+                    "$avg": {
+                        "$divide": [
+                            {
+                                "$subtract": [
+                                    {"$toDate": "$ended_at"},
+                                    {"$toDate": "$started_at"},
+                                ]
+                            },
+                            60000,
+                        ]
+                    }
+                },
+            }
+        },
+        {"$sort": {"patients": -1}},
+    ]
+
+    # 2) Patient level
+    patient_pipeline = [
+        {"$match": match},
+        {"$unwind": "$patients"},
+        {"$replaceRoot": {"newRoot": "$patients"}},
+        {
+            "$facet": {
+                "flags": [
+                    {
+                        "$group": {
+                            "_id": None,
+                            "total": {"$sum": 1},
+                            "avg_risk_score": {"$avg": "$risk_score"},
+                            "critical_by_trigger": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
+                                                {"$eq": ["$severity", "CRITICAL"]},
+                                                {
+                                                    "$ne": [
+                                                        {
+                                                            "$ifNull": [
+                                                                "$critical_trigger",
+                                                                None,
+                                                            ]
+                                                        },
+                                                        None,
+                                                    ]
+                                                },
+                                            ]
+                                        },
+                                        1,
+                                        0,
+                                    ]
+                                }
+                            },
+                            "critical_by_keywords": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
+                                                {"$eq": ["$severity", "CRITICAL"]},
+                                                {
+                                                    "$eq": [
+                                                        {
+                                                            "$ifNull": [
+                                                                "$critical_trigger",
+                                                                None,
+                                                            ]
+                                                        },
+                                                        None,
+                                                    ]
+                                                },
+                                            ]
+                                        },
+                                        1,
+                                        0,
+                                    ]
+                                }
+                            },
+                            "clinician_overridden": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$ne": [
+                                                {"$ifNull": ["$clinician_override", None]},
+                                                None,
+                                            ]
+                                        },
+                                        1,
+                                        0,
+                                    ]
+                                }
+                            },
+                            "rule_matched": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$gt": [
+                                                {
+                                                    "$size": {
+                                                        "$ifNull": [
+                                                            "$matched_rules",
+                                                            [],
+                                                        ]
+                                                    }
+                                                },
+                                                0,
+                                            ]
+                                        },
+                                        1,
+                                        0,
+                                    ]
+                                }
+                            },
+                        }
+                    }
+                ],
+                "override_direction": [
+                    {"$match": {"$expr": {"$ne": ["$severity", "$ai_severity"]}}},
+                    {
+                        "$addFields": {
+                            "_delta": {
+                                "$subtract": [
+                                    {
+                                        "$indexOfArray": [
+                                            ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                                            "$severity",
+                                        ]
+                                    },
+                                    {
+                                        "$indexOfArray": [
+                                            ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                                            "$ai_severity",
+                                        ]
+                                    },
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": {
+                                "$cond": [
+                                    {"$gt": ["$_delta", 0]},
+                                    "escalated",
+                                    "de_escalated",
+                                ]
+                            },
+                            "n": {"$sum": 1},
+                        }
+                    },
+                ],
+                "model_vs_final": [
+                    {
+                        "$group": {
+                            "_id": {"ai": "$ai_severity", "final": "$severity"},
+                            "n": {"$sum": 1},
+                        }
+                    },
+                ],
+                "by_condition": [
+                    {
+                        "$group": {
+                            "_id": "$condition_group",
+                            "n": {"$sum": 1},
+                            "avg_risk": {"$avg": "$risk_score"},
+                        }
+                    },
+                    {"$sort": {"n": -1}},
+                ],
+                "by_method": [
+                    {"$group": {"_id": "$method", "n": {"$sum": 1}}},
+                ],
+                "top_red_flags": [
+                    {
+                        "$unwind": {
+                            "path": "$red_flags",
+                            "preserveNullAndEmptyArrays": False,
+                        }
+                    },
+                    {"$group": {"_id": "$red_flags", "n": {"$sum": 1}}},
+                    {"$sort": {"n": -1}},
+                    {"$limit": 10},
+                ],
+                "top_rules": [
+                    {
+                        "$unwind": {
+                            "path": "$matched_rules",
+                            "preserveNullAndEmptyArrays": False,
+                        }
+                    },
+                    {"$group": {"_id": "$matched_rules", "n": {"$sum": 1}}},
+                    {"$sort": {"n": -1}},
+                    {"$limit": 10},
+                ],
+            }
+        },
+    ]
+
+    camps = await _db.triage_archives.aggregate(camp_pipeline).to_list(None)
+    patients = await _db.triage_archives.aggregate(patient_pipeline).to_list(None)
+    return {"camps": camps, "patients": patients[0] if patients else {}}
