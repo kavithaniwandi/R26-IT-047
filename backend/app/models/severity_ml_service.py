@@ -1,325 +1,172 @@
+"""
+severity_ml_service.py  -  ML severity inference (v3 stacked ensemble).
+
+Drop-in replacement for the old module: same public function name, same signature,
+same return shape as severity_rules.predict_severity():
+    severity, priority_score, scores, matched_rules, critical_trigger
+
+Files this module needs (see the integration notes):
+    app/models/severity_pipeline.py                      (module written by the training notebook)
+    app/models/severity_model/severity_bundle.joblib     (trained model)
+    app/models/severity_model/metrics.json               (training metrics + library versions)
+"""
 from __future__ import annotations
 
 import json
-import re
-from functools import lru_cache
+import logging
+import os
+import threading
+import warnings
 from pathlib import Path
+from typing import Optional
 
-import joblib
-import numpy as np
-from scipy.sparse import csr_matrix, hstack
+from . import severity_pipeline as sp
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
 
-BASE_DIR   = Path(__file__).resolve().parents[2]
-MODEL_DIR  = BASE_DIR / "ml_models" / "severity_ml"
+# Some scikit-learn / LightGBM version pairs emit this cosmetic warning on every predict(): the model is always fed
+# arrays built by the same FeatureBuilder (fixed column order), so it carries no information. Narrow filter only.
+warnings.filterwarnings("ignore", message="X does not have valid feature names", category=UserWarning)
 
-# ── Lazy singleton loader ─────────────────────────────────────────────────────
+MODEL_VERSION = os.environ.get("SEVERITY_MODEL_VERSION", "v3_stack_vitals")
+_MODEL_DIR = Path(os.environ.get("SEVERITY_MODEL_DIR", Path(__file__).resolve().parent / "severity_model"))
 
-_artefacts: dict | None = None
+_BUNDLE = None
+_MANIFEST: dict = {}
+_LOCK = threading.Lock()
+
+SCORE_BANDS = {"CRITICAL": 80.0, "HIGH": 60.0, "MEDIUM": 40.0, "LOW": 0.0}
+_LAYER_NAMES = {"red_flag": "red_flag_override", "complaint": "complaint_override"}
 
 
-def _load_artefacts() -> dict:
-    global _artefacts
-    if _artefacts is not None:
-        return _artefacts
+# ----------------------------------------------------------------------------------------------
+# Loading
+# ----------------------------------------------------------------------------------------------
+def _current_versions() -> dict:
+    import lightgbm, numpy, sklearn, xgboost
+    return {"numpy": numpy.__version__, "sklearn": sklearn.__version__,
+            "xgboost": xgboost.__version__, "lightgbm": lightgbm.__version__}
 
-    with (MODEL_DIR / "model_config.json").open("r", encoding="utf-8") as f:
-        cfg = json.load(f)
 
-    _artefacts = {
-        "cfg":       cfg,
-        "tfidf":     joblib.load(MODEL_DIR / "tfidf_vectorizer.pkl"),
-        "sc":        joblib.load(MODEL_DIR / "scaler_maxabs.pkl"),
-        "sc_d":      joblib.load(MODEL_DIR / "scaler_standard.pkl"),
-        "le_cg":     joblib.load(MODEL_DIR / "label_encoder_cg.pkl"),
-        "meta":      joblib.load(MODEL_DIR / "meta_learner.pkl"),
-        "lr_a":      joblib.load(MODEL_DIR / "base_lr_a.pkl"),
-        "lr_b":      joblib.load(MODEL_DIR / "base_lr_b.pkl"),
-        "lr_c":      joblib.load(MODEL_DIR / "base_lr_c.pkl"),
-        "lgb":       joblib.load(MODEL_DIR / "base_lgb.pkl"),
-        "xgb":       joblib.load(MODEL_DIR / "base_xgb.pkl"),
-        "complaint_pattern": re.compile(
-            "|".join(re.escape(p) for p in cfg["high_complaint_patterns"]),
-            re.IGNORECASE,
-        ),
+def _check_versions(trained_with: Optional[dict]) -> None:
+    """A model pickled under other library versions can fail to load or silently misbehave."""
+    if not trained_with:
+        logger.warning("severity model: metrics.json has no library versions; cannot verify the environment")
+        return
+    now = _current_versions()
+    if trained_with != now and os.environ.get("SEVERITY_ALLOW_VERSION_MISMATCH") != "1":
+        raise RuntimeError(
+            f"Severity model was trained with {trained_with} but this environment has {now}. "
+            "Retrain in this environment (or install the trained versions). "
+            "Set SEVERITY_ALLOW_VERSION_MISMATCH=1 only for debugging.")
+
+
+def _load_bundle():
+    global _BUNDLE, _MANIFEST
+    if _BUNDLE is not None:
+        return _BUNDLE
+    with _LOCK:
+        if _BUNDLE is None:
+            bundle_path = _MODEL_DIR / "severity_bundle.joblib"
+            if not bundle_path.exists():
+                raise FileNotFoundError(f"Severity model not found at {bundle_path}")
+            manifest_path = _MODEL_DIR / "metrics.json"
+            manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+            _check_versions(manifest.get("libraries"))
+            _BUNDLE = sp.load_bundle(str(bundle_path))
+            _MANIFEST = manifest
+            logger.info("severity model loaded: %s (T_HIGH=%.2f, T_LOW=%.2f, layers=%s)",
+                        MODEL_VERSION, _BUNDLE.t_high, _BUNDLE.t_low, _BUNDLE.layers)
+    return _BUNDLE
+
+
+def warm_up() -> bool:
+    """Optional: call at app startup so the first patient does not pay the load time."""
+    predict_severity_ml("warm up", age=30)
+    return True
+
+
+# ----------------------------------------------------------------------------------------------
+# Input mapping
+# ----------------------------------------------------------------------------------------------
+def _clean_vitals(vitals: Optional[dict]) -> dict:
+    out = {}
+    unknown = sorted(set(vitals or {}) - set(sp.VITAL_COLS))
+    if unknown:
+        logger.warning("severity model: ignoring unknown vital keys %s (expected %s)", unknown, list(sp.VITAL_COLS))
+    for key in sp.VITAL_COLS:
+        value = (vitals or {}).get(key)
+        if value is None or value == "":
+            continue
+        try:
+            out[key] = float(value)
+        except (TypeError, ValueError):
+            logger.warning("severity model: ignoring non-numeric vital %s=%r", key, value)
+    return out
+
+
+def predict_severity_ml_detailed(
+    clinical_note: str,
+    age: float | None = None,
+    condition_group: str = "Unknown",      # accepted for compatibility; the v3 model does not use it
+    vitals: dict | None = None,
+    has_red_flag: int = 0,
+    red_flag_count: int = 0,
+    rf_flags: dict | None = None,
+    symptoms: str = "",
+) -> dict:
+    """Full result including model-only decision, layers and version (for stats / auditing)."""
+    bundle = _load_bundle()
+
+    text = (symptoms or "").strip() or (clinical_note or "").strip()
+    flags = {f: 1 for f, v in (rf_flags or {}).items() if f in sp.KNOWN_FLAGS and v}
+    clean_vitals = _clean_vitals(vitals)
+
+    row = sp.row_from_request(text, age, flags, clean_vitals)
+    if has_red_flag:                                            # keep the app's explicit flag authoritative
+        row.loc[0, "has_red_flag"] = 1
+    row.loc[0, "red_flag_count"] = max(int(row.loc[0, "red_flag_count"]), int(red_flag_count or 0))
+
+    out = bundle.predict(row)
+    proba = out["proba"][0]
+    model_idx, final_idx = int(out["model_pred"][0]), int(out["final_pred"][0])
+    masks = {k: bool(v[0]) for k, v in out["layer_masks"].items()}
+
+    # a layer is reported only when it actually raised the model's decision
+    matched = [_LAYER_NAMES[k] for k in bundle.layers if masks.get(k) and model_idx < 2]
+
+    severity = sp.LABELS[final_idx]
+    return {
+        "severity": severity,
+        "priority_score": round(SCORE_BANDS[severity] + float(proba[final_idx]) * 19.9, 4),
+        "scores": {"CRITICAL": 0.0, "HIGH": round(float(proba[2]), 4),
+                   "MEDIUM": round(float(proba[1]), 4), "LOW": round(float(proba[0]), 4)},
+        "matched_rules": matched,
+        "critical_trigger": None,
+        # extras (not part of the legacy shape)
+        "model_severity": sp.LABELS[model_idx],
+        "layers_fired": masks,
+        "vitals_provided": sorted(clean_vitals),
+        "thresholds": {"high": bundle.t_high, "low": bundle.t_low},
+        "model_version": MODEL_VERSION,
     }
-    return _artefacts
 
-
-# ── Text cleaning (mirrors Colab clean_text exactly) ─────────────────────────
-
-def _clean_text(text: str) -> str:
-    if not isinstance(text, str):
-        return ""
-    text = text.lower()
-    text = re.sub(r"\|", " ", text)
-    text = re.sub(r"symptoms:\s*", "", text)
-    text = re.sub(r"age:\s*(\d+)", r"age\1", text)
-    text = re.sub(r"[^a-z0-9_ ]", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-# ── Condition group encoder ───────────────────────────────────────────────────
-
-def _encode_cg(condition_group: str, cfg: dict, le_cg) -> np.ndarray:
-    """One-hot vector + [high_rate, med_rate, low_rate] for one sample."""
-    classes  = le_cg.classes_
-    n_cls    = len(classes)
-    oh       = np.zeros(n_cls, dtype="float32")
-    idx      = np.where(classes == condition_group)[0]
-    if len(idx):
-        oh[idx[0]] = 1.0
-
-    hp = cfg["high_rate_map"].get(condition_group, 0.26)
-    mp = cfg["med_rate_map"].get(condition_group,  0.33)
-    lp = cfg["low_rate_map"].get(condition_group,  0.41)
-
-    return np.concatenate([oh, [hp, mp, lp]]).astype("float32")
-
-
-# ── Structured feature builder ────────────────────────────────────────────────
-
-def _build_struct(
-    age:            float,
-    pain_score:     float,
-    text_clean:     str,
-    condition_group: str,
-    has_red_flag:   int,
-    red_flag_count: int,
-    rf_flags:       dict[str, int],   # {rf_breathing_difficulty: 0/1, ...}
-    vitals:         dict[str, float], # {vital_hr, vital_spo2, vital_sbp, vital_rr, vital_temp}
-    cfg:            dict,
-) -> np.ndarray:
-    """Mirrors build_struct() from the notebook for a single sample."""
-
-    VF_COLS = cfg["vf_cols"]
-    RF_COLS = cfg["rf_cols"]   # ['has_red_flag','red_flag_count', rf_*]
-
-    # ── Red flag columns ──────────────────────────────────────────────────────
-    known_flags = [
-        "breathing_difficulty", "chest_pain", "focal_neurologic_deficit",
-        "active_bleeding", "syncope", "seizure",
-    ]
-    rf_vec = np.array(
-        [float(has_red_flag), float(red_flag_count)]
-        + [float(rf_flags.get(f, 0)) for f in known_flags],
-        dtype="float32",
-    )  # len == 8
-
-    # ── Age features ──────────────────────────────────────────────────────────
-    age    = float(age) if age is not None else 35.0
-    age_n  = age / 100.0
-    age_e  = float(age >= 65)
-    age_c  = float(age <   5)
-    age_a  = float(5 <= age < 65)
-
-    # ── Symptom count ─────────────────────────────────────────────────────────
-    sym_c = len(text_clean.split()) / 20.0
-
-    # ── Prior rates ───────────────────────────────────────────────────────────
-    hp = cfg["high_rate_map"].get(condition_group, 0.26)
-    mp = cfg["med_rate_map"].get(condition_group,  0.33)
-    lp = cfg["low_rate_map"].get(condition_group,  0.41)
-
-    # ── Interaction terms ─────────────────────────────────────────────────────
-    has_rf_inv = 1.0 - float(has_red_flag)
-    med_score  = mp * age_a * has_rf_inv * min(max(sym_c, 0.1), 0.8)
-    low_score  = lp * has_rf_inv * (1.0 - age_e)
-    elder_x_hp = age_e * hp
-    rf_x_hp    = float(red_flag_count) * hp
-
-    # ── Vital threshold flags (mirrors apply_thresh) ──────────────────────────
-    hr    = vitals.get("vital_hr",   None)
-    spo2  = vitals.get("vital_spo2", None)
-    sbp   = vitals.get("vital_sbp",  None)
-    rr    = vitals.get("vital_rr",   None)
-    temp  = vitals.get("vital_temp", None)
-    pain  = pain_score if pain_score is not None else 5.0
-
-    def _v(val, op, threshold):
-        if val is None:
-            return 0.0
-        ops = {">": val > threshold, "<": val < threshold,
-               ">=": val >= threshold, "==": val == threshold}
-        return float(ops[op])
-
-    vf_bradycardia       = _v(hr,   "<",  50)
-    vf_hypox_severe      = _v(spo2, "<",  90)
-    vf_hypox_moderate    = _v(spo2, "<",  94)
-    vf_hypotension       = _v(sbp,  "<",  90)
-    vf_hypertension_crit = _v(sbp,  ">",  180)
-    vf_tachypnea_severe  = _v(rr,   ">",  24)
-    vf_bradypnea         = _v(rr,   "<",  10)
-    vf_hypothermia       = _v(temp, "<",  35.0)
-    vf_high_fever        = _v(temp, ">",  38.5)
-    vf_pain_severe       = _v(pain, ">=", 8)
-    vf_pain_none         = _v(pain, "==", 0)
-    vf_elderly           = float(age >= 65)
-    vf_child             = float(age <   5)
-    vf_pain_low          = float(pain <= 3)
-    vf_critical_vital    = max(vf_hypox_severe, vf_hypotension,
-                               vf_bradycardia, vf_hypothermia)
-    vf_any_danger        = max(vf_hypox_severe, vf_hypotension,
-                               vf_bradycardia, vf_hypothermia,
-                               vf_tachypnea_severe, vf_bradypnea)
-    vf_elder_x_pain      = age_e * (pain / 10.0)
-
-    vf_vec = np.array([
-        vf_bradycardia, vf_hypox_severe, vf_hypox_moderate,
-        vf_hypotension, vf_hypertension_crit, vf_tachypnea_severe,
-        vf_bradypnea, vf_hypothermia, vf_high_fever,
-        vf_pain_severe, vf_pain_none,
-        vf_elderly, vf_child, vf_pain_low,
-        vf_critical_vital, vf_any_danger, vf_elder_x_pain,
-    ], dtype="float32")
-
-    pain_norm    = pain / 10.0
-    pain_x_age   = pain_norm * age_e
-
-    struct = np.concatenate([
-        rf_vec,
-        [age_n, age_c, age_e, age_a, sym_c, hp, mp, lp,
-         med_score, low_score, elder_x_hp, rf_x_hp],
-        vf_vec,
-        [pain_norm, pain_x_age],
-    ]).astype("float32")
-
-    return struct
-
-
-# ── Vital imputation using per-class medians from config 
-
-def _impute_vitals(vitals: dict[str, float | None], severity_hint: int, cfg: dict) -> dict:
-    """Fill missing vitals using training medians for the given class (0=LOW,1=MED,2=HIGH)."""
-    medians = cfg["vital_medians"][str(severity_hint)]
-    return {col: vitals.get(col) if vitals.get(col) is not None else medians[col]
-            for col in cfg["vital_cols"]}
-
-
-# ── Public inference entry point 
 
 def predict_severity_ml(
-    clinical_note:   str,
-    age:             float | None = None,
-    condition_group: str          = "Unknown",
-    vitals:          dict | None  = None,
-    has_red_flag:    int          = 0,
-    red_flag_count:  int          = 0,
-    rf_flags:        dict | None  = None,
-    symptoms:        str          = "",
+    clinical_note: str,
+    age: float | None = None,
+    condition_group: str = "Unknown",
+    vitals: dict | None = None,
+    has_red_flag: int = 0,
+    red_flag_count: int = 0,
+    rf_flags: dict | None = None,
+    symptoms: str = "",
 ) -> dict:
     """
-    Run the full ML inference pipeline for a single patient.
-
+    Run the ML inference pipeline for a single patient.
     Returns the same shape as severity_rules.predict_severity():
         severity, priority_score, scores, matched_rules, critical_trigger
     """
-    art = _load_artefacts()
-    cfg = art["cfg"]
-
-    TH = cfg["threshold_high"]
-    TL = cfg["threshold_low"]
-
-    # ── 1. Text cleaning + TF-IDF ─────────────────────────────────────────────
-    text_clean = _clean_text(clinical_note)
-    X_tfidf    = art["tfidf"].transform([text_clean])   # sparse (1, 8000)
-
-    # ── 2. Condition group encoding ───────────────────────────────────────────
-    cg_vec = _encode_cg(condition_group, cfg, art["le_cg"])  # (n_cg_classes + 3,)
-
-    # ── 3. Vital imputation + structured features ─────────────────────────────
-    raw_vitals  = vitals or {}
-    imp_vitals  = _impute_vitals(raw_vitals, severity_hint=1, cfg=cfg)  # impute as MEDIUM
-    pain        = raw_vitals.get("pain_score", imp_vitals.get("pain_score", 5.0))
-    struct_vec  = _build_struct(
-        age             = age if age is not None else 35.0,
-        pain_score      = pain,
-        text_clean      = text_clean,
-        condition_group = condition_group,
-        has_red_flag    = has_red_flag,
-        red_flag_count  = red_flag_count,
-        rf_flags        = rf_flags or {},
-        vitals          = imp_vitals,
-        cfg             = cfg,
-    )  # (n_struct,)
-
-    # ── 4. Assemble sparse matrix (text + cg + struct) → MaxAbsScaler ─────────
-    X_sparse = hstack([
-        X_tfidf,
-        csr_matrix(cg_vec.reshape(1, -1)),
-        csr_matrix(struct_vec.reshape(1, -1)),
-    ])
-    X_sc = art["sc"].transform(X_sparse).astype("float32")
-
-    # ── 5. Assemble dense matrix (cg + struct) → StandardScaler ───────────────
-    Xd = np.hstack([cg_vec, struct_vec]).reshape(1, -1).astype("float32")
-    Xd_sc = art["sc_d"].transform(Xd).astype("float32")
-
-    # ── 6. Base model probabilities (5 models × 3 classes = 15 cols) ──────────
-    proba_cols = np.hstack([
-        art["lr_a"].predict_proba(X_sc),   # sparse
-        art["lr_b"].predict_proba(X_sc),   # sparse
-        art["lr_c"].predict_proba(X_sc),   # sparse
-        art["lgb"].predict_proba(Xd_sc),   # dense
-        art["xgb"].predict_proba(Xd_sc),   # dense
-    ]).astype("float32")  # shape (1, 15)
-
-    # ── 7. Meta-learner ───────────────────────────────────────────────────────
-    mX    = np.hstack([proba_cols, struct_vec.reshape(1, -1)])
-    proba = art["meta"].predict_proba(mX)[0]   # shape (3,) → [LOW, MED, HIGH]
-
-    # ── 8. Threshold cascade ──────────────────────────────────────────────────
-    ph = proba[2]   # HIGH probability
-    pl = proba[0]   # LOW  probability
-
-    if ph >= TH:
-        pred_idx = 2
-    elif pl >= TL:
-        pred_idx = 0
-    else:
-        pred_idx = np.argmax(proba)
-
-    # ── 9. Override layers ────────────────────────────────────────────────────
-    override_reason: str | None = None
-
-    # Layer 1 — red flag floor
-    if has_red_flag and pred_idx < 2:
-        pred_idx       = 2
-        override_reason = "red_flag_override"
-
-    # Layer 2 — dx resuscitation flags (passed via rf_flags)
-    dx_override_cols = cfg.get("dx_override_cols", ["dx_resus", "dx_intubate", "dx_centline"])
-    if any((rf_flags or {}).get(col, 0) for col in dx_override_cols):
-        pred_idx       = 2
-        override_reason = override_reason or "dx_override"
-
-    # Layer 3 — complaint pattern
-    if art["complaint_pattern"].search(symptoms or clinical_note):
-        pred_idx       = 2
-        override_reason = override_reason or "complaint_override"
-
-    # ── 10. Map to label ──────────────────────────────────────────────────────
-    label_map    = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
-    severity     = label_map[pred_idx]
-    matched_rules = [override_reason] if override_reason else []
-
-    # ── 11. Build scores dict matching rule-based shape ───────────────────────
-    scores = {
-        "CRITICAL": 0.0,
-        "HIGH":     round(float(proba[2]), 4),
-        "MEDIUM":   round(float(proba[1]), 4),
-        "LOW":      round(float(proba[0]), 4),
-    }
-
-    # ── 12. Priority score (reuse rule-based bands for consistency) ───────────
-    SCORE_BANDS = {"CRITICAL": 80.0, "HIGH": 60.0, "MEDIUM": 40.0, "LOW": 0.0}
-    priority_score = round(SCORE_BANDS[severity] + float(proba[pred_idx]) * 19.9, 4)
-
-    return {
-        "severity":        severity,
-        "priority_score":  priority_score,
-        "scores":          scores,
-        "matched_rules":   matched_rules,
-        "critical_trigger": None,   # CRITICAL is handled upstream by rule-based
-    }
+    full = predict_severity_ml_detailed(clinical_note, age, condition_group, vitals,
+                                        has_red_flag, red_flag_count, rf_flags, symptoms)
+    return {k: full[k] for k in ("severity", "priority_score", "scores", "matched_rules", "critical_trigger")}

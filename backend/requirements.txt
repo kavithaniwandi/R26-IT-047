@@ -22,13 +22,45 @@ PyMySQL==1.1.0
 mysqlclient==2.2.4
 cryptography==42.0.5
 
-# ML Inference
+# ============================================================================
+# ML INFERENCE: LOCKED VERSIONS (do not upgrade without retraining)
+# ============================================================================
+# The severity model (app/models/severity_model/severity_bundle.joblib) is a
+# pickled bundle trained with EXACTLY the versions below. If any LOCKED library
+# changes, the adapter refuses to load the model (app/models/severity_ml_service.py).
+# Bypassing that check can give wrong predictions silently.
+#
+# LOCKED (must match the training environment):
+#   numpy==1.26.4        scispaCy/thinc also break on numpy 2.x
+#   scipy==1.15.3        sparse-matrix code in the feature pipeline (tested set)
+#   scikit-learn==1.7.2  pickled vectorizers, scalers and classifiers
+#   xgboost==2.1.4       pickled XGBoost model
+#   lightgbm==4.7.0      pickled LightGBM model
+#
+# KEEP (the model was trained and tested with these; change only after re-testing):
+#   joblib==1.4.2, pandas==2.2.3, Python 3.10.x
+#
+# DO NOT UPGRADE INDIRECTLY:
+#   opencv-python-headless is pinned because current opencv wheels require numpy 2.x.
+#   Installing packages such as ultralytics, torch or opencv-python normally can
+#   upgrade numpy to 2.x and break this model and the scispaCy pipeline. Use
+#   "pip install --no-deps <package>" for them, then re-check the versions above.
+#   Never run "pip install -r requirements.txt" blindly in an older environment.
+#
+# TO UPGRADE ANY LOCKED LIBRARY:
+#   1. Retrain the severity model in Colab with the new versions (update the pins in
+#      the Colab environment cell and the EXPECTED line in the training script).
+#   2. Replace the files in app/models/severity_model/ and app/models/severity_pipeline.py.
+#   3. Run: pytest --noconftest tests/test_severity_ml_service.py
+# ============================================================================
 joblib==1.4.2
-numpy>=1.26,<2.0
+numpy==1.26.4
+scipy==1.15.3
 scikit-learn==1.7.2
 pandas==2.2.3
-lightgbm
-xgboost
+lightgbm==4.7.0
+xgboost==2.1.4
+opencv-python-headless==4.10.0.84
 scispacy
 https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
 sentence-transformers

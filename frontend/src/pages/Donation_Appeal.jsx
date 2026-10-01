@@ -4,7 +4,7 @@ import CreditStatusBar from "../components/CreditStatusBar";
 import "./Donation_Appeal.css";
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const MIN_APPEAL_LENGTH = 10;
 const MAX_APPEAL_LENGTH = 10_000;

@@ -3,7 +3,7 @@
  * Centralized API client for Disaster Relief Module Backend.
  */
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export const getAuthToken = () => localStorage.getItem('dr_token');
 export const setAuthToken = (token) => localStorage.setItem('dr_token', token);

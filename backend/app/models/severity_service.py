@@ -2,6 +2,29 @@ from app.models.severity_ml_service import predict_severity_ml
 
 
 SUPPORTED_MODES = {"rule_based", "ml"}
+MIN_VITALS_FOR_ML = 4
+ML_VITAL_KEYS = {
+    "vital_hr",
+    "vital_spo2",
+    "vital_sbp",
+    "vital_rr",
+    "vital_temp",
+    "pain_score",
+}
+
+
+def _count_numeric_vitals(vitals: dict | None) -> int:
+    count = 0
+    for key in ML_VITAL_KEYS:
+        value = (vitals or {}).get(key)
+        if value is None or value == "":
+            continue
+        try:
+            float(value)
+        except (TypeError, ValueError):
+            continue
+        count += 1
+    return count
 
 
 def _normalize_scores(scores: dict[str, float]) -> dict[str, float]:
@@ -162,19 +185,28 @@ def classify_note(
     # Critical trigger detection is handled exclusively by the rule engine
     # and acts as a hard safety floor before the ML path is reached.
     rule_result = predict_severity(clinical_note, age=age)
+    effective_method = mode
+    ml_skipped_reason = None
     if rule_result["critical_trigger"] is not None:
         result = rule_result
     elif mode == "ml":
-        result = predict_severity_ml(
-            clinical_note=clinical_note,
-            age=age,
-            condition_group=condition_group,
-            vitals=vitals,
-            has_red_flag=has_red_flag,
-            red_flag_count=red_flag_count,
-            rf_flags=rf_flags,
-            symptoms=symptoms,
-        )
+        if _count_numeric_vitals(vitals) < MIN_VITALS_FOR_ML:
+            result = dict(rule_result)
+            result["method"] = "rule_based"
+            result["ml_skipped_reason"] = "insufficient_vitals"
+            effective_method = "rule_based"
+            ml_skipped_reason = "insufficient_vitals"
+        else:
+            result = predict_severity_ml(
+                clinical_note=clinical_note,
+                age=age,
+                condition_group=condition_group,
+                vitals=vitals,
+                has_red_flag=has_red_flag,
+                red_flag_count=red_flag_count,
+                rf_flags=rf_flags,
+                symptoms=symptoms,
+            )
     else:
         result = rule_result
 
@@ -183,7 +215,7 @@ def classify_note(
     queue_policy = _build_queue_policy(
         result["severity"],
         risk_score,
-        mode,
+        effective_method,
         result["matched_rules"],
         result["critical_trigger"],
         source=source,
@@ -192,7 +224,8 @@ def classify_note(
         "severity": result["severity"],
         "priority_score": result["priority_score"],
         "risk_score": risk_score,
-        "method": mode,
+        "method": effective_method,
+        "ml_skipped_reason": ml_skipped_reason,
         "scores": normalized_scores,
         "matched_rules": result["matched_rules"],
         "critical_trigger": result["critical_trigger"],

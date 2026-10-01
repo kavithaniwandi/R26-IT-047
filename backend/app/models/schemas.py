@@ -99,6 +99,7 @@ class SeverityClassifyResponse(BaseModel):
     priority_score: float = Field(..., ge=0.0, le=100.0)
     risk_score: int = Field(..., ge=0, le=100)
     method: Literal["rule_based", "ml"]
+    ml_skipped_reason: str | None = None
     scores: dict[Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"], float]
     matched_rules: list[str]
     critical_trigger: str | None

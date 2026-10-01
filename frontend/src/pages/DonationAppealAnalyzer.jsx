@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "./DonationAppealAnalyzer.css";
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const MIN_TEXT_LENGTH = 10;
 const MAX_TEXT_LENGTH = 10_000;
