@@ -17,9 +17,21 @@ from app.database import init_db
 from app.routers import admin_stats as admin_router
 from app.routers import auth as auth_router
 from app.routers import camps as camps_router
+from app.routers import disaster_donation_requests as disaster_donation_requests_router
+from app.routers import divisions as divisions_router
+from app.routers import donation_items as donation_items_router
+from app.routers import donation_history as donation_history_router
 from app.routers import donations as donations_router
 from app.routers import heatmap as heatmap_router
 from app.routers import notifications as notifications_router
+try:
+    from app.routers import population as population_router
+except ImportError as exc:
+    population_router = None
+    __import__("logging").getLogger(__name__).warning(
+        "population router disabled (missing dependency): %s", exc
+    )
+from app.routers import relief_camps as relief_camps_router
 from app.routers import sms as sms_router
 from app.routers import sos as sos_router
 from app.routers import triage as triage_router
@@ -81,6 +93,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5176",
+        "http://localhost:5177",
+        "http://127.0.0.1:5177",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
@@ -97,8 +117,15 @@ app.include_router(admin_router.router, prefix=API_V1_PREFIX)
 app.include_router(users_router.router, prefix=API_V1_PREFIX)
 app.include_router(sos_router.router, prefix=API_V1_PREFIX)
 app.include_router(camps_router.router, prefix=API_V1_PREFIX)
+app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
+app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
+if population_router is not None:
+    app.include_router(population_router.router, prefix=API_V1_PREFIX)
+app.include_router(disaster_donation_requests_router.router, prefix=API_V1_PREFIX)
 app.include_router(heatmap_router.router, prefix=API_V1_PREFIX)
 app.include_router(donations_router.router, prefix=API_V1_PREFIX)
+app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
+app.include_router(donation_history_router.router, prefix=API_V1_PREFIX)
 app.include_router(notifications_router.router, prefix=API_V1_PREFIX)
 app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
