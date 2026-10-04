@@ -1,0 +1,261 @@
+id,district,ds_division,gn_division,address,disaster_type,affected_families,affected_people,lat,lng,geocode_precision,label,jittered
+1,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2.0,7.0,6.9003514,80.4978097,gn_division,1,False
+2,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,1.0,4.0,6.9003514,80.4978097,gn_division,1,False
+3,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,Kadawala,Landslide,1.0,1.0,6.9890908,80.4941848,gn_division,1,False
+4,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kadusirigama, Peragolla, Ginigathhena",Landslide,1.0,5.0,6.9890908,80.4941848,gn_division,1,False
+5,Nuwaraeliya,Ambagamuwa,316 C Kalugala,"Kalugala, Ptawala",Landslide,4.0,9.0,6.9866191,80.4454418,gn_division,1,False
+6,Nuwaraeliya,Ambagamuwa,316 C Kalugala,"Gasnagaldeniya, Kalugala, Pitawala",Landslide,1.0,2.0,6.9866191,80.4454418,gn_division,1,False
+7,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Yahida Janapadaya,Landslide,5.0,15.0,7.012135827521417,80.49984406923258,ds_division,1,True
+8,Nuwaraeliya,Ambagamuwa,316 E Millagahamula,Millagahamulla,Landslide,4.0,13.0,7.023014819922504,80.49168738398761,ds_division,1,True
+9,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,2.0,7.0,6.9003514,80.4978097,gn_division,1,False
+10,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Weralugsthenna, Lakshapana",Landslide,1.0,4.0,6.9003514,80.4978097,gn_division,1,False
+11,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,7.0,22.0,7.018675016881468,80.49134601167943,ds_division,1,True
+12,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya",Landslide,1.0,3.0,7.005706162934728,80.48356289789739,ds_division,1,True
+13,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Babaragala, Koththalhena, Hatton",Landslide,1.0,4.0,7.02789743178572,80.50660359260151,ds_division,1,True
+14,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Yahida Road,Landslide,1.0,4.0,7.025217136379114,80.50257152151288,ds_division,1,True
+15,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Samangiri Janapadaya,Landslide,2.0,7.0,7.024570739136243,80.49522205351067,ds_division,1,True
+16,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Pitawala,Landslide,1.0,3.0,7.023060181571019,80.48830112727688,ds_division,1,True
+17,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Katakithula, Lakshapana",Landslide,1.0,4.0,6.9003514,80.4978097,gn_division,1,False
+18,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"4 Kanuwa, Lakshapana",Landslide,1.0,3.0,6.9003514,80.4978097,gn_division,1,False
+19,Nuwaraeliya,Ambagamuwa,318 B Gagarapitiya,"Gagarapitiya, Hatton",Landslide,16.0,47.0,7.008336351985786,80.48520444484303,ds_division,1,True
+20,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gadumawatta, Koththalhena, Hatton", Landslide,9.0,22.0,7.014655235503081,80.47730106785757,ds_division,1,True
+21,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,3.0,11.0,7.034714440299847,80.49510245699179,ds_division,1,True
+22,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,2.0,9.0,7.032665821807863,80.490364595156,ds_division,1,True
+23,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Miyanapalawa, Koththalhena",Landslide,1.0,5.0,7.024592312317142,80.48289899845938,ds_division,1,True
+24,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Koththalhena, Hatton",Landslide,2.0,9.0,7.019219801467356,80.49451031671119,ds_division,1,True
+25,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Thebaton, Norton bridge",Landslide,1.0,4.0,7.020074070741686,80.49569451071496,ds_division,1,True
+26,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Coolborn road, Udubulathgama",Landslide,2.0,7.0,7.025442918416023,80.50793049488358,ds_division,1,True
+27,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Peradeniya House, Coolborn Road, Abagamuwa",Landslide,2.0,10.0,7.015212118769874,80.50340133778684,ds_division,1,True
+28,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Dehigastenna, Ambagamuwa",Landslide,1.0,4.0,7.018700688075112,80.49299953349941,ds_division,1,True
+29,Nuwaraeliya,Ambagamuwa,314 C Sellipigama,Sellipigama,Landslide,1.0,7.0,7.017200700433913,80.4937893090801,ds_division,1,True
+30,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1.0,5.0,7.015801978503914,80.50466874853873,ds_division,1,True
+31,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,2.0,11.0,7.01879481095107,80.49296600789383,ds_division,1,True
+32,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Kelanigama, Homagama, Ginigathhena",Landslide,1.0,6.0,7.020718389702834,80.4952688454275,ds_division,1,True
+33,Nuwaraeliya,Ambagamuwa,314 E Kalaweldeniya,"Abradine 2, Widulipura",Landslide,3.0,12.0,6.949261,80.4953134,gn_division,1,False
+34,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,3.0,12.0,7.016276761390628,80.50263992392789,ds_division,1,True
+35,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,5.0,7.010540388855112,80.50237590714737,ds_division,1,True
+36,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kenilworth 04, Ginigathhena",Landslide,1.0,4.0,6.9998737,80.4826168,address,1,False
+37,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,Ginigathhena,Landslide,1.0,3.0,6.9905174,80.4893267,address,1,False
+38,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"No 227, Peragahamula, Hatton Road, Ginigathhena",Landslide,1.0,4.0,6.9890908,80.4941848,gn_division,1,False
+39,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Peragahamula, Ginigathhena",Landslide,1.0,5.0,6.9890908,80.4941848,gn_division,1,False
+40,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kadawala, Ginigathhena",Landslide,1.0,4.0,6.9890908,80.4941848,gn_division,1,False
+41,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Pawalamale, Ginigathhena",Landslide,1.0,3.0,6.9890908,80.4941848,gn_division,1,False
+42,Nuwaraeliya,Ambagamuwa,315 C Widulipura South,"Akkarawatta, Norton",Landslide,1.0,1.0,7.007562004280139,80.4962509829412,ds_division,1,True
+43,Nuwaraeliya,Ambagamuwa,315 D Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,4.0,7.019750251971002,80.48905303721185,ds_division,1,True
+44,Nuwaraeliya,Ambagamuwa,316 Bulathgama,Bulathgama,Landslide,1.0,3.0,7.022854730068197,80.50531334531038,ds_division,1,True
+45,Nuwaraeliya,Ambagamuwa,316 Bulathgama,"Badhupola, Ginigathhena",Landslide,1.0,5.0,7.014606727354597,80.49264070238216,ds_division,1,True
+46,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Pahala Kadawala, Ginigathhena",Landslide,5.0,18.0,7.013962286115167,80.48978479327778,ds_division,1,True
+47,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Madilla, Ginigathhena",Landslide,1.0,5.0,7.031745900605083,80.49692468511513,ds_division,1,True
+48,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Gonawala, Ginigathhena",Landslide,2.0,7.0,7.0097314489788465,80.48564902102645,ds_division,1,True
+49,Nuwaraeliya,Ambagamuwa,317 Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,2.0,9.0,7.026191671625248,80.50655968028866,ds_division,1,True
+50,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2.0,8.0,6.9003514,80.4978097,gn_division,1,False
+51,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kuburuhena, Lakshapana",Landslide,1.0,3.0,6.9003514,80.4978097,gn_division,1,False
+52,Nuwaraeliya,Ambagamuwa,317 C Morahenagama,"Kiriwelhinna, Morahenagama, Hatton",Landslide,3.0,10.0,7.029737239265145,80.49777024091627,ds_division,1,True
+53,Nuwaraeliya,Ambagamuwa,317 C Morahenagama,"Kolhena, Morahenagama, Hatton",Landslide,3.0,12.0,7.028580627443513,80.48976860757365,ds_division,1,True
+54,Nuwaraeliya,Ambagamuwa,317 B Waggama,"Udabage, Lakshapana",Landslide,1.0,2.0,7.020513034309877,80.49266102400838,ds_division,1,True
+55,Nuwaraeliya,Ambagamuwa,317 B Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0,7.021241258118858,80.48679421240399,ds_division,1,True
+56,Nuwaraeliya,Ambagamuwa,318 Polpitiya,"Polopitiya, Pitawala",Landslide,4.0,15.0,7.017256682879567,80.49755921579008,ds_division,1,True
+57,Nuwaraeliya,Ambagamuwa,318 A Hitigegama,"Hitigegama, Hatton",Landslide,3.0,11.0,7.022458422023939,80.49557624798472,ds_division,1,True
+58,Nuwaraeliya,Ambagamuwa,318 C Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1.0,5.0,7.011824257427987,80.47684808823092,ds_division,1,True
+59,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,1.0,4.0,7.012276444944166,80.4956460965413,ds_division,1,True
+60,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,2.0,7.030439184041679,80.50426141176845,ds_division,1,True
+61,Nuwaraeliya,Ambagamuwa,320 F Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,4.0,6.9447494,80.5393499,gn_division,1,False
+62,Nuwaraeliya,Ambagamuwa,314 Abagamuwa South,"Abagamuwa, Udubulathgama",Landslide,4.0,13.0,7.007497754169076,80.4933725661694,ds_division,1,True
+63,Nuwaraeliya,Ambagamuwa,314 Abagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,2.0,7.0,7.032852329542935,80.49611887613587,ds_division,1,True
+64,Nuwaraeliya,Ambagamuwa,Millagamula,"Kaluwagala, Millagahamula, Pitawala",Landslide,1.0,5.0,7.026490285298844,80.48810317712089,ds_division,1,True
+65,Nuwaraeliya,Ambagamuwa,Pitawala,"Yahida Janapadaya, Pitawala, Nawalapitiya",Landslide,1.0,4.0,7.0182912561331,80.50348261815459,ds_division,1,True
+66,Nuwaraeliya,Ambagamuwa,Lakshapana,"Katakithula, Lakshapana",Landslide,1.0,4.0,6.9003514,80.4978097,gn_division,1,False
+67,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Norton Bridge",Landslide,1.0,4.0,7.014228706541981,80.48540112119252,ds_division,1,True
+68,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1.0,6.0,6.9767266,80.478909,gn_division,1,False
+69,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0,6.9703898,80.4836719,address,1,False
+70,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Sri Abhinavaramaya, Ginigathhena",Landslide,1.0,3.0,6.9890908,80.4941848,gn_division,1,False
+71,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,4.0,6.9447494,80.5393499,gn_division,1,False
+72,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"No. 07, Dehigasthenna, Abathalawa, giigathhena",Landslide,1.0,5.0,7.0175342882538,80.49630673179138,ds_division,1,True
+73,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,6.0,6.9447494,80.5393499,gn_division,1,False
+74,Nuwaraeliya,Ambagamuwa,Millagamula,"Millagahamulla, Pitawala",Landslide,1.0,4.0,7.005950587385173,80.491376038101,ds_division,1,True
+75,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dagampitiya, Pitawala",Landslide,1.0,4.0,6.9767266,80.478909,gn_division,1,False
+76,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0,7.014021758396361,80.491550821674,ds_division,1,True
+77,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0,6.9703898,80.4836719,address,1,False
+78,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"berdine 2, Widulipura",Landslide,1.0,8.0,6.949261,80.4953134,gn_division,1,False
+79,Nuwaraeliya,Ambagamuwa,Kehelwarawa,"Aditri morahenagama, Hatton",Landslide,1.0,5.0,7.019038768259811,80.49343036727079,ds_division,1,True
+80,Nuwaraeliya,Ambagamuwa,Gonawala,"Madilla, Ginigathhena",Landslide,1.0,5.0,7.030282803365342,80.49079964286214,ds_division,1,True
+81,Nuwaraeliya,Ambagamuwa,Habbakanda,"Koslallamula, Habbakanda, Ginigathhena",Landslide,1.0,4.0,7.019366241321495,80.48985012748822,ds_division,1,True
+82,Nuwaraeliya,Ambagamuwa,Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,4.0,7.034599931636743,80.48669041099951,ds_division,1,True
+83,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Kelanigama, Dagampitiya, Ginigathhena",Landslide,2.0,13.0,6.9767266,80.478909,gn_division,1,False
+84,Nuwaraeliya,Ambagamuwa,Hitigegama,"Hitigegama, Hatton",Landslide,1.0,5.0,7.03243407135038,80.48239643324685,ds_division,1,True
+85,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1.0,4.0,7.005401847970905,80.48344130187525,ds_division,1,True
+86,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1.0,6.0,7.024746381806174,80.4898576395916,ds_division,1,True
+87,Nuwaraeliya,Ambagamuwa,Homagama,"Polwatta, Dagampitiya, Ginigathhena",Landslide,1.0,4.0,7.019100946184135,80.49317350244564,ds_division,1,True
+88,Nuwaraeliya,Ambagamuwa,Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,1.0,3.0,7.024432991364914,80.50891678497625,ds_division,1,True
+89,Nuwaraeliya,Ambagamuwa,Homagama,"Kelanigama, Ginigathhena",Landslide,2.0,9.0,7.0262700128772115,80.49520473480872,ds_division,1,True
+90,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,6.0,6.9703898,80.4836719,address,1,False
+91,Nuwaraeliya,Ambagamuwa,Polpitiya,"Paratalwa, Polpitiya, Pitawala",Landslide,1.0,5.0,6.9764711,80.4506492,gn_division,1,False
+92,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2.0,14.0,7.010924962117256,80.50864484979614,ds_division,1,True
+93,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,4.0,7.005578786130038,80.50428788880507,ds_division,1,True
+94,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0,7.016808908346119,80.50837187782274,ds_division,1,True
+95,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,3.0,18.0,6.9764711,80.4506492,gn_division,1,False
+96,Nuwaraeliya,Ambagamuwa,Polpitiya,"Pallewatta, Pitawala",Landslide,1.0,2.0,6.9764711,80.4506492,gn_division,1,False
+97,Nuwaraeliya,Ambagamuwa,Koththallena,"Koththalhena, Hatton",Landslide,2.0,10.0,6.909833,80.485003,gn_division,1,False
+98,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"212, Panvilagodella, Abagamuwa",Landslide,1.0,5.0,7.021383329730625,80.48832087141793,ds_division,1,True
+99,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1.0,4.0,7.014551483000552,80.49850190557775,ds_division,1,True
+100,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,1.0,6.0,6.9764711,80.4506492,gn_division,1,False
+101,Nuwaraeliya,Ambagamuwa,Kehelwarawa,"Galgodahinna, Morathotiyawatta, Morahenagama, Hatton",Landslide,1.0,5.0,7.015902356280095,80.50818603827167,ds_division,1,True
+102,Nuwaraeliya,Ambagamuwa,Sellipigama,"No 19, Abagamuwa, Udubulathgama",Landslide,1.0,4.0,7.013358342193751,80.4915003908161,ds_division,1,True
+103,Nuwaraeliya,Ambagamuwa,Sellipigama,C Collany,Landslide,1.0,1.0,7.0207973467042954,80.49540760527739,ds_division,1,True
+104,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Kadawala Watta, Watawala",Landslide,4.0,21.0,6.9890908,80.4941848,gn_division,1,False
+105,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,6.0,7.022096009874294,80.4834559574224,ds_division,1,True
+106,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Pallegedara, Ambagamuwa, Udubulathgama",Landslide,1.0,5.0,7.033915150283609,80.500698190871,ds_division,1,True
+107,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Road, Ambagamuwa, Udubulathgama",Landslide,1.0,4.0,7.031362934505203,80.4919854935393,ds_division,1,True
+108,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Wattegedara, Koththelhena, Hatton",Landslide,1.0,8.0,7.020295339696401,80.48277739161902,ds_division,1,True
+109,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0,7.01941888645722,80.49469875108024,ds_division,1,True
+110,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,6.0,7.029938941924584,80.49341270441548,ds_division,1,True
+111,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dagampitiya, Kelanigama",Landslide,2.0,12.0,6.9767266,80.478909,gn_division,1,False
+112,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,3.0,6.9764711,80.4506492,gn_division,1,False
+113,Nuwaraeliya,Ambagamuwa,Gonawala,"Thennakoon House, Gonawala, Ginigathhena",Landslide,1.0,7.0,7.02599648051716,80.4765508998568,ds_division,1,True
+114,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,1.0,4.0,6.9764711,80.4506492,gn_division,1,False
+115,Nuwaraeliya,Ambagamuwa,Polpitiya,"Wellethenna, pitawala",Landslide,1.0,5.0,6.9764711,80.4506492,gn_division,1,False
+116,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,2.0,7.018188549647219,80.49057516915758,ds_division,1,True
+117,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,4.0,7.017636101499742,80.48369734738192,ds_division,1,True
+118,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,5.0,7.020970854839571,80.47723954558121,ds_division,1,True
+119,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0,7.030792984942711,80.49905861244522,ds_division,1,True
+120,Nuwaraeliya,Ambagamuwa,Lakshapana,"4 Kanuwa, Lakshapana, Nortonbridge",Landslide,1.0,5.0,6.9003514,80.4978097,gn_division,1,False
+121,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Kada weediya, Ambagamuwa, Udubulathgama",Landslide,6.0,35.0,7.0109527482299825,80.50285252014585,ds_division,1,True
+122,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,3.0,15.0,6.9764711,80.4506492,gn_division,1,False
+123,Nuwaraeliya,Ambagamuwa,Gonawala,"Wedilla, Gonawala, Ginigathhena",Landslide,1.0,4.0,7.028312986061674,80.50151118117239,ds_division,1,True
+124,Nuwaraeliya,Ambagamuwa,Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,1.0,3.0,6.9154445,80.5053843,gn_division,1,False
+125,Nuwaraeliya,Ambagamuwa,Widulipura South,"Babaragala, Norton Bridge",Landslide,11.0,51.0,7.0230897255880205,80.48807892442852,ds_division,1,True
+126,Nuwaraeliya,Ambagamuwa,Widulipura South,Wimalasurendragama,Landslide,1.0,5.0,7.01508406150804,80.48929711701207,ds_division,1,True
+127,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,6.0,7.0117669515934375,80.50586100011941,ds_division,1,True
+128,Nuwaraeliya,Ambagamuwa,Hagarapitiya,"Hagarapitiya, Hatton",Landslide,1.0,5.0,7.0323124918409565,80.49874369659501,ds_division,1,True
+129,Nuwaraeliya,Ambagamuwa,Watawala,"Diyagala, Watawala",Landslide,1.0,4.0,6.9447494,80.5393499,gn_division,1,False
+130,Nuwaraeliya,Ambagamuwa,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1.0,5.0,7.013023672963531,80.50762486338438,ds_division,1,True
+131,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Panvilagodella, Abagamuwa",Landslide,2.0,9.0,7.011377201429021,80.50778874306317,ds_division,1,True
+132,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Racepitiya, Abagamuwa",Landslide,1.0,3.0,7.0176870429712475,80.48381856271983,ds_division,1,True
+133,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0,7.012998254978342,80.48610010395097,ds_division,1,True
+134,Nuwaraeliya,Ambagamuwa,Pitawala,"Pitawala, Nawalapitiya",Landslide,2.0,9.0,7.029784970808199,80.48359352771806,ds_division,1,True
+135,Nuwaraeliya,Ambagamuwa,Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0,7.007331348778193,80.49507489227204,ds_division,1,True
+136,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,5.0,7.028106476428824,80.50172525027673,ds_division,1,True
+137,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,2.0,10.0,6.949261,80.4953134,gn_division,1,False
+138,Nuwaraeliya,Ambagamuwa,Koththallena,"Denihena, Koththelhena, Hatton",Landslide,1.0,4.0,6.909833,80.485003,gn_division,1,False
+139,Nuwaraeliya,Ambagamuwa,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,4.0,17.0,7.0155824006631144,80.47896206785528,ds_division,1,True
+140,Nuwaraeliya,Ambagamuwa,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,2.0,8.0,7.019950248343527,80.47690526805677,ds_division,1,True
+141,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0,7.013220231492225,80.4907208834502,ds_division,1,True
+142,Nuwaraeliya,Ambagamuwa,Watawala,"Templestore Janapadaya, Watawala",Landslide,1.0,4.0,6.9447494,80.5393499,gn_division,1,False
+143,Nuwaraeliya,Ambagamuwa,Watawala,"Gnananadagama, Watawala",Landslide,3.0,17.0,6.9447494,80.5393499,gn_division,1,False
+144,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,5.0,6.9447494,80.5393499,gn_division,1,False
+145,Nuwaraeliya,Ambagamuwa,Waggama,"Udabage, Lakshapana",Landslide,1.0,7.0,7.019753346882989,80.48626612547315,ds_division,1,True
+146,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,2.0,9.0,7.017172318263335,80.49309189487884,ds_division,1,True
+147,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Ambalanowita, Abagamuwa",Landslide,2.0,11.0,7.008551044877153,80.49153099677613,ds_division,1,True
+148,Nuwaraeliya,Ambagamuwa,Habbakanda,"No 82, Horakada, Ginigathhena",Landslide,1.0,4.0,7.018282756266624,80.49331230856747,ds_division,1,True
+149,Nuwaraeliya,Ambagamuwa,Thiniyagala,"Hiriyapitiya, Ginigathhena",Landslide,1.0,4.0,7.027146784335391,80.49436964238001,ds_division,1,True
+150,Nuwaraeliya,Ambagamuwa,Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,1.0,3.0,7.0264799072800335,80.49920368394278,ds_division,1,True
+151,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Pitakanda, Hitigegama, Hatton",Landslide,7.0,42.0,7.023926964454262,80.49404598151489,ds_division,1,True
+152,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Dehigasthenna, Abathalawa, Ginigathhena",Landslide,1.0,4.0,7.011895350356654,80.48491714683728,ds_division,1,True
+153,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,4.0,7.01864818841908,80.49353444963799,ds_division,1,True
+154,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Sirisewana, Abathalawa",Landslide,1.0,5.0,7.018192435175128,80.49298890534847,ds_division,1,True
+155,Nuwaraeliya,Ambagamuwa,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,6.0,32.0,7.031255826558851,80.48483175739659,ds_division,1,True
+156,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,2.0,7.0188932609452594,80.49956425968557,ds_division,1,True
+157,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,4.0,25.0,6.9764711,80.4506492,gn_division,1,False
+158,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Udapa Kotuwe Gedara, Abagamuwa",Landslide,1.0,4.0,7.016928467871962,80.49425668340696,ds_division,1,True
+159,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Watta, Abagamuwa, Udubulathgama",Landslide,1.0,2.0,7.019192535891625,80.48355032816363,ds_division,1,True
+160,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Mahapathana, Abagamuwa, Udubulathgama",Landslide,4.0,18.0,7.020707131828888,80.50688006328811,ds_division,1,True
+161,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4.0,22.0,7.022306998231366,80.49484743757608,ds_division,1,True
+162,Nuwaraeliya,Ambagamuwa,Ambagamuwa  South,"No 03 Part, Kenilworth Watta",Landslide,3.0,45.0,7.016090270512679,80.50398251113764,ds_division,1,True
+163,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Abagamuwa Market Street, Abagamuwa, Udubulathgama",Landslide,1.0,5.0,7.019678402708324,80.49433993670075,ds_division,1,True
+164,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4.0,21.0,7.0197062221986375,80.49262430766493,ds_division,1,True
+165,Nuwaraeliya,Ambagamuwa,Rampadeniya,"Hathlaha, Giniathhena",Landslide,1.0,2.0,7.022283437014716,80.48401523564964,ds_division,1,True
+166,Nuwaraeliya,Ambagamuwa,Rampadeniya,"No 01, Keniworth watta, Ginigathhena",Landslide,6.0,68.0,7.012349486571052,80.48572873255793,ds_division,1,True
+167,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,4.0,6.9764711,80.4506492,gn_division,1,False
+168,Nuwaraeliya,Ambagamuwa,Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,5.0,7.026803078867364,80.48466286736748,ds_division,1,True
+169,Nuwaraeliya,Ambagamuwa,Gonawala,"Gonawala, Ginigathhena",Landslide,1.0,6.0,7.0231931589854675,80.48058634873743,ds_division,1,True
+170,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0,7.025687893400877,80.5093526644251,ds_division,1,True
+171,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0,7.026126672607628,80.4871677438064,ds_division,1,True
+172,Nuwaraeliya,Ambagamuwa,Lakshapana,"Lakshapana, Nortonbridge",Landslide,1.0,3.0,6.9003514,80.4978097,gn_division,1,False
+173,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"77, Kadusirigama, Abathalawa, Ginigathhena",Landslide,1.0,7.0,7.013222247560671,80.49159081967363,ds_division,1,True
+174,Nuwaraeliya,Ambagamuwa,Millagamula,"Sadasirigama, Millagamula, Pitawala",Landslide,1.0,6.0,7.023923834155712,80.47951954138298,ds_division,1,True
+175,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0,7.022740663464861,80.49003862520065,ds_division,1,True
+176,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kalaweldeniya",Landslide,1.0,5.0,7.015586782696929,80.50027806771179,ds_division,1,True
+177,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2.0,10.0,7.019953325437121,80.49393364241858,ds_division,1,True
+178,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,1.0,6.9764711,80.4506492,gn_division,1,False
+179,Nuwaraeliya,Ambagamuwa,Widulipura South,"Babaragala, Norton Bridge",Landslide,3.0,19.0,7.018927522793445,80.49348120334041,ds_division,1,True
+180,Nuwaraeliya,Ambagamuwa,Koththallena,"Aluoya Janapadaya, Widulipura",Landslide,1.0,3.0,6.909833,80.485003,gn_division,1,False
+181,Nuwaraeliya,Ambagamuwa,Kiriwaneliya,"3 Kanuwa, Lakshapana",Landslide,1.0,5.0,6.9154445,80.5053843,gn_division,1,False
+182,Nuwaraeliya,Ambagamuwa,Lakshapana,"Weralugasthenna, Lakshapana",Landslide,1.0,4.0,6.9003514,80.4978097,gn_division,1,False
+183,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Gowalwatta, Htigegama, Hatton",Landslide,1.0,4.0,7.003306948919253,80.50075242070102,ds_division,1,True
+184,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1.0,5.0,7.025107288905172,80.4792138171202,ds_division,1,True
+185,Nuwaraeliya,Ambagamuwa,Gonawala,"257/1, Kotahela Janapadaya, Ginigathhena",Landslide,1.0,6.0,7.026902014466383,80.48332722137086,ds_division,1,True
+186,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,4.0,7.0262258927907295,80.49334959543364,ds_division,1,True
+187,Nuwaraeliya,Ambagamuwa,Hitigegama,"Galapalhena, Hagarapitiya, Hatton",Landslide,1.0,4.0,7.015749096130906,80.49281312079552,ds_division,1,True
+188,Nuwaraeliya,Ambagamuwa,Rampadeniya,"Hathlaga, Warakagahamula",Landslide,1.0,6.0,7.0164167822921355,80.49443386611122,ds_division,1,True
+189,Nuwaraeliya,Ambagamuwa,Widulipura south,"Babaragala, Norton Bridge",Landslide,1.0,4.0,7.01965055083247,80.49749874035429,ds_division,1,True
+190,Nuwaraeliya,Ambagamuwa,Millagahamula,"Kadusirigama, Dillagahamula",Landslide,1.0,5.0,7.026083983913644,80.49984466063225,ds_division,1,True
+191,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0,6.9703898,80.4836719,address,1,False
+192,Nuwaraeliya,Ambagamuwa,Waggama,"Mawussawatta, Lakshapana",Landslide,1.0,5.0,7.012128973746364,80.50408164017678,ds_division,1,True
+193,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,5.0,6.9447494,80.5393499,gn_division,1,False
+194,Nuwaraeliya,Ambagamuwa,Watawala,"Templestore Janapadaya, Watawala",Landslide,2.0,15.0,6.9447494,80.5393499,gn_division,1,False
+195,Nuwaraeliya,Ambagamuwa,Sellipigama,"D 23 Abagamuwa, Udubulathgama",Landslide,1.0,7.0,7.030002713196301,80.48881778520123,ds_division,1,True
+196,Nuwaraeliya,Ambagamuwa,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,1.0,5.0,7.0166254274523725,80.49757920164373,ds_division,1,True
+197,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,4.0,7.001779392532086,80.4909835324038,ds_division,1,True
+198,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Abagamuwa, Udubulathgama",Landslide,1.0,6.0,7.014996461374919,80.48020898496833,ds_division,1,True
+199,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,5.0,7.012323735075419,80.50063137707332,ds_division,1,True
+200,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa, Udubulathgama",Landslide,1.0,4.0,7.029713612065405,80.49106676183908,ds_division,1,True
+201,Nuwaraeliya,Ambagamuwa,Sellipigama,"New St Clive Janapadaya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0,7.026215283225466,80.49124468958671,ds_division,1,True
+202,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,1.0,5.0,7.018814415202711,80.49752244251088,ds_division,1,True
+203,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,1.0,4.0,6.949261,80.4953134,gn_division,1,False
+204,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1.0,5.0,6.9767266,80.478909,gn_division,1,False
+205,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,1.0,5.0,7.012451436334915,80.49313711651413,ds_division,1,True
+206,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Road, Abagamuwa, Udubulathgama",Landslide,1.0,4.0,7.014573205681321,80.50608636264649,ds_division,1,True
+207,Nuwaraeliya,Ambagamuwa,Kalugala,"Yatiberiya, Pitawla",Landslide,1.0,6.0,6.9866191,80.4454418,gn_division,1,False
+208,Nuwaraeliya,Ambagamuwa,Kalugala,"Pitawala, Nawalapitiya",Landslide,1.0,6.0,6.9866191,80.4454418,gn_division,1,False
+209,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Kaluduriyapaluwa, Pallewatta, Pitawala",Landslide,1.0,5.0,6.9767266,80.478909,gn_division,1,False
+210,Nuwaraeliya,Ambagamuwa,Kalugala,"Kalugala, Pitawala, Nawalapitiya",Landslide,1.0,7.0,6.9866191,80.4454418,gn_division,1,False
+211,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,6.0,7.018808079947878,80.4932804643696,ds_division,1,True
+212,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Gadumawatta, Koththalhena, Hatton",Landslide,1.0,5.0,7.02089987893235,80.49350941769985,ds_division,1,True
+213,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"New house, Abathalawa, Ginigathhena",Landslide,1.0,7.0,7.018224295848583,80.49249482838609,ds_division,1,True
+214,Nuwaraeliya,Ambagamuwa,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1.0,5.0,7.018130651669515,80.49301295452818,ds_division,1,True
+215,Nuwaraeliya,Ambagamuwa,Waggama,"Haddala, Morahenagama",Landslide,1.0,5.0,7.033478816517682,80.49796148366485,ds_division,1,True
+216,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Kadawawatta, Watawala",Landslide,2.0,15.0,6.9890908,80.4941848,gn_division,1,False
+217,Nuwaraeliya,Ambagamuwa,Watawala,"Agarawatta, Watawala",Landslide,1.0,7.0,6.9447494,80.5393499,gn_division,1,False
+218,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,6.0,7.016594681699168,80.50559328633607,ds_division,1,True
+219,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Nilawatta, Pallewatta, Pitawala",Landslide,1.0,6.0,6.9767266,80.478909,gn_division,1,False
+220,Nuwaraeliya,Ambagamuwa,Watawala,"101 Janapadaya, Watawala",Landslide,1.0,5.0,6.9447494,80.5393499,gn_division,1,False
+221,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura, North",Landslide,1.0,9.0,7.026027754144627,80.48833398870309,ds_division,1,True
+222,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Hatton",Landslide,1.0,6.0,6.9764711,80.4506492,gn_division,1,False
+223,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,5.0,30.0,7.018979928162115,80.49479766931246,ds_division,1,True
+224,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2.0,14.0,7.024298118191841,80.50007378172278,ds_division,1,True
+225,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Ambagamuwa, Market Street",Landslide,4.0,26.0,7.010352103297735,80.49359460503369,ds_division,1,True
+226,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Abagawwa, Udubulathgama",Landslide,1.0,5.0,7.02197247872798,80.49274228952697,ds_division,1,True
+227,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2.0,11.0,7.019254455870222,80.50089176008322,ds_division,1,True
+228,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1.0,8.0,7.015490017426167,80.48663958311757,ds_division,1,True
+229,Nuwaraeliya,Ambagamuwa,314 A Ambagamuwa East,"Panvilagodella, Abagamuwa, Udubulathgama",Landslide,1.0,7.0,7.019673808516906,80.48187500029805,ds_division,1,True
+230,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Ambagamuwa, Udubulathgama",Landslide,12.0,73.0,7.01975235837621,80.50452016724148,ds_division,1,True
+231,Nuwaraeliya,Ambagamuwa,314 C Sellipigama,Sellipigama,Landslide,1.0,9.0,7.018753022523117,80.4922106397796,ds_division,1,True
+232,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,2.0,11.0,7.014312841657765,80.49804728979468,ds_division,1,True
+233,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Homagama, Kalaweldeniya, Ginigathhena",Landslide,2.0,13.0,7.011264832664488,80.48463111949712,ds_division,1,True
+234,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1.0,7.0,7.012806701556003,80.48623000260781,ds_division,1,True
+235,Nuwaraeliya,Ambagamuwa,314 E Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,6.0,37.0,6.9703898,80.4836719,address,1,False
+236,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,6.0,7.003820373586686,80.48955972018727,ds_division,1,True
+237,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"2 Kanuwa, Atlas",Landslide,1.0,4.0,7.028873587482729,80.49945117091596,ds_division,1,True
+238,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,6.0,7.020363621174927,80.49048225845026,ds_division,1,True
+239,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Ellauda Village, Upper part, Sadaham Sisila Temple",Landslide,1.0,7.0,7.0183173854238685,80.49418189523215,ds_division,1,True
+240,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Ambathalawa, Ginigathhena",Landslide,1.0,6.0,7.023359871558425,80.50377243697126,ds_division,1,True
+241,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Dehigasthenna, Galayatawatta",Landslide,1.0,5.0,7.019326489978638,80.49314736044666,ds_division,1,True
+242,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Mallika Janapada, Abathalawa",Landslide,1.0,4.0,7.009984798087016,80.48727702077183,ds_division,1,True
+243,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Godagedara, Abathalawa",Landslide,1.0,5.0,7.011417505872842,80.47769393092564,ds_division,1,True
+244,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Godagedara, Abathalawa",Landslide,1.0,8.0,7.029177037784306,80.49411228248432,ds_division,1,True
+245,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Horakada, Abathalawa",Landslide,1.0,6.0,7.01189052731355,80.49249047386803,ds_division,1,True
+246,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Badullawatta, Habbakanda",Landslide,1.0,7.0,7.02056992708246,80.50457657684055,ds_division,1,True
+247,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,8.0,7.013810829714529,80.48644644788719,ds_division,1,True
+248,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Wagurawatta, Ginigathhena",Landslide,2.0,9.0,7.023362384699847,80.50183299344808,ds_division,1,True
+249,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1.0,5.0,7.012712818591842,80.47709741076447,ds_division,1,True
+250,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"148/1 Alagala, Ginigathhena",Landslide,1.0,4.0,7.0135961724437506,80.49760315209735,ds_division,1,True
+251,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,2.0,11.0,7.034832585357485,80.48626984116308,ds_division,1,True
+252,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Nawalapitiya Road, Ginigathhena",Landslide,1.0,5.0,7.029456969500029,80.50552468073627,ds_division,1,True
+253,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1.0,4.0,7.0169542130358575,80.49601365552725,ds_division,1,True
+254,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Kadurusima, Peragahamula",Landslide,2.0,11.0,7.019809737307003,80.49384901969405,ds_division,1,True
+255,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1.0,6.0,7.020480717385116,80.49219167404821,ds_division,1,True
+256,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Pawalamale, Ginigathhena",Landslide,1.0,7.0,7.019099945331129,80.49279495223617,ds_division,1,True
+257,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,Ginigathhena,Landslide,2.0,12.0,7.018779523831814,80.49473778961732,ds_division,1,True
+258,Nuwaraeliya,Ambagamuwa,315 Thiniyagala, ,,,,7.012269244395016,80.48255694908335,ds_division,1,True
+259,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,,,,,7.019390199239058,80.49184660931165,ds_division,1,True
+260,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,,,,,7.013459328506143,80.49105699601748,ds_division,1,True

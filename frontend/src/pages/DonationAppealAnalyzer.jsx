@@ -4,6 +4,11 @@ import "./DonationAppealAnalyzer.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+const MIN_TEXT_LENGTH = 10;
+const MAX_TEXT_LENGTH = 10_000;
+const CHAR_WARN_THRESHOLD = 9_000;
+const LOW_CONFIDENCE_THRESHOLD = 0.50;
+
 const SEVERITY_CONFIG = {
   high: { bg: "#fef2f2", border: "#fecaca", tag: "#991b1b", text: "#7f1d1d", label: "High" },
   medium: { bg: "#fff7ed", border: "#fed7aa", tag: "#92400e", text: "#78350f", label: "Medium" },
@@ -11,15 +16,52 @@ const SEVERITY_CONFIG = {
 };
 
 
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+
+function detectScript(text) {
+  const sinhalaChars = (text.match(/[\u0D80-\u0DFF]/g) || []).length;
+  const tamilChars = (text.match(/[\u0B80-\u0BFF]/g) || []).length;
+  const totalChars = text.replace(/\s/g, "").length;
+  if (!totalChars) return null;
+  if (sinhalaChars / totalChars > 0.3) return "Sinhala";
+  if (tamilChars / totalChars > 0.3) return "Tamil";
+  return "English";
+}
+
+
 async function analyseAppeal(appealText, language) {
+  const trimmed = (appealText || "").trim();
+  if (!trimmed) {
+    throw new ValidationError("Paste an appeal before analysing.");
+  }
+  if (trimmed.length < MIN_TEXT_LENGTH) {
+    throw new ValidationError(
+      `Appeal is too short to analyse (${trimmed.length} characters). Minimum is ${MIN_TEXT_LENGTH}.`
+    );
+  }
+  if (trimmed.length > MAX_TEXT_LENGTH) {
+    throw new ValidationError(
+      `Appeal exceeds the ${MAX_TEXT_LENGTH.toLocaleString()} character limit.`
+    );
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/quality/analyse`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ appeal_text: appealText, language }),
+    body: JSON.stringify({ appeal_text: trimmed, language }),
   });
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
+    if (response.status === 422) {
+      throw new ValidationError(data?.detail || "Validation failed.");
+    }
     throw new Error(data?.detail || "Failed to analyse appeal.");
   }
 
@@ -43,11 +85,28 @@ async function improveAppeal(appealText, language) {
 }
 
 
-function ScoreHero({ score, label, confidence, title = "Quality Score" }) {
+function LowConfidenceBanner() {
+  return (
+    <div className="daa-low-confidence-banner" role="alert">
+      <span className="daa-low-conf-icon">!</span>
+      <div>
+        <strong>Low confidence score</strong>
+        <p>
+          The model is uncertain about this quality rating.
+          Consider reviewing the appeal manually before acting on this score.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+function ScoreHero({ score, label, confidence, lowConfidence = false, title = "Quality Score" }) {
   const pct = Math.round((Number(score) / 5) * 100);
 
   return (
     <div className="daa-score-hero">
+      {lowConfidence && <LowConfidenceBanner />}
       <div>
         <span className="daa-score-num">{Number(score).toFixed(2)}</span>
         <span className="daa-score-denom"> / 5</span>
@@ -58,7 +117,10 @@ function ScoreHero({ score, label, confidence, title = "Quality Score" }) {
       </div>
       <div className="daa-score-meta">
         <span className={`daa-label-pill daa-label-${label}`}>{label}</span>
-        <span className="daa-conf-text">{Math.round(Number(confidence) * 100)}% confidence</span>
+        <span className={`daa-conf-text ${lowConfidence ? "daa-conf-low" : ""}`}>
+          {Math.round(Number(confidence) * 100)}% confidence
+          {lowConfidence && " - uncertain"}
+        </span>
       </div>
     </div>
   );
@@ -67,6 +129,20 @@ function ScoreHero({ score, label, confidence, title = "Quality Score" }) {
 
 function IssueCard({ issue }) {
   const c = SEVERITY_CONFIG[issue.severity] || SEVERITY_CONFIG.low;
+  const DIMENSION_HINTS = {
+    specificity: "Add concrete numbers, names, or locations to strengthen this appeal.",
+    urgency: "Use time-sensitive language to motivate immediate action.",
+    clarity: "Simplify sentences so the ask is unambiguous.",
+    credibility: "Include verifiable facts or organisation details.",
+    emotional: "Connect the need to real people and their stories.",
+    length: "Adjust the length to match the channel and audience.",
+    cta: "End with a single, direct call to action.",
+    currency: "Mention a specific donation amount or goal.",
+    "content depth": "Add more detail about what donors' contributions will specifically provide.",
+    content_depth: "Add more detail about what donors' contributions will specifically provide.",
+    content: "Add more detail about what donors' contributions will specifically provide.",
+  };
+  const hint = DIMENSION_HINTS[issue.dimension?.toLowerCase()] || null;
 
   return (
     <div
@@ -92,6 +168,11 @@ function IssueCard({ issue }) {
         <span style={{ color: c.text }}><strong>Found:</strong> {issue.value}</span>
         <span style={{ color: c.text }}><strong>Target:</strong> {issue.target}</span>
       </div>
+      {hint && (
+        <p className="daa-issue-hint" style={{ color: c.text }}>
+          Tip: {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -130,29 +211,46 @@ export default function DonationAppealAnalyzer() {
   const [improvement, setImprovement] = useState(null);
   const [analysing, setAnalysing] = useState(false);
   const [improving, setImproving] = useState(false);
-  const [error, setError] = useState("");
+  const [analyseError, setAnalyseError] = useState("");
+  const [analyseErrorIsValidation, setAnalyseErrorIsValidation] = useState(false);
+  const [improveError, setImproveError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const charCount = appealText.length;
+  const charOverLimit = charCount > MAX_TEXT_LENGTH;
+  const charNearLimit = charCount >= CHAR_WARN_THRESHOLD && !charOverLimit;
+  const detectedScript = detectScript(appealText);
+  const languageMismatch = (
+    detectedScript !== null &&
+    detectedScript !== language &&
+    appealText.trim().length > 20
+  );
   const wordCount = appealText.split(/\s+/).filter(Boolean).length;
   const highCount = analysis?.issues?.filter((issue) => issue.severity === "high").length || 0;
   const mediumCount = analysis?.issues?.filter((issue) => issue.severity === "medium").length || 0;
   const lowCount = analysis?.issues?.filter((issue) => issue.severity === "low").length || 0;
+  const analysisLowConf = analysis
+    ? (analysis.low_confidence ?? analysis.confidence < LOW_CONFIDENCE_THRESHOLD)
+    : false;
+  const improvementLowConf = improvement
+    ? (improvement.low_confidence ?? improvement.improved_confidence < LOW_CONFIDENCE_THRESHOLD)
+    : false;
 
   const handleAnalyse = async () => {
-    if (!appealText.trim()) {
-      setError("Please paste an appeal to analyse.");
-      return;
-    }
-
-    setAnalysing(true);
-    setError("");
+    setAnalyseError("");
+    setAnalyseErrorIsValidation(false);
     setAnalysis(null);
     setImprovement(null);
+    setImproveError("");
+    setAnalysing(true);
 
     try {
-      setAnalysis(await analyseAppeal(appealText, language));
+      const result = await analyseAppeal(appealText, language);
+      setAnalysis(result);
     } catch (err) {
-      setError(err.message || "Analysis failed.");
+      const isValidation = err instanceof ValidationError;
+      setAnalyseError(err.message || "Analysis failed.");
+      setAnalyseErrorIsValidation(isValidation);
     } finally {
       setAnalysing(false);
     }
@@ -161,16 +259,21 @@ export default function DonationAppealAnalyzer() {
   const handleImprove = async () => {
     if (!appealText.trim() || !analysis) return;
 
+    setImproveError("");
     setImproving(true);
-    setError("");
 
     try {
       setImprovement(await improveAppeal(appealText, language));
     } catch (err) {
-      setError(err.message || "Improvement failed.");
+      setImproveError(err.message || "Improvement failed.");
     } finally {
       setImproving(false);
     }
+  };
+
+  const handleReImprove = async () => {
+    setImprovement(null);
+    await handleImprove();
   };
 
   const handleCopy = async () => {
@@ -225,19 +328,31 @@ export default function DonationAppealAnalyzer() {
               </select>
             </div>
 
-            <div className="daa-char-count">
-              {appealText.length} characters, {wordCount} words
+            {languageMismatch && (
+              <div className="daa-lang-mismatch" role="alert">
+                ! Text appears to be <strong>{detectedScript}</strong> but language is set to{" "}
+                <strong>{language}</strong> - scores may be inaccurate. Update the language
+                selector to match your text.
+              </div>
+            )}
+
+            <div className={`daa-char-count ${charOverLimit ? "daa-char-over" : charNearLimit ? "daa-char-warn" : ""}`}>
+              {charCount.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()} characters
+              {charOverLimit && " - too long"}
+              {charNearLimit && " - approaching limit"}
+              {!charOverLimit && !charNearLimit && `, ${wordCount} words`}
             </div>
           </div>
 
           <textarea
-            className="daa-textarea"
+            className={`daa-textarea ${charOverLimit ? "daa-textarea-over" : ""}`}
             value={appealText}
             onChange={(event) => {
               setAppealText(event.target.value);
               setAnalysis(null);
               setImprovement(null);
-              setError("");
+              setAnalyseError("");
+              setImproveError("");
             }}
             placeholder="Paste any donation appeal here..."
             rows={8}
@@ -247,12 +362,20 @@ export default function DonationAppealAnalyzer() {
             className="daa-analyse-btn"
             type="button"
             onClick={handleAnalyse}
-            disabled={analysing || !appealText.trim()}
+            disabled={analysing || !appealText.trim() || charOverLimit}
           >
             {analysing ? "Analysing..." : "Analyse Appeal"}
           </button>
 
-          {error && <p className="daa-error">{error}</p>}
+          {analyseError && (
+            <div
+              className={`daa-error-box ${analyseErrorIsValidation ? "validation" : "api"}`}
+              role="alert"
+            >
+              <strong>{analyseErrorIsValidation ? "Validation issue" : "Analysis failed"}</strong>
+              <p>{analyseError}</p>
+            </div>
+          )}
         </section>
 
         {analysis && (
@@ -279,11 +402,11 @@ export default function DonationAppealAnalyzer() {
                   ))}
                 </div>
 
-                {!improvement && (
+                <div className="daa-improve-row">
                   <button
                     className="daa-improve-btn"
                     type="button"
-                    onClick={handleImprove}
+                    onClick={improvement ? handleReImprove : handleImprove}
                     disabled={improving}
                   >
                     {improving ? (
@@ -291,9 +414,16 @@ export default function DonationAppealAnalyzer() {
                         <span className="daa-spinner" />
                         Generating improvement...
                       </span>
-                    ) : "Generate Improved Version"}
+                    ) : improvement ? "Regenerate Improvement" : "Generate Improved Version"}
                   </button>
-                )}
+
+                  {improveError && (
+                    <div className="daa-error-box api" role="alert">
+                      <strong>Improvement failed</strong>
+                      <p>{improveError}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -312,6 +442,7 @@ export default function DonationAppealAnalyzer() {
                       score={analysis.score}
                       label={analysis.label}
                       confidence={analysis.confidence}
+                      lowConfidence={analysisLowConf}
                     />
                     <div className="daa-score-rows">
                       <div className="daa-score-row">
@@ -331,6 +462,7 @@ export default function DonationAppealAnalyzer() {
                       score={analysis.score}
                       label={analysis.label}
                       confidence={analysis.confidence}
+                      lowConfidence={analysisLowConf}
                       title="Original Score"
                     />
 
@@ -348,6 +480,7 @@ export default function DonationAppealAnalyzer() {
                       score={improvement.improved_score}
                       label={improvement.improved_label}
                       confidence={improvement.improved_confidence}
+                      lowConfidence={improvementLowConf}
                       title="Improved Score"
                     />
                   </>
@@ -375,6 +508,19 @@ export default function DonationAppealAnalyzer() {
                 {Math.round(Number(improvement.improved_confidence) * 100)}% confidence
               </span>
             </div>
+
+            {improvementLowConf && (
+              <div className="daa-low-confidence-banner" role="alert">
+                <span className="daa-low-conf-icon">!</span>
+                <div>
+                  <strong>Low confidence on improved version</strong>
+                  <p>
+                    The model is uncertain about the improved appeal's quality rating.
+                    Review it manually before publishing.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="daa-improved-text">
               <p>{improvement.improved_appeal}</p>

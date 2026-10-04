@@ -35,12 +35,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(12, 11, 11, 0.1);
 }
 
 .map-content {
   text-align: center;
-  color: #2c3e50;
+  color: #edeeef;
 }
 
 .map-icon {

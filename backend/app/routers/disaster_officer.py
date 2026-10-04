@@ -4,45 +4,25 @@ app/routers/disaster_officer.py
 Disaster Officer endpoints powered directly by MongoDB Atlas collections.
 """
 from __future__ import annotations
-from typing import List, Optional, Literal
+from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.security import require_role, get_current_user_payload, TokenPayload
-from app.database import disaster_requests_collection, users_collection
+from app.core.security import require_role, TokenPayload
+from app.database import disaster_requests_collection, get_db, users_collection
+from app.models.user import User
+from app.models.disaster_donation_request import (
+    BatchPledgeCreate,
+    DisasterDonationRequestCreate,
+)
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/disaster-donation-requests", tags=["Disaster Officer (MongoDB)"])
 
 
 # ── Input / Request Schemas ──────────────────────────────────────────────────
-
-class RequestItemIn(BaseModel):
-    itemName: str = Field(..., min_length=2)
-    unit: str = Field(...)
-    neededQuantity: float = Field(..., gt=0)
-
-
-class DisasterDonationRequestCreate(BaseModel):
-    disasterType: Literal["Flood", "Landslide", "Tsunami", "Drought", "Fire", "Other"] = "Flood"
-    severity: Literal["Low", "Moderate", "High", "Critical"] = "High"
-    dsArea: str = Field(..., min_length=2)
-    gnDivision: str = Field(..., min_length=2)
-    reliefCamp: str = Field(..., min_length=2)
-    people_count: int = Field(default=1, ge=0)
-    items: List[RequestItemIn] = Field(..., min_items=1)
-
-
-class PledgeItem(BaseModel):
-    itemName: str
-    quantity: float = Field(..., gt=0)
-    itemId: Optional[str] = None
-
-
-class BatchPledgeCreate(BaseModel):
-    pledges: List[PledgeItem] = Field(..., min_items=1)
-
 
 # ── Output / Response Schemas ────────────────────────────────────────────────
 
@@ -70,6 +50,7 @@ class DonationEntryOut(BaseModel):
     status: str = "pledged"
     donatedAt: datetime
     acceptedAt: Optional[datetime] = None
+    acceptedByOfficerId: Optional[str] = None
 
 
 class DisasterRequestGroupOut(BaseModel):
@@ -80,6 +61,9 @@ class DisasterRequestGroupOut(BaseModel):
     gnDivision: str
     reliefCamp: str
     people_count: int
+    status: str = "remaining"
+    createdBy: Optional[str] = None
+    createdAt: Optional[datetime] = None
     items: List[RequestItemOut]
     donations: List[DonationEntryOut]
 
@@ -107,7 +91,7 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         needed = float(item.get("neededQuantity", 0))
         pledged = float(item.get("pledgedQuantity", 0))
         donated = float(item.get("donatedQuantity", 0))
-        rem = max(0.0, needed - (pledged + donated))
+        rem = max(0.0, needed - donated)
         items_out.append(
             RequestItemOut(
                 itemId=item.get("itemId") or str(item.get("_id", "")),
@@ -138,6 +122,7 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
                 status=don.get("status", "pledged"),
                 donatedAt=don.get("donatedAt") or datetime.now(timezone.utc),
                 acceptedAt=don.get("acceptedAt"),
+                acceptedByOfficerId=don.get("acceptedByOfficerId"),
             )
         )
 
@@ -149,6 +134,9 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         gnDivision=doc.get("gnDivision", "Ranala"),
         reliefCamp=doc.get("reliefCamp", "Community Shelter"),
         people_count=int(doc.get("people_count", 1)),
+        status=doc.get("status", "remaining"),
+        createdBy=str(doc.get("createdBy")) if doc.get("createdBy") is not None else None,
+        createdAt=doc.get("createdAt"),
         items=items_out,
         donations=donations_out,
     )
@@ -157,14 +145,29 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
 # ── Route Endpoints ──────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[DisasterRequestGroupOut])
-async def get_all_disaster_requests():
-    cursor = disaster_requests_collection.find()
+async def get_all_disaster_requests(
+    dsArea: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
+):
+    query = {}
+    if dsArea:
+        query["dsArea"] = dsArea
+    if status_filter:
+        query["status"] = status_filter
+    cursor = disaster_requests_collection.find(query).sort("createdAt", -1)
     docs = await cursor.to_list(length=200)
     return [format_mongo_doc(d) for d in docs]
 
 
 @router.get("/officer/pledges", response_model=List[OfficerPledgeItemOut])
-async def get_officer_pending_pledges():
+async def get_officer_pending_pledges(
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
+):
     cursor = disaster_requests_collection.find({"donations.status": "pledged"})
     docs = await cursor.to_list(length=200)
 
@@ -196,11 +199,28 @@ async def get_officer_pending_pledges():
     return pledges_out
 
 
+@router.get("/{req_id}", response_model=DisasterRequestGroupOut)
+async def get_disaster_request(
+    req_id: str,
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
+):
+    if not ObjectId.is_valid(req_id):
+        raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
+    document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    if not document:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+    return format_mongo_doc(document)
+
+
 @router.patch("/{req_id}/donations/{donation_id}/accept")
 async def accept_donation_at_ds_office(
     req_id: str,
     donation_id: str,
-    token_payload: TokenPayload = Depends(get_current_user_payload),
+    token_payload: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
@@ -218,14 +238,27 @@ async def accept_donation_at_ds_office(
     for don in donations:
         current_don_id = don.get("donationId") or str(don.get("_id", ""))
         if current_don_id == donation_id:
+            if don.get("status") == "received":
+                raise HTTPException(status_code=400, detail="This donation has already been received")
             don["status"] = "received"
             don["acceptedAt"] = now
             don["acceptedByOfficerId"] = str(token_payload.sub)
             updated = True
 
             for itm in items:
-                if itm.get("itemName") == don.get("itemName"):
-                    itm["donatedQuantity"] = float(itm.get("donatedQuantity", 0)) + float(don.get("quantity", 0))
+                same_item_id = don.get("itemId") and itm.get("itemId") == don.get("itemId")
+                same_item_name = itm.get("itemName", "").casefold() == don.get("itemName", "").casefold()
+                if same_item_id or same_item_name:
+                    transfer_quantity = float(don.get("quantity", 0))
+                    itm["pledgedQuantity"] = max(
+                        0.0,
+                        float(itm.get("pledgedQuantity", 0)) - transfer_quantity,
+                    )
+                    itm["donatedQuantity"] = float(itm.get("donatedQuantity", 0)) + transfer_quantity
+                    itm["remainingQuantity"] = max(
+                        0.0,
+                        float(itm.get("neededQuantity", 0)) - itm["donatedQuantity"],
+                    )
                     if itm["donatedQuantity"] >= float(itm.get("neededQuantity", 0)):
                         itm["status"] = "fulfilled"
             break
@@ -233,19 +266,30 @@ async def accept_donation_at_ds_office(
     if not updated:
         raise HTTPException(status_code=404, detail="Donation record not found in request")
 
-    await disaster_requests_collection.update_one(
-        {"_id": ObjectId(req_id)},
-        {"$set": {"donations": donations, "items": items}}
+    request_status = (
+        "fulfilled"
+        if items and all(item.get("status") == "fulfilled" for item in items)
+        else "remaining"
     )
 
-    return {"message": "Donation verified and accepted at DS Office.", "donationId": donation_id}
+    await disaster_requests_collection.update_one(
+        {"_id": ObjectId(req_id)},
+        {"$set": {"donations": donations, "items": items, "status": request_status}}
+    )
+
+    updated_document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    return format_mongo_doc(updated_document)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_disaster_request(payload: DisasterDonationRequestCreate):
+@router.post("", response_model=DisasterRequestGroupOut, status_code=status.HTTP_201_CREATED)
+async def create_disaster_request(
+    payload: DisasterDonationRequestCreate,
+    token_payload: TokenPayload = Depends(require_role(["admin", "volunteer"])),
+):
     doc = payload.model_dump()
     doc["createdAt"] = datetime.now(timezone.utc)
-    doc["status"] = "active"
+    doc["status"] = "remaining"
+    doc["createdBy"] = token_payload.sub
     doc["donations"] = []
 
     for itm in doc.get("items", []):
@@ -255,11 +299,17 @@ async def create_disaster_request(payload: DisasterDonationRequestCreate):
         itm["status"] = "remaining"
 
     result = await disaster_requests_collection.insert_one(doc)
-    return {"message": "Request created successfully", "id": str(result.inserted_id)}
+    doc["_id"] = result.inserted_id
+    return format_mongo_doc(doc)
 
 
 @router.post("/{req_id}/pledge", status_code=status.HTTP_201_CREATED)
-async def add_pledge_to_request(req_id: str, payload: BatchPledgeCreate):
+async def add_pledge_to_request(
+    req_id: str,
+    payload: BatchPledgeCreate,
+    token_payload: TokenPayload = Depends(require_role(["admin", "donor"])),
+    db: Session = Depends(get_db),
+):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
@@ -271,27 +321,70 @@ async def add_pledge_to_request(req_id: str, payload: BatchPledgeCreate):
     new_donations = []
     items = doc.get("items", [])
 
+    sql_user = None
+    mongo_user = None
+    if token_payload.sub.isdigit():
+        sql_user = db.query(User).filter(User.id == int(token_payload.sub)).first()
+    elif ObjectId.is_valid(token_payload.sub):
+        mongo_user = await users_collection.find_one({"_id": ObjectId(token_payload.sub)})
+    donor_name = (
+        sql_user.full_name
+        if sql_user
+        else " ".join(
+            value for value in [
+                (mongo_user or {}).get("firstName"),
+                (mongo_user or {}).get("lastName"),
+            ] if value
+        ) or (mongo_user or {}).get("full_name") or "Verified Donor"
+    )
+    donor_phone = sql_user.phone if sql_user else (mongo_user or {}).get("phone")
+    donor_email = sql_user.email if sql_user else (mongo_user or {}).get("email")
+
     for p in payload.pledges:
+        target_item = next(
+            (
+                item for item in items
+                if (p.itemId and item.get("itemId") == p.itemId)
+                or item.get("itemName", "").casefold() == p.itemName.casefold()
+            ),
+            None,
+        )
+        if target_item is None:
+            raise HTTPException(status_code=404, detail=f"Requested item '{p.itemName}' was not found")
+        available = max(
+            0.0,
+            float(target_item.get("neededQuantity", 0))
+            - float(target_item.get("pledgedQuantity", 0))
+            - float(target_item.get("donatedQuantity", 0)),
+        )
+        if float(p.quantity) > available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {available:g} {target_item.get('unit', 'units')} remain for {p.itemName}",
+            )
+
         donation_entry = {
             "donationId": str(ObjectId()),
-            "donorId": "donor_01",
-            "donorName": "Sri Lanka Red Cross",
-            "donorPhone": "+94 77 123 4567",
+            "donorId": token_payload.sub,
+            "donorName": donor_name,
+            "donorPhone": donor_phone,
+            "donorEmail": donor_email,
+            "itemId": target_item.get("itemId"),
             "itemName": p.itemName,
             "quantity": float(p.quantity),
             "dsArea": doc.get("dsArea", "Western Sector"),
+            "reliefCamp": doc.get("reliefCamp"),
             "status": "pledged",
             "donatedAt": now,
         }
         new_donations.append(donation_entry)
 
-        for itm in items:
-            if itm.get("itemName") == p.itemName:
-                itm["pledgedQuantity"] = float(itm.get("pledgedQuantity", 0)) + float(p.quantity)
+        target_item["pledgedQuantity"] = float(target_item.get("pledgedQuantity", 0)) + float(p.quantity)
 
     await disaster_requests_collection.update_one(
         {"_id": ObjectId(req_id)},
         {"$push": {"donations": {"$each": new_donations}}, "$set": {"items": items}}
     )
 
-    return {"message": "Pledges recorded successfully", "count": len(new_donations)}
+    updated_document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    return format_mongo_doc(updated_document)

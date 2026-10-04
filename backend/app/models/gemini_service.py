@@ -320,6 +320,17 @@ def _has_hallucination(text: str) -> tuple[bool, str]:
     return False, ""
 
 
+def _has_language_mixing(text: str, expected_language: str) -> bool:
+    """Return True when a non-English appeal contains significant Latin script."""
+    if expected_language not in ("Sinhala", "Tamil"):
+        return False
+    non_ws = re.sub(r"\s", "", text)
+    if not non_ws:
+        return False
+    latin_chars = sum(1 for ch in non_ws if ch.isascii() and ch.isalpha())
+    return (latin_chars / len(non_ws)) > 0.15
+
+
 def _has_invented_person(text: str) -> bool:
     """Return True if the text contains hallucinated individuals or narrative drift."""
     has_problem, _reason = _has_hallucination(text)
@@ -432,10 +443,16 @@ async def call_gemini_with_key_fallback(
     *,
     language: str = "English",
     max_retries: int = 2,
+    key_offset: int = 0,
 ) -> dict:
     from app.services.credit_monitor import _key_state
 
-    gemini_keys = list(enumerate(_gemini_api_keys(), start=1))
+    all_keys = list(enumerate(_gemini_api_keys(), start=1))
+    if all_keys:
+        offset = key_offset % len(all_keys)
+        gemini_keys = all_keys[offset:] + all_keys[:offset]
+    else:
+        gemini_keys = []
     gemini_all_failed = True
     invalid_model_detected = False
 
@@ -451,6 +468,13 @@ async def call_gemini_with_key_fallback(
                 appeal_text = appeal_text.strip()
                 if not appeal_text:
                     break
+                if _has_language_mixing(appeal_text, language):
+                    print(
+                        f"Language mixing detected (key={key_index}, attempt={attempt}, "
+                        f"expected={language}) - rejecting and retrying"
+                    )
+                    retry_temp = max(0.1, retry_temp - 0.2)
+                    continue
                 has_problem, reason = _has_hallucination(appeal_text)
                 if not has_problem:
                     record_success(label)
@@ -476,8 +500,8 @@ async def call_gemini_with_key_fallback(
                     print(f"Gemini key {key_index} daily quota exhausted - marked permanently")
                     mark_exhausted(label)
                 elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"Gemini key {key_index} rate limited - waiting 10s before next key")
-                    await asyncio.sleep(10)
+                    print(f"Gemini key {key_index} rate limited - waiting 2s before next key")
+                    await asyncio.sleep(2)
                     record_failure(label, "rate_limited_temporary")
                 else:
                     print(f"Gemini key {key_index} failed: {exc}")
@@ -548,8 +572,8 @@ async def call_gemini_with_key_fallback(
                     print(f"HF Llama quota exhausted: {exc}")
                     mark_exhausted(_HF_LABEL)
                 elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"HF Llama rate limited - waiting 10s before giving up on fallback")
-                    await asyncio.sleep(10)
+                    print(f"HF Llama rate limited - waiting 2s before giving up on fallback")
+                    await asyncio.sleep(2)
                     record_failure(_HF_LABEL, "rate_limited_temporary")
                 else:
                     print(f"HF Llama attempt {hf_attempt} failed: {exc}")
@@ -676,9 +700,9 @@ def generate_donation_appeal(form_data: dict) -> str:
                     print(f"Gemini key {key_index} daily quota exhausted - marked permanently")
                     mark_exhausted(label)
                 elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"Gemini key {key_index} rate limited - waiting 10s before next key")
+                    print(f"Gemini key {key_index} rate limited - waiting 2s before next key")
                     record_failure(label, "rate_limited_temporary")
-                    time.sleep(10)
+                    time.sleep(2)
                 else:
                     record_failure(label, str(e))
                 print(f"Gemini key {key_index} generation error: {e}")
@@ -738,12 +762,14 @@ async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[
             _build_generation_prompt(campaign_data, style=style),
             temp=0.5,
             language=language,
+            max_retries=1,
+            key_offset=index * 3,
         )
-        for style in styles
+        for index, style in enumerate(styles)
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    candidates: list[dict] = []
+    valid_results: list[tuple[int, dict, str]] = []
     seen_texts: set[str] = set()
 
     for index, result in enumerate(results):
@@ -759,8 +785,17 @@ async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[
         if normalised in seen_texts:
             continue
         seen_texts.add(normalised)
+        valid_results.append((index, result, appeal_text))
 
-        scoring = score_text(appeal_text, language=language)
+    scorings = await asyncio.gather(
+        *[
+            asyncio.to_thread(score_text, appeal_text, language=language)
+            for _, _, appeal_text in valid_results
+        ]
+    )
+
+    candidates: list[dict] = []
+    for (index, result, appeal_text), scoring in zip(valid_results, scorings):
         candidates.append({
             "model": result["model"],
             "temperature": 0.5,
@@ -777,6 +812,102 @@ async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[
     if not candidates:
         return [_build_fallback_variant(campaign_data)]
     return candidates[:top_n]
+
+
+async def generate_first_appeal_variant(campaign_data: dict) -> list[dict]:
+    _ensure_required_generation_fields(campaign_data)
+    language = campaign_data.get("language", "English")
+    first_style = VARIANT_STYLES[0]
+
+    result = await call_gemini_with_key_fallback(
+        _build_generation_prompt(campaign_data, style=first_style),
+        temp=0.5,
+        language=language,
+        max_retries=1,
+        key_offset=0,
+    )
+
+    if not result or not result.get("appeal_text", "").strip():
+        return [_build_fallback_variant(campaign_data)]
+
+    appeal_text = result["appeal_text"].strip()
+    scoring = await asyncio.to_thread(score_text, appeal_text, language=language)
+
+    return [
+        {
+            "model": result["model"],
+            "temperature": 0.5,
+            "style": first_style["style_name"],
+            "appeal_text": appeal_text,
+            "quality_label": scoring["quality_label"],
+            "quality_score": scoring["quality_score"],
+            "confidence": scoring["confidence"],
+            "confidence_normalised": scoring["confidence_normalised"],
+            "confidence_display": scoring["confidence_display"],
+        }
+    ]
+
+
+async def generate_remaining_appeal_variants(
+    campaign_data: dict,
+    skip_styles: int = 1,
+) -> list[dict]:
+    _ensure_required_generation_fields(campaign_data)
+    language = campaign_data.get("language", "English")
+    remaining_styles = VARIANT_STYLES[skip_styles:]
+
+    tasks = [
+        call_gemini_with_key_fallback(
+            _build_generation_prompt(campaign_data, style=style),
+            temp=0.5,
+            language=language,
+            max_retries=1,
+            key_offset=(index + 1) * 3,
+        )
+        for index, style in enumerate(remaining_styles)
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    valid_results: list[tuple[int, dict, str]] = []
+    seen_texts: set[str] = set()
+
+    for index, result in enumerate(results):
+        if isinstance(result, Exception) or not result:
+            print(f"Remaining variant {index + 1} failed: {result}")
+            continue
+
+        appeal_text = result.get("appeal_text", "").strip()
+        if not appeal_text:
+            continue
+
+        normalised = re.sub(r"\s+", " ", appeal_text.lower())
+        if normalised in seen_texts:
+            continue
+        seen_texts.add(normalised)
+        valid_results.append((index, result, appeal_text))
+
+    scorings = await asyncio.gather(
+        *[
+            asyncio.to_thread(score_text, appeal_text, language=language)
+            for _, _, appeal_text in valid_results
+        ]
+    )
+
+    candidates: list[dict] = []
+    for (index, result, appeal_text), scoring in zip(valid_results, scorings):
+        candidates.append({
+            "model": result["model"],
+            "temperature": 0.5,
+            "style": remaining_styles[index]["style_name"],
+            "appeal_text": appeal_text,
+            "quality_label": scoring["quality_label"],
+            "quality_score": scoring["quality_score"],
+            "confidence": scoring["confidence"],
+            "confidence_normalised": scoring["confidence_normalised"],
+            "confidence_display": scoring["confidence_display"],
+        })
+
+    return candidates
 
 
 def _diagnose_weaknesses(appeal_text: str, language: str = "English") -> list[dict]:
@@ -900,19 +1031,37 @@ STRICT REQUIREMENTS FOR THE NEW VERSION:
 5. Include one community or human element: who is affected and how.
 6. End with a strong, specific call to action, not just "donate today".
 7. No invented names, ages, statistics, dates, or details not in the original.
-8. Write entirely in {language}.
+8. CRITICAL: Write every single word — including the call to action — exclusively in {language}.
+   Do NOT switch to English for any sentence, phrase, or word. If {language} is Sinhala, the
+   call to action must be in Sinhala script. If {language} is Tamil, in Tamil script.
+   Any English word in a non-English output is a failure.
 
 Output ONLY the improved appeal. Nothing else.
 """
 
 
-def _fallback_improved_appeal(appeal_text: str) -> str:
+_FALLBACK_CTA = {
+    "Sinhala": "අදම පරිත්‍යාග කරන්න.",
+    "Tamil": "இன்றே நன்கொடை வழங்குங்கள்.",
+    "English": "Please donate today to provide verified support where it is needed most.",
+}
+
+_DONATE_TERMS_BY_LANG: dict[str, tuple[str, ...]] = {
+    "Sinhala": ("පරිත්‍යාග", "ආධාර", "දායාද"),
+    "Tamil": ("நன்கொடை", "உதவி", "ஆதரவு"),
+    "English": ("donate", "support", "contribute", "give"),
+}
+
+
+def _fallback_improved_appeal(appeal_text: str, language: str = "English") -> str:
     text = re.sub(r"\s+", " ", (appeal_text or "").strip())
     if not text:
         return ""
-    if re.search(r"\b(donate|support|contribute|give)\b", text, re.IGNORECASE):
+    donate_terms = _DONATE_TERMS_BY_LANG.get(language, _DONATE_TERMS_BY_LANG["English"])
+    if any(term in text for term in donate_terms):
         return text
-    return f"{text} Please donate today to provide verified support where it is needed most."
+    cta = _FALLBACK_CTA.get(language, _FALLBACK_CTA["English"])
+    return f"{text} {cta}"
 
 
 def _is_weak_improvement(original_text: str, improved_text: str) -> bool:
@@ -969,7 +1118,7 @@ async def improve_appeal_text(appeal_text: str, language: str = "English") -> di
         print("Improvement generation timed out - using fallback")
 
     if not improved_text:
-        improved_text = _fallback_improved_appeal(appeal_text)
+        improved_text = _fallback_improved_appeal(appeal_text, language)
 
     improved = score_text(improved_text, language)
     return {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../api";
 import "./PriorityApplication.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -321,6 +322,12 @@ export default function PriorityApplication() {
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...currentApplications]));
+    api.saveTriagePatient({
+      ...entry,
+      session_id: currentSession.session_id,
+    }).catch((error) => {
+      console.warn("[triage] patient save:", error);
+    });
     navigate("/priority-queue");
   };
 

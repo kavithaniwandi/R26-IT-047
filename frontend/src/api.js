@@ -3,7 +3,7 @@
  * Centralized API client for Disaster Relief Module Backend.
  */
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
 
 export const getAuthToken = () => localStorage.getItem('dr_token');
 export const setAuthToken = (token) => localStorage.setItem('dr_token', token);
@@ -40,7 +40,7 @@ async function apiRequest(endpoint, options = {}) {
 
   if (response.status === 401) {
     // If unauthorized and endpoint is not login/register, clear token
-    if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+    if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/component-login') && !endpoint.includes('/auth/register')) {
       removeAuthToken();
     }
   }
@@ -62,6 +62,7 @@ async function apiRequest(endpoint, options = {}) {
 export const api = {
   // Auth
   login: (email, password) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  componentLogin: (email, password) => apiRequest('/auth/component-login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   register: (payload) => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   getMe: () => apiRequest('/auth/me'),
 
@@ -92,6 +93,16 @@ export const api = {
   },
   createCamp: (payload) => apiRequest('/camps', { method: 'POST', body: JSON.stringify(payload) }),
   approveCamp: (campId) => apiRequest(`/camps/${campId}/approve`, { method: 'PATCH' }),
+
+  // Triage persistence
+  startTriageSession: (payload) => apiRequest('/triage/session/start', { method: 'POST', body: JSON.stringify(payload) }),
+  saveTriagePatient: (payload) => apiRequest('/triage/patient/save', { method: 'POST', body: JSON.stringify(payload) }),
+  endTriageSession: (payload) => apiRequest('/triage/session/end', { method: 'POST', body: JSON.stringify(payload) }),
+  getTriageArchives: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/triage/archives${qs ? `?${qs}` : ''}`);
+  },
+  getTriageArchive: (sessionId) => apiRequest(`/triage/archives/${sessionId}`),
 
   // Heatmap & ML Inference
   getHeatmap: () => apiRequest('/heatmap'),
@@ -133,7 +144,34 @@ export const api = {
   },
   getSMSGatewayStatus: () => apiRequest('/sms/gateway-status'),
 
+  // SOS Emergency Contact Alert (real SMS dispatch to selected contacts)
+  sendSOSAlertToContacts: (payload) =>
+    apiRequest('/sos/alert-contacts', { method: 'POST', body: JSON.stringify(payload) }),
   // Donors (MongoDB)
   getDonors: () => apiRequest('/donors'),
   getDonorDetail: (donorId) => apiRequest(`/donors/${donorId}`),
+
+  // Individual disaster-operations component (MongoDB)
+  getReliefCamps: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/relief-camps${qs ? `?${qs}` : ''}`);
+  },
+  getReliefCamp: (campId) => apiRequest(`/relief-camps/${campId}`),
+  updateReliefCampPopulation: (campId, payload) => apiRequest(`/relief-camps/${campId}/population`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  predictReliefCampPopulation: (payload) => apiRequest('/relief-camps/predict-population', { method: 'POST', body: JSON.stringify(payload) }),
+  getDisasterRequests: () => apiRequest('/disaster-donation-requests'),
+  createDisasterRequest: (payload) => apiRequest('/disaster-donation-requests', { method: 'POST', body: JSON.stringify(payload) }),
+  pledgeDisasterRequest: (requestId, pledges) => apiRequest(`/disaster-donation-requests/${requestId}/pledge`, { method: 'POST', body: JSON.stringify({ pledges }) }),
+  getOfficerPledges: () => apiRequest('/disaster-donation-requests/officer/pledges'),
+  acceptDisasterPledge: (requestId, donationId) => apiRequest(`/disaster-donation-requests/${requestId}/donations/${donationId}/accept`, { method: 'PATCH' }),
+  getDonationCatalog: () => apiRequest('/donation-items'),
+  getDivisions: () => apiRequest('/divisions'),
+  getDSAreas: () => apiRequest('/divisions/ds-areas'),
+  getGNDivisions: (dsArea) => apiRequest(`/divisions/${encodeURIComponent(dsArea)}/gn-divisions`),
+  getDonationHistory: () => apiRequest('/donation-history'),
+  getComponentUsers: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/component-users${qs ? `?${qs}` : ''}`);
+  },
 };
+

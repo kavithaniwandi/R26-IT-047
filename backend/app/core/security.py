@@ -30,13 +30,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 # ── Token payload model ──────────────────────────────────────────────────────
 class TokenPayload(BaseModel):
     sub: str          # user_id as string
-    role: str         # one of: admin, victim, donor, authority, volunteer
+    role: str         # admin, victim, donor, authority, volunteer, disaster_officer
     exp: int          # unix timestamp
 
 
 # ── JWT helpers ──────────────────────────────────────────────────────────────
 
-def create_access_token(user_id: int, role: str) -> str:
+def create_access_token(user_id: int | str, role: str) -> str:
     """
     Create a signed JWT that embeds user_id and role.
 

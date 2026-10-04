@@ -23,8 +23,6 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
-
 export default function DisasterOfficer({ currentUser, onAddToast }) {
   const [activeTab, setActiveTab] = useState('unpledged'); // 'unpledged' | 'pending_pledges' | 'completed' | 'assessments'
   const [loading, setLoading] = useState(false);
@@ -57,35 +55,22 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     immediate_actions: 'Deploy rescue boats and establish emergency rations drop.',
   });
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || '';
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const authHeaders = getAuthHeaders();
-
-      const [pledgesRes, requestsRes, donorsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/disaster-donation-requests/officer/pledges`, { headers: authHeaders }),
-        fetch(`${API_BASE_URL}/disaster-donation-requests`, { headers: authHeaders }),
-        fetch(`${API_BASE_URL}/users?role_filter=donor`, { headers: authHeaders }),
+      const [pledgeData, requestData, donorData] = await Promise.all([
+        api.getOfficerPledges(),
+        api.getDisasterRequests(),
+        api.getComponentUsers({ userType: 'donor' }),
       ]);
-
-      if (pledgesRes.ok) {
-        const pData = await pledgesRes.json();
-        setPledges(pData || []);
-      }
-      if (requestsRes.ok) {
-        const rData = await requestsRes.json();
-        setDisasterRequests(rData || []);
-      }
-      if (donorsRes.ok) {
-        const dData = await donorsRes.json();
-        setAllDonors(dData || []);
-      }
+      setPledges(pledgeData || []);
+      setDisasterRequests(requestData || []);
+      setAllDonors((donorData || []).map((donor) => ({
+        ...donor,
+        id: donor.userId,
+        name: `${donor.firstName || ''} ${donor.lastName || ''}`.trim(),
+      })));
     } catch (err) {
       console.error('Error fetching officer data:', err);
       setError('Failed to connect to Disaster Officer telemetry.');
@@ -101,22 +86,8 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
   const handleMarkReceived = async (reqId, donationId) => {
     setAcceptingId(donationId);
     try {
-      const cleanReqId = reqId ? reqId.replace('REQ-', '') : '1';
-      const response = await fetch(
-        `${API_BASE_URL}/disaster-donation-requests/${cleanReqId}/donations/${donationId}/accept`,
-        {
-          method: 'PATCH',
-          headers: {
-            ...getAuthHeaders(),
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Failed to accept items');
-      }
+      const cleanReqId = reqId ? reqId.replace('REQ-', '') : '';
+      await api.acceptDisasterPledge(cleanReqId, donationId);
 
       const msg = 'Item receipt verified at DS Office. Inventory and request status updated.';
       setSuccessMsg(msg);
@@ -144,7 +115,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
 
       const scored = allDonors.map((donor, idx) => {
         let score = 45 + ((idx * 17) % 45);
-        const nameStr = (donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`).toLowerCase();
+        const nameStr = (donor.name || donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`).toLowerCase();
         const emailStr = (donor.email || '').toLowerCase();
         const addressStr = (donor.address || '').toLowerCase();
         
@@ -159,7 +130,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
 
         return {
           ...donor,
-          displayName: donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`.trim() || 'Verified Donor',
+          displayName: donor.name || donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`.trim() || 'Verified Donor',
           score,
           tier,
           isAreaMatch,

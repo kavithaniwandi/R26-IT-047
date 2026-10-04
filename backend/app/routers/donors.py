@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.security import require_role
 from app.database import disaster_requests_collection
 
 router = APIRouter(prefix="/donors", tags=["Donors (MongoDB)"])
@@ -90,7 +91,11 @@ async def _aggregate_donors() -> list[dict]:
     return list(donors.values())
 
 
-@router.get("", response_model=List[DonorSummary])
+@router.get(
+    "",
+    response_model=List[DonorSummary],
+    dependencies=[Depends(require_role(["admin", "authority", "disaster_officer"]))],
+)
 async def list_donors():
     donor_list = await _aggregate_donors()
     donor_list.sort(key=lambda d: d["total_donated"], reverse=True)
@@ -109,7 +114,11 @@ async def list_donors():
     ]
 
 
-@router.get("/{donor_id}", response_model=DonorDetail)
+@router.get(
+    "/{donor_id}",
+    response_model=DonorDetail,
+    dependencies=[Depends(require_role(["admin", "authority", "disaster_officer", "donor"]))],
+)
 async def get_donor_detail(donor_id: str):
     donor_list = await _aggregate_donors()
     for d in donor_list:

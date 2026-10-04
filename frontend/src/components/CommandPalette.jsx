@@ -20,9 +20,11 @@ import {
   VolumeX,
   Volume2,
   X,
-  ArrowRight
-} from "lucide-react";
-import { PORTAL_CONFIG } from "../portalConfig";
+  ArrowRight,
+  Sparkles,
+  Radio
+} from 'lucide-react';
+import { PORTAL_CONFIG } from '../portalConfig';
 
 export function CommandPalette({
   isOpen,
@@ -198,7 +200,7 @@ export function CommandPalette({
       category: 'Command Center Views',
       id: 'tab-users',
       title: 'Stakeholder User Directory',
-      subtitle: '5-Role RBAC authorization & permissions',
+      subtitle: '6-Role RBAC authorization & permissions',
       icon: Users,
       color: 'blue',
       action: () => { onSelectPortal('admin'); onSelectTab('users'); onClose(); }
@@ -211,6 +213,15 @@ export function CommandPalette({
       icon: Bell,
       color: 'amber',
       action: () => { onSelectPortal('admin'); onSelectTab('notifications'); onClose(); }
+    },
+    {
+      category: 'Command Center Views',
+      id: 'tab-sms-gateway',
+      title: 'Telecom SMS Gateway Console',
+      subtitle: 'Twilio integration · Simulate inbound · Broadcast alerts · SMS logs',
+      icon: Radio,
+      color: 'rose',
+      action: () => { onSelectPortal('admin'); onSelectTab('sms'); onClose(); }
     },
 
     // Quick System Actions

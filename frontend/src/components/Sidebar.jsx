@@ -11,8 +11,6 @@ import {
   ShieldCheck,
   Truck, 
   Radio, 
-  ExternalLink,
-  Sparkles,
   Server,
   BarChart3,
   ChevronLeft,
@@ -24,7 +22,7 @@ import {
   Shield, 
   Gift  
 } from 'lucide-react';
-import { PORTAL_CONFIG, getPortalUrl } from '../portalConfig';
+import { PORTAL_CONFIG } from '../portalConfig';
 
 export function Sidebar({ 
   currentPortal, 
@@ -48,6 +46,12 @@ export function Sidebar({
     { id: 'disaster_donation', label: 'Disaster Donation', icon: Gift, color: 'emerald', port: PORTAL_CONFIG.disaster_donation.port },
   ];
 
+  const visiblePortals = user?.role === 'admin'
+    ? portals
+    : portals.filter((portal) => (
+        portal.id === 'home' || PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
+      ));
+
   const adminNavItems = [
     { id: 'overview', label: 'Executive Overview', icon: Activity, badge: null },
     { id: 'analytics', label: 'ML Analytics Engine', icon: BarChart3, badge: '4 Models', badgeColor: 'violet' },
@@ -57,6 +61,7 @@ export function Sidebar({
     { id: 'donations', label: 'Supply Matchmaking', icon: HeartHandshake, badge: null },
     { id: 'users', label: 'User RBAC Directory', icon: Users, badge: null },
     { id: 'notifications', label: 'Audit Log Trail', icon: Bell, badge: null },
+    { id: 'sms', label: 'SMS Gateway', icon: Radio, badge: 'Twilio', badgeColor: 'rose' },
   ];
 
   const getRoleBadgeStyle = (role) => {
@@ -65,6 +70,7 @@ export function Sidebar({
       case 'authority': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
       case 'donor': return { bg: 'var(--accent-emerald-subtle)', text: 'var(--accent-emerald)', border: 'hsla(150, 84%, 42%, 0.35)' };
       case 'volunteer': return { bg: 'var(--accent-amber-subtle)', text: 'var(--accent-amber)', border: 'hsla(38, 92%, 50%, 0.35)' };
+      case 'disaster_officer': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
       case 'victim': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
       default: return { bg: 'var(--border-subtle)', text: 'var(--text-secondary)', border: 'transparent' };
     }
@@ -99,7 +105,7 @@ export function Sidebar({
       <div className="sidebar-section-container">
         {!isCollapsed && <span className="sidebar-section-title">Dedicated Portals</span>}
         <div className="portal-switch-group">
-          {portals.map((p) => {
+          {visiblePortals.map((p) => {
             const Icon = p.icon;
             const isCurrent = currentPortal === p.id;
             return (
@@ -170,7 +176,7 @@ export function Sidebar({
               <div className="active-portal-info-box">
                 <div className="active-portal-info-title">Active Dedicated Portal</div>
                 <div className="active-portal-info-name">
-                  {portals.find((p) => p.id === currentPortal)?.label}
+                  {visiblePortals.find((p) => p.id === currentPortal)?.label}
                 </div>
                 <p className="active-portal-info-desc">
                   You are currently operating in the dedicated stakeholder interface.
@@ -178,10 +184,12 @@ export function Sidebar({
                 <button
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', marginTop: '12px' }}
-                  onClick={() => setPortal('admin')}
+                  onClick={() => setPortal(user?.role === 'admin' ? 'admin' : 'home')}
                 >
-                  <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
-                  <span>Return to Admin</span>
+                  {user?.role === 'admin'
+                    ? <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
+                    : <Home size={14} style={{ color: 'var(--accent-blue)' }} />}
+                  <span>{user?.role === 'admin' ? 'Return to Admin' : 'Open Public Home'}</span>
                 </button>
               </div>
             )}

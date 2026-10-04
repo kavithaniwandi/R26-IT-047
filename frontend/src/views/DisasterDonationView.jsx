@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Gift, 
-  HeartHandshake, 
   Package, 
   Truck, 
   CheckCircle2, 
   AlertCircle, 
   Filter, 
-  Search, 
   Plus, 
-  Clock, 
   MapPin, 
   X 
 } from 'lucide-react';
@@ -28,22 +25,46 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
   // Modal State
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealForm, setAppealForm] = useState({
+    item_id: '',
     item_name: '',
-    category: 'Medicine',
     quantity_required: 100,
     unit: 'units',
-    district: 'Colombo',
-    priority_level: 'High',
+    disaster_type: 'Flood',
+    severity: 'High',
+    ds_area: 'Kaduwela',
+    gn_division: 'Ranala',
+    relief_camp: '',
+    people_count: 1,
   });
 
   const [donationItems, setDonationItems] = useState([]);
+  const [donationCatalog, setDonationCatalog] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [reliefCamps, setReliefCamps] = useState([]);
 
   const loadDonations = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getDonationNeeds({ category_filter: categoryFilter });
-      setDonationItems(data || []);
+      const requests = await api.getDisasterRequests();
+      const items = (requests || []).flatMap((request) =>
+        (request.items || [])
+          .filter((item) => Number(item.remainingQuantity) > 0)
+          .map((item) => ({
+            id: `${request.id}-${item.itemId || item.itemName}`,
+            request_id: request.id,
+            item_name: item.itemName,
+            category: request.disasterType,
+            quantity_required: item.neededQuantity,
+            quantity_fulfilled: item.donatedQuantity,
+            remaining_needed: item.remainingQuantity,
+            unit: item.unit,
+            district: `${request.gnDivision}, ${request.dsArea}`,
+            relief_camp: request.reliefCamp,
+            priority_score: request.severity,
+          }))
+      );
+      setDonationItems(items);
     } catch (err) {
       setError(err.message || 'Failed to load disaster donation records.');
     } finally {
@@ -55,16 +76,63 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
     loadDonations();
   }, [categoryFilter]);
 
-  const handleAppealSubmit = (e) => {
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      const [catalogResult, divisionsResult, campsResult] = await Promise.allSettled([
+        api.getDonationCatalog(),
+        api.getDivisions(),
+        api.getReliefCamps(),
+      ]);
+      if (catalogResult.status === 'fulfilled') setDonationCatalog(catalogResult.value || []);
+      if (divisionsResult.status === 'fulfilled') setDivisions(divisionsResult.value || []);
+      if (campsResult.status === 'fulfilled') setReliefCamps(campsResult.value || []);
+    };
+    loadReferenceData();
+  }, []);
+
+  const handleAppealSubmit = async (e) => {
     e.preventDefault();
-    const msg = `Disaster supply appeal for ${appealForm.quantity_required} ${appealForm.unit} of '${appealForm.item_name}' published.`;
-    setSuccessMsg(msg);
-    if (onAddToast) onAddToast(msg, 'success', 'Appeal Published');
-    setShowAppealModal(false);
-    setTimeout(() => setSuccessMsg(null), 5000);
+    setLoading(true);
+    setError(null);
+    try {
+      await api.createDisasterRequest({
+        disasterType: appealForm.disaster_type,
+        severity: appealForm.severity,
+        dsArea: appealForm.ds_area,
+        gnDivision: appealForm.gn_division,
+        reliefCamp: appealForm.relief_camp,
+        people_count: appealForm.people_count,
+        items: [{
+          itemId: appealForm.item_id || undefined,
+          itemName: appealForm.item_name,
+          unit: appealForm.unit,
+          neededQuantity: appealForm.quantity_required,
+        }],
+      });
+      const msg = `Disaster supply request for ${appealForm.quantity_required} ${appealForm.unit} of '${appealForm.item_name}' published.`;
+      setSuccessMsg(msg);
+      if (onAddToast) onAddToast(msg, 'success', 'Request Published');
+      setShowAppealModal(false);
+      await loadDonations();
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (err) {
+      setError(err.message || 'Failed to publish the disaster supply request.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const visibleItems = donationItems.filter((item) => {
+    const matchesType = !categoryFilter || item.category === categoryFilter;
+    const query = searchQuery.trim().toLowerCase();
+    return matchesType && (!query || [item.item_name, item.district, item.relief_camp].some((value) => (value || '').toLowerCase().includes(query)));
+  });
   const totalUnmet = donationItems.reduce((acc, item) => acc + (item.remaining_needed || 0), 0);
+  const selectedDivision = divisions.find((division) => division.dsArea === appealForm.ds_area);
+  const matchingCamps = reliefCamps.filter((camp) =>
+    (!appealForm.ds_area || camp.dsArea === appealForm.ds_area) &&
+    (!appealForm.gn_division || camp.gnDivision === appealForm.gn_division)
+  );
 
   return (
     <div>
@@ -126,7 +194,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
           onClick={() => setActiveTab('inventory')}
         >
           <Package size={16} />
-          <span>Priority Supply Shortages ({donationItems.length})</span>
+          <span>Priority Supply Shortages ({visibleItems.length})</span>
         </button>
         <button
           className={`btn ${activeTab === 'shipments' ? 'btn-primary' : 'btn-secondary'}`}
@@ -186,13 +254,21 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  <option value="">All Supply Categories</option>
-                  <option value="Medicine">Medicine & First Aid</option>
-                  <option value="Consumables">Medical Consumables</option>
-                  <option value="Equipment">Emergency Equipment</option>
-                  <option value="Water">Clean Drinking Water</option>
-                  <option value="Nutrition">Therapeutic Nutrition</option>
+                  <option value="">All Disaster Types</option>
+                  <option value="Flood">Flood</option>
+                  <option value="Landslide">Landslide</option>
+                  <option value="Tsunami">Tsunami</option>
+                  <option value="Drought">Drought</option>
+                  <option value="Fire">Fire</option>
+                  <option value="Other">Other</option>
                 </select>
+                <input
+                  className="form-input"
+                  placeholder="Search item, camp, or area"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  style={{ width: '240px' }}
+                />
               </div>
 
               <button className="btn btn-primary" onClick={() => setShowAppealModal(true)}>
@@ -208,7 +284,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
                 Loading supply shortages...
               </div>
-            ) : donationItems.length === 0 ? (
+            ) : visibleItems.length === 0 ? (
               <div style={{
                 backgroundColor: 'var(--bg-secondary)',
                 borderRadius: 'var(--radius-lg)',
@@ -228,7 +304,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                 </button>
               </div>
             ) : (
-              donationItems.map((item) => {
+              visibleItems.map((item) => {
                 const pct = item.quantity_required > 0
                   ? Math.min(100, Math.round((item.quantity_fulfilled / item.quantity_required) * 100))
                   : 0;
@@ -252,7 +328,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                         <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 4px' }}>{item.item_name}</h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                           <MapPin size={12} style={{ color: 'var(--accent-rose)' }} />
-                          <span>Incident District: {item.district || 'Western Province'}</span>
+                          <span>{item.relief_camp} &bull; {item.district}</span>
                         </div>
                       </div>
                       <span className="badge badge-critical">
@@ -329,30 +405,91 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
 
             <form onSubmit={handleAppealSubmit}>
               <div className="form-group">
-                <label className="form-label">Supply Category</label>
+                <label className="form-label">Disaster Type</label>
                 <select
                   className="form-select"
-                  value={appealForm.category}
-                  onChange={(e) => setAppealForm({ ...appealForm, category: e.target.value })}
+                  value={appealForm.disaster_type}
+                  onChange={(e) => setAppealForm({ ...appealForm, disaster_type: e.target.value })}
                 >
-                  <option value="Medicine">Medicine & Prescription Drugs</option>
-                  <option value="Consumables">Medical Consumables</option>
-                  <option value="Equipment">Emergency Equipment</option>
-                  <option value="Water">Clean Drinking Water</option>
-                  <option value="Nutrition">Emergency Rations</option>
+                  <option value="Flood">Flood</option>
+                  <option value="Landslide">Landslide</option>
+                  <option value="Tsunami">Tsunami</option>
+                  <option value="Drought">Drought</option>
+                  <option value="Fire">Fire</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">DS Area</label>
+                  {divisions.length > 0 ? (
+                    <select required className="form-select" value={appealForm.ds_area} onChange={(e) => setAppealForm({ ...appealForm, ds_area: e.target.value, gn_division: '' })}>
+                      <option value="">Select DS Area</option>
+                      {divisions.map((division) => <option key={division.id} value={division.dsArea}>{division.dsArea}</option>)}
+                    </select>
+                  ) : (
+                    <input required className="form-input" value={appealForm.ds_area} onChange={(e) => setAppealForm({ ...appealForm, ds_area: e.target.value })} />
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">GN Division</label>
+                  {selectedDivision ? (
+                    <select required className="form-select" value={appealForm.gn_division} onChange={(e) => setAppealForm({ ...appealForm, gn_division: e.target.value })}>
+                      <option value="">Select GN Division</option>
+                      {(selectedDivision.gnDivisions || []).map((name) => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                  ) : (
+                    <input required className="form-input" value={appealForm.gn_division} onChange={(e) => setAppealForm({ ...appealForm, gn_division: e.target.value })} />
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Relief Camp</label>
+                {matchingCamps.length > 0 ? (
+                  <select required className="form-select" value={appealForm.relief_camp} onChange={(e) => setAppealForm({ ...appealForm, relief_camp: e.target.value })}>
+                    <option value="">Select Relief Camp</option>
+                    {matchingCamps.map((camp) => <option key={camp.id} value={camp.name}>{camp.name}</option>)}
+                  </select>
+                ) : (
+                  <input required className="form-input" placeholder="Assigned relief camp name" value={appealForm.relief_camp} onChange={(e) => setAppealForm({ ...appealForm, relief_camp: e.target.value })} />
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Severity</label>
+                <select className="form-select" value={appealForm.severity} onChange={(e) => setAppealForm({ ...appealForm, severity: e.target.value })}>
+                  <option value="Low">Low</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
                 </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Item Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Human Insulin 100 IU/ml Vials"
-                  className="form-input"
-                  value={appealForm.item_name}
-                  onChange={(e) => setAppealForm({ ...appealForm, item_name: e.target.value })}
-                />
+                {donationCatalog.length > 0 ? (
+                  <select
+                    required
+                    className="form-select"
+                    value={appealForm.item_id}
+                    onChange={(e) => {
+                      const selected = donationCatalog.find((item) => item.itemId === e.target.value);
+                      setAppealForm({ ...appealForm, item_id: e.target.value, item_name: selected?.item || '', unit: selected?.unit || 'units' });
+                    }}
+                  >
+                    <option value="">Select Relief Item</option>
+                    {donationCatalog.map((item) => <option key={item.itemId} value={item.itemId}>{item.item} ({item.unit})</option>)}
+                  </select>
+                ) : (
+                  <input type="text" required placeholder="e.g. Human Insulin 100 IU/ml Vials" className="form-input" value={appealForm.item_name} onChange={(e) => setAppealForm({ ...appealForm, item_name: e.target.value })} />
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Affected People Count</label>
+                <input type="number" min="0" required className="form-input" value={appealForm.people_count} onChange={(e) => setAppealForm({ ...appealForm, people_count: parseInt(e.target.value) || 0 })} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

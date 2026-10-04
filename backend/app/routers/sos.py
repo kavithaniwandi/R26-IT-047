@@ -18,6 +18,7 @@ from app.database import get_db
 from app.models.sos import SOSRequest
 from app.models.user import User
 from app.models.notification import Notification
+from app.services import sms_gateway
 
 MODEL_DIR = Path(__file__).resolve().parents[2] / "ml_models"
 
@@ -55,6 +56,21 @@ class SOSCreateRequest(BaseModel):
 
 class SOSStatusUpdateRequest(BaseModel):
     status: str # 'active', 'triaged', 'camp_assigned', 'resolved', 'cancelled'
+
+class EmergencyContactSMS(BaseModel):
+    name: str
+    phone: str
+    relation: Optional[str] = "Emergency Contact"
+
+class SOSAlertContactsRequest(BaseModel):
+    sos_id: int
+    priority_score: float
+    victim_name: str
+    location_text: str
+    latitude: float
+    longitude: float
+    contacts: List[EmergencyContactSMS]
+
 
 class SOSOut(BaseModel):
     id: int
@@ -250,3 +266,51 @@ def update_sos_status(sos_id: int, payload: SOSStatusUpdateRequest, db: Session 
         status=sos.status,
         created_at=sos.created_at.isoformat(),
     )
+
+
+@router.post("/alert-contacts", status_code=status.HTTP_200_OK)
+def alert_emergency_contacts(
+    payload: SOSAlertContactsRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Send real SMS alert messages to all provided emergency contacts.
+    Works with any number of contacts (1 to N) — no minimum required.
+    Each contact receives a personalized message with SOS ID, GPS coordinates,
+    priority score and victim details, dispatched via the SMS gateway service.
+    """
+    if not payload.contacts:
+        raise HTTPException(status_code=400, detail="At least 1 emergency contact is required.")
+
+    sent_to = []
+    for contact in payload.contacts:
+        phone = contact.phone.strip()
+        if not phone:
+            continue
+
+        message = (
+            f"[EMERGENCY SOS ALERT] {payload.victim_name} has triggered Distress Beacon "
+            f"#{payload.sos_id} at {payload.location_text} "
+            f"({payload.latitude:.4f}°N, {payload.longitude:.4f}°E). "
+            f"Urgent medical relief/rescue needed! Priority: {round(payload.priority_score)}/100. "
+            f"Emergency services (119/1990) dispatched. - Sri Lanka Disaster Relief System"
+        )
+
+        try:
+            sms_gateway.send_direct_sms(
+                recipient=phone,
+                message=message,
+                message_type="SOS_EMERGENCY_CONTACT_ALERT",
+                db=db,
+            )
+            sent_to.append({"phone": phone, "name": contact.name, "status": "sent"})
+        except Exception as exc:
+            sent_to.append({"phone": phone, "name": contact.name, "status": f"error: {str(exc)}"})
+
+    return {
+        "sos_id": payload.sos_id,
+        "contacts_alerted": len([c for c in sent_to if c["status"] == "sent"]),
+        "total_contacts": len(payload.contacts),
+        "dispatch_log": sent_to,
+        "message": f"SOS alert dispatched to {len([c for c in sent_to if c['status'] == 'sent'])}/{len(payload.contacts)} emergency contacts.",
+    }

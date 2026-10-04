@@ -1,0 +1,261 @@
+id,district,ds_division,gn_division,address,disaster_type,affected_families,affected_people
+1,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2.0,7.0
+2,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,1.0,4.0
+3,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,Kadawala,Landslide,1.0,1.0
+4,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kadusirigama, Peragolla, Ginigathhena",Landslide,1.0,5.0
+5,Nuwaraeliya,Ambagamuwa,316 C Kalugala,"Kalugala, Ptawala",Landslide,4.0,9.0
+6,Nuwaraeliya,Ambagamuwa,316 C Kalugala,"Gasnagaldeniya, Kalugala, Pitawala",Landslide,1.0,2.0
+7,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Yahida Janapadaya,Landslide,5.0,15.0
+8,Nuwaraeliya,Ambagamuwa,316 E Millagahamula,Millagahamulla,Landslide,4.0,13.0
+9,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kumburuhena, Lakshapana",Landslide,2.0,7.0
+10,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Weralugsthenna, Lakshapana",Landslide,1.0,4.0
+11,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,7.0,22.0
+12,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya",Landslide,1.0,3.0
+13,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Babaragala, Koththalhena, Hatton",Landslide,1.0,4.0
+14,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Yahida Road,Landslide,1.0,4.0
+15,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Samangiri Janapadaya,Landslide,2.0,7.0
+16,Nuwaraeliya,Ambagamuwa,316 D Pitawala,Pitawala,Landslide,1.0,3.0
+17,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Katakithula, Lakshapana",Landslide,1.0,4.0
+18,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"4 Kanuwa, Lakshapana",Landslide,1.0,3.0
+19,Nuwaraeliya,Ambagamuwa,318 B Gagarapitiya,"Gagarapitiya, Hatton",Landslide,16.0,47.0
+20,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gadumawatta, Koththalhena, Hatton", Landslide,9.0,22.0
+21,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,3.0,11.0
+22,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,2.0,9.0
+23,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Miyanapalawa, Koththalhena",Landslide,1.0,5.0
+24,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Koththalhena, Hatton",Landslide,2.0,9.0
+25,Nuwaraeliya,Ambagamuwa,318 E Koththalhena,"Thebaton, Norton bridge",Landslide,1.0,4.0
+26,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Coolborn road, Udubulathgama",Landslide,2.0,7.0
+27,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Peradeniya House, Coolborn Road, Abagamuwa",Landslide,2.0,10.0
+28,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Dehigastenna, Ambagamuwa",Landslide,1.0,4.0
+29,Nuwaraeliya,Ambagamuwa,314 C Sellipigama,Sellipigama,Landslide,1.0,7.0
+30,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1.0,5.0
+31,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,2.0,11.0
+32,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Kelanigama, Homagama, Ginigathhena",Landslide,1.0,6.0
+33,Nuwaraeliya,Ambagamuwa,314 E Kalaweldeniya,"Abradine 2, Widulipura",Landslide,3.0,12.0
+34,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,3.0,12.0
+35,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,5.0
+36,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kenilworth 04, Ginigathhena",Landslide,1.0,4.0
+37,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,Ginigathhena,Landslide,1.0,3.0
+38,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"No 227, Peragahamula, Hatton Road, Ginigathhena",Landslide,1.0,4.0
+39,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Peragahamula, Ginigathhena",Landslide,1.0,5.0
+40,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Kadawala, Ginigathhena",Landslide,1.0,4.0
+41,Nuwaraeliya,Ambagamuwa,315 A Ginigathhena,"Pawalamale, Ginigathhena",Landslide,1.0,3.0
+42,Nuwaraeliya,Ambagamuwa,315 C Widulipura South,"Akkarawatta, Norton",Landslide,1.0,1.0
+43,Nuwaraeliya,Ambagamuwa,315 D Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,4.0
+44,Nuwaraeliya,Ambagamuwa,316 Bulathgama,Bulathgama,Landslide,1.0,3.0
+45,Nuwaraeliya,Ambagamuwa,316 Bulathgama,"Badhupola, Ginigathhena",Landslide,1.0,5.0
+46,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Pahala Kadawala, Ginigathhena",Landslide,5.0,18.0
+47,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Madilla, Ginigathhena",Landslide,1.0,5.0
+48,Nuwaraeliya,Ambagamuwa,316 B Gonawala,"Gonawala, Ginigathhena",Landslide,2.0,7.0
+49,Nuwaraeliya,Ambagamuwa,317 Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,2.0,9.0
+50,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kanamadilihena, lakshapana",Landslide,2.0,8.0
+51,Nuwaraeliya,Ambagamuwa,317 A Lakshapana,"Kuburuhena, Lakshapana",Landslide,1.0,3.0
+52,Nuwaraeliya,Ambagamuwa,317 C Morahenagama,"Kiriwelhinna, Morahenagama, Hatton",Landslide,3.0,10.0
+53,Nuwaraeliya,Ambagamuwa,317 C Morahenagama,"Kolhena, Morahenagama, Hatton",Landslide,3.0,12.0
+54,Nuwaraeliya,Ambagamuwa,317 B Waggama,"Udabage, Lakshapana",Landslide,1.0,2.0
+55,Nuwaraeliya,Ambagamuwa,317 B Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0
+56,Nuwaraeliya,Ambagamuwa,318 Polpitiya,"Polopitiya, Pitawala",Landslide,4.0,15.0
+57,Nuwaraeliya,Ambagamuwa,318 A Hitigegama,"Hitigegama, Hatton",Landslide,3.0,11.0
+58,Nuwaraeliya,Ambagamuwa,318 C Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1.0,5.0
+59,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Gatagahawatta, Hagarapitiya, Hatton",Landslide,1.0,4.0
+60,Nuwaraeliya,Ambagamuwa,318 D Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,2.0
+61,Nuwaraeliya,Ambagamuwa,320 F Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,4.0
+62,Nuwaraeliya,Ambagamuwa,314 Abagamuwa South,"Abagamuwa, Udubulathgama",Landslide,4.0,13.0
+63,Nuwaraeliya,Ambagamuwa,314 Abagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,2.0,7.0
+64,Nuwaraeliya,Ambagamuwa,Millagamula,"Kaluwagala, Millagahamula, Pitawala",Landslide,1.0,5.0
+65,Nuwaraeliya,Ambagamuwa,Pitawala,"Yahida Janapadaya, Pitawala, Nawalapitiya",Landslide,1.0,4.0
+66,Nuwaraeliya,Ambagamuwa,Lakshapana,"Katakithula, Lakshapana",Landslide,1.0,4.0
+67,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Norton Bridge",Landslide,1.0,4.0
+68,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1.0,6.0
+69,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0
+70,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Sri Abhinavaramaya, Ginigathhena",Landslide,1.0,3.0
+71,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,4.0
+72,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"No. 07, Dehigasthenna, Abathalawa, giigathhena",Landslide,1.0,5.0
+73,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,6.0
+74,Nuwaraeliya,Ambagamuwa,Millagamula,"Millagahamulla, Pitawala",Landslide,1.0,4.0
+75,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dagampitiya, Pitawala",Landslide,1.0,4.0
+76,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0
+77,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0
+78,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"berdine 2, Widulipura",Landslide,1.0,8.0
+79,Nuwaraeliya,Ambagamuwa,Kehelwarawa,"Aditri morahenagama, Hatton",Landslide,1.0,5.0
+80,Nuwaraeliya,Ambagamuwa,Gonawala,"Madilla, Ginigathhena",Landslide,1.0,5.0
+81,Nuwaraeliya,Ambagamuwa,Habbakanda,"Koslallamula, Habbakanda, Ginigathhena",Landslide,1.0,4.0
+82,Nuwaraeliya,Ambagamuwa,Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,4.0
+83,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Kelanigama, Dagampitiya, Ginigathhena",Landslide,2.0,13.0
+84,Nuwaraeliya,Ambagamuwa,Hitigegama,"Hitigegama, Hatton",Landslide,1.0,5.0
+85,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1.0,4.0
+86,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kelanigama, Ginigathhena",Landslide,1.0,6.0
+87,Nuwaraeliya,Ambagamuwa,Homagama,"Polwatta, Dagampitiya, Ginigathhena",Landslide,1.0,4.0
+88,Nuwaraeliya,Ambagamuwa,Homagama,"Nayawala, Kelanigama, Ginigathhena",Landslide,1.0,3.0
+89,Nuwaraeliya,Ambagamuwa,Homagama,"Kelanigama, Ginigathhena",Landslide,2.0,9.0
+90,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,6.0
+91,Nuwaraeliya,Ambagamuwa,Polpitiya,"Paratalwa, Polpitiya, Pitawala",Landslide,1.0,5.0
+92,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2.0,14.0
+93,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,4.0
+94,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0
+95,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,3.0,18.0
+96,Nuwaraeliya,Ambagamuwa,Polpitiya,"Pallewatta, Pitawala",Landslide,1.0,2.0
+97,Nuwaraeliya,Ambagamuwa,Koththallena,"Koththalhena, Hatton",Landslide,2.0,10.0
+98,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"212, Panvilagodella, Abagamuwa",Landslide,1.0,5.0
+99,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Minuwandeniya, Hitigegama, Hatton",Landslide,1.0,4.0
+100,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,1.0,6.0
+101,Nuwaraeliya,Ambagamuwa,Kehelwarawa,"Galgodahinna, Morathotiyawatta, Morahenagama, Hatton",Landslide,1.0,5.0
+102,Nuwaraeliya,Ambagamuwa,Sellipigama,"No 19, Abagamuwa, Udubulathgama",Landslide,1.0,4.0
+103,Nuwaraeliya,Ambagamuwa,Sellipigama,C Collany,Landslide,1.0,1.0
+104,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Kadawala Watta, Watawala",Landslide,4.0,21.0
+105,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,6.0
+106,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Pallegedara, Ambagamuwa, Udubulathgama",Landslide,1.0,5.0
+107,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Road, Ambagamuwa, Udubulathgama",Landslide,1.0,4.0
+108,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Wattegedara, Koththelhena, Hatton",Landslide,1.0,8.0
+109,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0
+110,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,6.0
+111,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dagampitiya, Kelanigama",Landslide,2.0,12.0
+112,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,3.0
+113,Nuwaraeliya,Ambagamuwa,Gonawala,"Thennakoon House, Gonawala, Ginigathhena",Landslide,1.0,7.0
+114,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polopitiya, Pitawala",Landslide,1.0,4.0
+115,Nuwaraeliya,Ambagamuwa,Polpitiya,"Wellethenna, pitawala",Landslide,1.0,5.0
+116,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,2.0
+117,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura",Landslide,1.0,4.0
+118,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,5.0
+119,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0
+120,Nuwaraeliya,Ambagamuwa,Lakshapana,"4 Kanuwa, Lakshapana, Nortonbridge",Landslide,1.0,5.0
+121,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Kada weediya, Ambagamuwa, Udubulathgama",Landslide,6.0,35.0
+122,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,3.0,15.0
+123,Nuwaraeliya,Ambagamuwa,Gonawala,"Wedilla, Gonawala, Ginigathhena",Landslide,1.0,4.0
+124,Nuwaraeliya,Ambagamuwa,Kiriwaneliya,"2 kanuwa, Lakshapana",Landslide,1.0,3.0
+125,Nuwaraeliya,Ambagamuwa,Widulipura South,"Babaragala, Norton Bridge",Landslide,11.0,51.0
+126,Nuwaraeliya,Ambagamuwa,Widulipura South,Wimalasurendragama,Landslide,1.0,5.0
+127,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,6.0
+128,Nuwaraeliya,Ambagamuwa,Hagarapitiya,"Hagarapitiya, Hatton",Landslide,1.0,5.0
+129,Nuwaraeliya,Ambagamuwa,Watawala,"Diyagala, Watawala",Landslide,1.0,4.0
+130,Nuwaraeliya,Ambagamuwa,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1.0,5.0
+131,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Panvilagodella, Abagamuwa",Landslide,2.0,9.0
+132,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Racepitiya, Abagamuwa",Landslide,1.0,3.0
+133,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0
+134,Nuwaraeliya,Ambagamuwa,Pitawala,"Pitawala, Nawalapitiya",Landslide,2.0,9.0
+135,Nuwaraeliya,Ambagamuwa,Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0
+136,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,5.0
+137,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,2.0,10.0
+138,Nuwaraeliya,Ambagamuwa,Koththallena,"Denihena, Koththelhena, Hatton",Landslide,1.0,4.0
+139,Nuwaraeliya,Ambagamuwa,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,4.0,17.0
+140,Nuwaraeliya,Ambagamuwa,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,2.0,8.0
+141,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0
+142,Nuwaraeliya,Ambagamuwa,Watawala,"Templestore Janapadaya, Watawala",Landslide,1.0,4.0
+143,Nuwaraeliya,Ambagamuwa,Watawala,"Gnananadagama, Watawala",Landslide,3.0,17.0
+144,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,5.0
+145,Nuwaraeliya,Ambagamuwa,Waggama,"Udabage, Lakshapana",Landslide,1.0,7.0
+146,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,2.0,9.0
+147,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Ambalanowita, Abagamuwa",Landslide,2.0,11.0
+148,Nuwaraeliya,Ambagamuwa,Habbakanda,"No 82, Horakada, Ginigathhena",Landslide,1.0,4.0
+149,Nuwaraeliya,Ambagamuwa,Thiniyagala,"Hiriyapitiya, Ginigathhena",Landslide,1.0,4.0
+150,Nuwaraeliya,Ambagamuwa,Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,1.0,3.0
+151,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Pitakanda, Hitigegama, Hatton",Landslide,7.0,42.0
+152,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Dehigasthenna, Abathalawa, Ginigathhena",Landslide,1.0,4.0
+153,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,4.0
+154,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"Sirisewana, Abathalawa",Landslide,1.0,5.0
+155,Nuwaraeliya,Ambagamuwa,Sellipigama,"Abagamuwa, Udubulathgama",Landslide,6.0,32.0
+156,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,2.0
+157,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,4.0,25.0
+158,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Udapa Kotuwe Gedara, Abagamuwa",Landslide,1.0,4.0
+159,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Watta, Abagamuwa, Udubulathgama",Landslide,1.0,2.0
+160,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Mahapathana, Abagamuwa, Udubulathgama",Landslide,4.0,18.0
+161,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4.0,22.0
+162,Nuwaraeliya,Ambagamuwa,Ambagamuwa  South,"No 03 Part, Kenilworth Watta",Landslide,3.0,45.0
+163,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Abagamuwa Market Street, Abagamuwa, Udubulathgama",Landslide,1.0,5.0
+164,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,4.0,21.0
+165,Nuwaraeliya,Ambagamuwa,Rampadeniya,"Hathlaha, Giniathhena",Landslide,1.0,2.0
+166,Nuwaraeliya,Ambagamuwa,Rampadeniya,"No 01, Keniworth watta, Ginigathhena",Landslide,6.0,68.0
+167,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,4.0
+168,Nuwaraeliya,Ambagamuwa,Habbakanda,"Horakada, Ginigathhena",Landslide,1.0,5.0
+169,Nuwaraeliya,Ambagamuwa,Gonawala,"Gonawala, Ginigathhena",Landslide,1.0,6.0
+170,Nuwaraeliya,Ambagamuwa,Morahenagama,"Morahenagama, Pitawala",Landslide,1.0,5.0
+171,Nuwaraeliya,Ambagamuwa,Waggama,"Waggama, Morahenagama, Hatton",Landslide,1.0,4.0
+172,Nuwaraeliya,Ambagamuwa,Lakshapana,"Lakshapana, Nortonbridge",Landslide,1.0,3.0
+173,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"77, Kadusirigama, Abathalawa, Ginigathhena",Landslide,1.0,7.0
+174,Nuwaraeliya,Ambagamuwa,Millagamula,"Sadasirigama, Millagamula, Pitawala",Landslide,1.0,6.0
+175,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0
+176,Nuwaraeliya,Ambagamuwa,Homagama,"Homagama, Kalaweldeniya",Landslide,1.0,5.0
+177,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,2.0,10.0
+178,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Pitawala",Landslide,1.0,1.0
+179,Nuwaraeliya,Ambagamuwa,Widulipura South,"Babaragala, Norton Bridge",Landslide,3.0,19.0
+180,Nuwaraeliya,Ambagamuwa,Koththallena,"Aluoya Janapadaya, Widulipura",Landslide,1.0,3.0
+181,Nuwaraeliya,Ambagamuwa,Kiriwaneliya,"3 Kanuwa, Lakshapana",Landslide,1.0,5.0
+182,Nuwaraeliya,Ambagamuwa,Lakshapana,"Weralugasthenna, Lakshapana",Landslide,1.0,4.0
+183,Nuwaraeliya,Ambagamuwa,Minuwandeniya,"Gowalwatta, Htigegama, Hatton",Landslide,1.0,4.0
+184,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1.0,5.0
+185,Nuwaraeliya,Ambagamuwa,Gonawala,"257/1, Kotahela Janapadaya, Ginigathhena",Landslide,1.0,6.0
+186,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,4.0
+187,Nuwaraeliya,Ambagamuwa,Hitigegama,"Galapalhena, Hagarapitiya, Hatton",Landslide,1.0,4.0
+188,Nuwaraeliya,Ambagamuwa,Rampadeniya,"Hathlaga, Warakagahamula",Landslide,1.0,6.0
+189,Nuwaraeliya,Ambagamuwa,Widulipura south,"Babaragala, Norton Bridge",Landslide,1.0,4.0
+190,Nuwaraeliya,Ambagamuwa,Millagahamula,"Kadusirigama, Dillagahamula",Landslide,1.0,5.0
+191,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,1.0,4.0
+192,Nuwaraeliya,Ambagamuwa,Waggama,"Mawussawatta, Lakshapana",Landslide,1.0,5.0
+193,Nuwaraeliya,Ambagamuwa,Watawala,"Samanpura Janapadaya, Watawala",Landslide,1.0,5.0
+194,Nuwaraeliya,Ambagamuwa,Watawala,"Templestore Janapadaya, Watawala",Landslide,2.0,15.0
+195,Nuwaraeliya,Ambagamuwa,Sellipigama,"D 23 Abagamuwa, Udubulathgama",Landslide,1.0,7.0
+196,Nuwaraeliya,Ambagamuwa,Sellipigama,"Nagolla, Agaraoya, Abagamuwa",Landslide,1.0,5.0
+197,Nuwaraeliya,Ambagamuwa,Sellipigama,"Agaraoya, Abagamuwa, Udubulathgama",Landslide,1.0,4.0
+198,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Abagamuwa, Udubulathgama",Landslide,1.0,6.0
+199,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,5.0
+200,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Ambagamuwa, Udubulathgama",Landslide,1.0,4.0
+201,Nuwaraeliya,Ambagamuwa,Sellipigama,"New St Clive Janapadaya, Abagamuwa, Udubulathgama",Landslide,1.0,5.0
+202,Nuwaraeliya,Ambagamuwa,Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,1.0,5.0
+203,Nuwaraeliya,Ambagamuwa,Kalaweldeniya,"Aberdine 2, Widulipura",Landslide,1.0,4.0
+204,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Dewalagama, Pallewatta, Pitawala",Landslide,1.0,5.0
+205,Nuwaraeliya,Ambagamuwa,Ambagamuwa East,"Wewalthalawa, Abagamuwa",Landslide,1.0,5.0
+206,Nuwaraeliya,Ambagamuwa,Ambagamuwa North,"Coolborn Road, Abagamuwa, Udubulathgama",Landslide,1.0,4.0
+207,Nuwaraeliya,Ambagamuwa,Kalugala,"Yatiberiya, Pitawla",Landslide,1.0,6.0
+208,Nuwaraeliya,Ambagamuwa,Kalugala,"Pitawala, Nawalapitiya",Landslide,1.0,6.0
+209,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Kaluduriyapaluwa, Pallewatta, Pitawala",Landslide,1.0,5.0
+210,Nuwaraeliya,Ambagamuwa,Kalugala,"Kalugala, Pitawala, Nawalapitiya",Landslide,1.0,7.0
+211,Nuwaraeliya,Ambagamuwa,Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,6.0
+212,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Gadumawatta, Koththalhena, Hatton",Landslide,1.0,5.0
+213,Nuwaraeliya,Ambagamuwa,Dehigasthenna,"New house, Abathalawa, Ginigathhena",Landslide,1.0,7.0
+214,Nuwaraeliya,Ambagamuwa,Widulipura South,"Hatton Road, Nortonbridge",Landslide,1.0,5.0
+215,Nuwaraeliya,Ambagamuwa,Waggama,"Haddala, Morahenagama",Landslide,1.0,5.0
+216,Nuwaraeliya,Ambagamuwa,Ginigathhena,"Kadawawatta, Watawala",Landslide,2.0,15.0
+217,Nuwaraeliya,Ambagamuwa,Watawala,"Agarawatta, Watawala",Landslide,1.0,7.0
+218,Nuwaraeliya,Ambagamuwa,Jambuthenna,"Muruthathenna, Koththallena, Hatton",Landslide,1.0,6.0
+219,Nuwaraeliya,Ambagamuwa,Dagampitiya,"Nilawatta, Pallewatta, Pitawala",Landslide,1.0,6.0
+220,Nuwaraeliya,Ambagamuwa,Watawala,"101 Janapadaya, Watawala",Landslide,1.0,5.0
+221,Nuwaraeliya,Ambagamuwa,Widulipura North,"Taplo Janapadaya, Widulipura, North",Landslide,1.0,9.0
+222,Nuwaraeliya,Ambagamuwa,Polpitiya,"Polpitiya, Hatton",Landslide,1.0,6.0
+223,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Bagathuluwa, Ginigathhena",Landslide,5.0,30.0
+224,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2.0,14.0
+225,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Ambagamuwa, Market Street",Landslide,4.0,26.0
+226,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Abagawwa, Udubulathgama",Landslide,1.0,5.0
+227,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Mandaladeniya, Abagamuwa",Landslide,2.0,11.0
+228,Nuwaraeliya,Ambagamuwa,314 Ambagamuwa South,"Ambagamuwa Village, Abagamuwa, Udupulathgama",Landslide,1.0,8.0
+229,Nuwaraeliya,Ambagamuwa,314 A Ambagamuwa East,"Panvilagodella, Abagamuwa, Udubulathgama",Landslide,1.0,7.0
+230,Nuwaraeliya,Ambagamuwa,314 B Abagamuwa North,"Ambagamuwa, Udubulathgama",Landslide,12.0,73.0
+231,Nuwaraeliya,Ambagamuwa,314 C Sellipigama,Sellipigama,Landslide,1.0,9.0
+232,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,2.0,11.0
+233,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Homagama, Kalaweldeniya, Ginigathhena",Landslide,2.0,13.0
+234,Nuwaraeliya,Ambagamuwa,314 D Homagama,"Arsalena Janapadaya, Kalaweldeniya, Ginigathhena",Landslide,1.0,7.0
+235,Nuwaraeliya,Ambagamuwa,314 E Kalaweldeniya,"Kalaweldeniya, Ginigathhena",Landslide,6.0,37.0
+236,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,6.0
+237,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"2 Kanuwa, Atlas",Landslide,1.0,4.0
+238,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Abathalawa, Ginigathhena",Landslide,1.0,6.0
+239,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Ellauda Village, Upper part, Sadaham Sisila Temple",Landslide,1.0,7.0
+240,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Ambathalawa, Ginigathhena",Landslide,1.0,6.0
+241,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Dehigasthenna, Galayatawatta",Landslide,1.0,5.0
+242,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Mallika Janapada, Abathalawa",Landslide,1.0,4.0
+243,Nuwaraeliya,Ambagamuwa,314 F Dehigasthenna,"Godagedara, Abathalawa",Landslide,1.0,5.0
+244,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Godagedara, Abathalawa",Landslide,1.0,8.0
+245,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Horakada, Abathalawa",Landslide,1.0,6.0
+246,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Badullawatta, Habbakanda",Landslide,1.0,7.0
+247,Nuwaraeliya,Ambagamuwa,314 G Habbakanda,"Habbakanda, Ginigathhena",Landslide,1.0,8.0
+248,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Wagurawatta, Ginigathhena",Landslide,2.0,9.0
+249,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Alagala, Ginigathhena",Landslide,1.0,5.0
+250,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"148/1 Alagala, Ginigathhena",Landslide,1.0,4.0
+251,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Thiniyagala, Ginigathhena",Landslide,2.0,11.0
+252,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Nawalapitiya Road, Ginigathhena",Landslide,1.0,5.0
+253,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1.0,4.0
+254,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Kadurusima, Peragahamula",Landslide,2.0,11.0
+255,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Peragahamula, Ginigathhena",Landslide,1.0,6.0
+256,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,"Pawalamale, Ginigathhena",Landslide,1.0,7.0
+257,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,Ginigathhena,Landslide,2.0,12.0
+258,Nuwaraeliya,Ambagamuwa,315 Thiniyagala, ,,,
+259,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,,,,
+260,Nuwaraeliya,Ambagamuwa,315 Thiniyagala,,,,

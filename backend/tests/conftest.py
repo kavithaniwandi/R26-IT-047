@@ -13,10 +13,14 @@ Key design:
 """
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 from app.database import Base, get_db
 from app.models.main import app

@@ -513,6 +513,11 @@
   color: #ffffff;
 }
 
+.cs-role-tag.admin {
+  background: #e0f2fe;
+  color: #075985;
+}
+
 .cs-role-tag.mo {
   background: #ebf3fc;
   color: #1a5fa8;
