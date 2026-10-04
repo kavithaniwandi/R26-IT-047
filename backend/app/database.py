@@ -20,16 +20,22 @@ class _LazyMongoCollection:
         self.name = name
 
     def __getattr__(self, attribute: str):
-        from app.services.mongo_service import get_mongo_collection
+        from app.services.mongo_service import get_component_mongo_collection
 
-        return getattr(get_mongo_collection(self.name), attribute)
+        return getattr(get_component_mongo_collection(self.name), attribute)
 
 
-# MongoDB collections owned by the individual component.
-disaster_requests_collection = _LazyMongoCollection("disaster_requests")
+# MongoDB collections owned by the individual component. Keep the original
+# collection names so the merged application reads the component's existing
+# Atlas data instead of creating parallel, empty collections.
+disaster_requests_collection = _LazyMongoCollection("disaster_donation_requests")
+disaster_donation_request_collection = disaster_requests_collection
 donation_items_collection = _LazyMongoCollection("donation_items")
 users_collection = _LazyMongoCollection("users")
+user_collection = users_collection
 relief_camp_collection = _LazyMongoCollection("relief_camps")
+division_collection = _LazyMongoCollection("administrative_divisions")
+donation_history_collection = _LazyMongoCollection("donation_history")
 
 
 # SQL database retained for every pre-existing research module.

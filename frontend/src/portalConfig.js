@@ -119,31 +119,42 @@ export function detectCurrentPortal() {
     return envPortal;
   }
 
-  // 2. Window location port detection
-  const currentPort = parseInt(window.location.port, 10);
-  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (cfg.port === currentPort) {
-      return key;
-    }
-  }
-
-  // 3. Window pathname detection
-  const pathname = window.location.pathname.toLowerCase();
-  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (pathname.startsWith(cfg.path)) {
-      return key;
-    }
-  }
-
-  // 4. Query param (?portal=victim)
+  // 2. An explicit portal query is used by the common login redirect.
   const params = new URLSearchParams(window.location.search);
   const portalParam = params.get('portal');
   if (portalParam && PORTAL_CONFIG[portalParam]) {
     return portalParam;
   }
 
+  // 3. Window pathname detection
+  const pathname = window.location.pathname.toLowerCase();
+  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
+    if (cfg.path === '/' ? pathname === '/' : pathname.startsWith(cfg.path)) {
+      return key;
+    }
+  }
+
+  // 4. Window location port detection
+  const currentPort = parseInt(window.location.port, 10);
+  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
+    if (cfg.port === currentPort && key !== 'home') {
+      return key;
+    }
+  }
+
   // Default to admin
   return 'admin';
+}
+
+export function getPortalForRole(role) {
+  return {
+    admin: 'admin',
+    victim: 'victim',
+    authority: 'authority',
+    donor: 'donor',
+    volunteer: 'volunteer',
+    disaster_officer: 'disaster_officer',
+  }[role] || 'home';
 }
 
 /**

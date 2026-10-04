@@ -557,8 +557,12 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
                   {crowdFiles.map((item, idx) => (
                     <div key={item.id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', backgroundColor: 'var(--bg-card)' }}>
-                      <div style={{ position: 'relative', height: '180px', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={item.annotatedUrl || item.preview} alt={`Zone ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'relative', height: '240px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img
+                          src={item.annotatedUrl || item.preview}
+                          alt={`Zone ${idx + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }}
+                        />
                         <button
                           onClick={() => handleRemoveCrowdFile(item.id)}
                           style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer' }}

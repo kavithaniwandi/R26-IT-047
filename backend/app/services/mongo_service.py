@@ -21,6 +21,8 @@ else:
 
 _client: Any = None
 _db: Any = None
+_component_client: Any = None
+_component_db: Any = None
 
 
 def _utc_now() -> datetime:
@@ -55,14 +57,47 @@ def get_mongo_collection(name: str):
     return _db[name]
 
 
+def get_component_mongo_collection(name: str):
+    """Return a collection from the isolated component database.
+
+    A separate URI/database can be configured without replacing the research
+    project's Mongo connection. If it is not configured, the component uses
+    the main Mongo database for backwards compatibility.
+    """
+    global _component_client, _component_db
+
+    uri = settings.COMPONENT_MONGODB_URI or settings.MONGODB_URI
+    database_name = settings.COMPONENT_MONGODB_DB_NAME or settings.MONGODB_DB_NAME
+    if not uri:
+        raise RuntimeError(
+            "MongoDB is not configured. Set COMPONENT_MONGODB_URI or MONGODB_URI in backend/.env."
+        )
+    if motor is None:
+        raise RuntimeError("MongoDB support requires the 'motor' package.")
+    if settings.COMPONENT_MONGODB_URI is None:
+        return get_mongo_collection(name)
+    if _component_client is None:
+        _component_client = motor.AsyncIOMotorClient(
+            uri,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+        )
+        _component_db = _component_client[database_name]
+    return _component_db[name]
+
+
 async def close_mongo() -> None:
     """Close the shared MongoDB client on app shutdown."""
-    global _client, _db
+    global _client, _db, _component_client, _component_db
 
     if _client is not None:
         _client.close()
     _client = None
     _db = None
+    if _component_client is not None:
+        _component_client.close()
+    _component_client = None
+    _component_db = None
 
 
 async def log_appeal_generation(

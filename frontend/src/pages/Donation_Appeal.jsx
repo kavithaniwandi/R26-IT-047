@@ -352,7 +352,7 @@ function Donation_Appeal() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="channel">Channel</label>
+              <label htmlFor="channel">Channel ffff</label>
               <select
                 id="channel"
                 name="channel"

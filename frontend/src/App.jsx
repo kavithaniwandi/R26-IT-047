@@ -2,7 +2,6 @@
 import { Sidebar } from './components/Sidebar';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
-import { LoginModal } from './components/LoginModal';
 import { CommandPalette } from './components/CommandPalette';
 import { ToastContainer } from './components/Toast';
 
@@ -40,12 +39,12 @@ import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
 import CampSetup from './pages/CampSetup';
 import PriorityApplication from './pages/PriorityApplication';
 import PriorityQueue from './pages/PriorityQueue';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 
 
-import { api, getStoredUser, removeAuthToken, setAuthToken, setStoredUser } from './api';
-import { PORTAL_CONFIG, detectCurrentPortal } from './portalConfig';
+import { api } from './api';
+import { PORTAL_CONFIG, detectCurrentPortal, getPortalForRole } from './portalConfig';
 import {
   playEmergencyBeep,
   playSuccessChime,
@@ -56,10 +55,18 @@ import {
 import { Radio } from 'lucide-react';
 
 function DashboardApp() {
-  const [currentPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
+  const navigate = useNavigate();
+  const { user: authenticatedUser, logout, isLoading: isAuthLoading } = useAuth();
+  const user = authenticatedUser;
+  const [selectedPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
+  const selectedPortalRole = PORTAL_CONFIG[selectedPortal]?.defaultRole;
+  const canAccessSelectedPortal = authenticatedUser?.role === 'admin'
+    || !selectedPortalRole
+    || selectedPortalRole === authenticatedUser?.role;
+  const currentPortal = authenticatedUser && !canAccessSelectedPortal
+    ? getPortalForRole(authenticatedUser.role)
+    : selectedPortal;
   const [currentTab, setCurrentTab] = useState('overview');
-  const [user, setUser] = useState(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [soundActive, setSoundActive] = useState(() => isSoundEnabled());
@@ -104,37 +111,24 @@ function DashboardApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Auto-login with role matching detected portal
+  // All protected portals share the same authenticated session.
   useEffect(() => {
-    const initSession = async () => {
-      const stored = getStoredUser();
-      const portalConfig = PORTAL_CONFIG[currentPortal] || PORTAL_CONFIG.admin;
+    if (isAuthLoading) return;
 
-      if (!portalConfig.defaultRole) {
-        setUser(stored);
-        return;
-      }
+    const portalConfig = PORTAL_CONFIG[currentPortal] || PORTAL_CONFIG.admin;
+    if (!portalConfig.defaultRole) {
+      return;
+    }
 
-      if (stored && stored.role === portalConfig.defaultRole) {
-        setUser(stored);
-        fetchStats();
-      } else {
-        try {
-          const res = await api.login(portalConfig.defaultEmail, portalConfig.defaultPassword);
-          setAuthToken(res.access_token);
-          const me = await api.getMe();
-          setStoredUser(me);
-          setUser(me);
-          fetchStats();
-        } catch {
-          setShowLoginModal(true);
-        }
-      }
-    };
-    initSession();
-  }, [currentPortal]);
+    if (!authenticatedUser) {
+      navigate('/signin', { replace: true, state: { portal: currentPortal } });
+      return;
+    }
 
-  const fetchStats = async () => {
+    fetchStats();
+  }, [authenticatedUser, currentPortal, isAuthLoading, navigate]);
+
+  async function fetchStats() {
     setIsRefreshing(true);
     try {
       const data = await api.getAdminStats();
@@ -144,31 +138,16 @@ function DashboardApp() {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }
 
   const handleLogout = () => {
-    removeAuthToken();
-    setUser(null);
-    setShowLoginModal(true);
-    addToast('Signed out of active session.', 'info', 'Logged Out');
+    logout();
+    navigate('/signin', { replace: true });
   };
 
-  const handleLoginSuccess = (loggedInUser) => {
-    setUser(loggedInUser);
-    playSuccessChime();
-    addToast(`Authenticated as ${loggedInUser.full_name} (${loggedInUser.role.toUpperCase()})`, 'success', 'Login Verified');
-
-    const activePortalRole = PORTAL_CONFIG[currentPortal]?.defaultRole;
-    if (loggedInUser.role !== activePortalRole) {
-      if (loggedInUser.role === 'victim') setCurrentPortal('victim');
-      else if (loggedInUser.role === 'authority') setCurrentPortal('authority');
-      else if (loggedInUser.role === 'donor') setCurrentPortal('donor');
-      else if (loggedInUser.role === 'volunteer') setCurrentPortal('volunteer');
-      else if (loggedInUser.role === 'disaster_officer') setCurrentPortal('disaster_officer');
-      else setCurrentPortal('admin');
-    }
-
-    fetchStats();
+  const handleSwitchAccount = () => {
+    logout();
+    navigate('/signin');
   };
 
   const handleResolveSOS = async (sosId, newStatus) => {
@@ -280,11 +259,11 @@ function DashboardApp() {
               setCurrentPortal(p);
               playNotificationPing();
             }}
-            onOpenLoginModal={() => setShowLoginModal(true)}
+            onOpenLoginModal={() => navigate('/signin')}
             onAddToast={addToast}
           />
         </main>
-      ) : currentPortal === 'victim' ? (
+      ) : currentPortal === 'victim' && user?.role !== 'admin' ? (
         /* 1. Victim Portal (Dedicated Public Emergency Mode - Isolated from Admin UI) */
         <main className="main-content" style={{ width: '100%' }}>
           <VictimPortalView
@@ -350,7 +329,7 @@ function DashboardApp() {
               }}
               isRefreshing={isRefreshing}
               user={user}
-              onSwitchUserClick={() => setShowLoginModal(true)}
+              onSwitchUserClick={handleSwitchAccount}
               onOpenCommandPalette={() => setShowCommandPalette(true)}
               onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
               soundEnabled={soundActive}
@@ -359,6 +338,15 @@ function DashboardApp() {
 
             {/* Dynamic View Body */}
             <div className="view-body">
+              {/* Admin preview of the victim portal keeps global navigation available. */}
+              {currentPortal === 'victim' && (
+                <VictimPortalView
+                  user={user}
+                  onAddToast={addToast}
+                  onReturnToAdmin={() => setCurrentPortal('admin')}
+                />
+              )}
+
               {/* 2. Authority Portal */}
               {currentPortal === 'authority' && (
                 <AuthorityPortalView currentUser={user} onAddToast={addToast} />
@@ -421,20 +409,13 @@ function DashboardApp() {
         </>
       )}
 
-      {/* Stakeholder Login & Quick Role Switch Modal */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
       {/* Global Command Palette (Ctrl+K) */}
       <CommandPalette
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
         onSelectPortal={setCurrentPortal}
         onSelectTab={setCurrentTab}
-        onOpenLoginModal={() => setShowLoginModal(true)}
+        onOpenLoginModal={handleSwitchAccount}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
       />
@@ -447,16 +428,19 @@ function DashboardApp() {
 
 function SystemWorkflowShell({ children, title, subtitle }) {
   const navigate = useNavigate();
+  const { user, logout, isLoading: isAuthLoading } = useAuth();
   const [currentPortal, setCurrentPortal] = useState('authority');
   const [currentTab, setCurrentTab] = useState('camps');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [soundActive, setSoundActive] = useState(() => isSoundEnabled());
   const [toasts, setToasts] = useState([]);
-  const user = getStoredUser() || {
-    full_name: 'Dr. Nihal Jayasinghe (MOH Officer)',
-    role: 'authority',
-  };
+
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      navigate('/signin', { replace: true, state: { portal: 'authority' } });
+    }
+  }, [isAuthLoading, navigate, user]);
 
   const addToast = useCallback((message, type = 'info', toastTitle = null) => {
     const id = Date.now() + Math.random();
@@ -491,6 +475,13 @@ function SystemWorkflowShell({ children, title, subtitle }) {
     );
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/signin', { replace: true });
+  };
+
+  if (isAuthLoading || !user) return null;
+
   return (
     <div className="app-container">
       <Sidebar
@@ -499,7 +490,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
         currentTab={currentTab}
         setTab={handleTabSelect}
         user={user}
-        onLogout={() => navigate('/')}
+        onLogout={handleLogout}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
@@ -522,7 +513,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
           onRefresh={() => addToast('Camp severity workflow refreshed.', 'info', 'Workflow Synced')}
           isRefreshing={false}
           user={user}
-          onSwitchUserClick={() => navigate('/')}
+          onSwitchUserClick={handleLogout}
           onOpenCommandPalette={() => setShowCommandPalette(true)}
           onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
           soundEnabled={soundActive}
@@ -535,7 +526,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
         onClose={() => setShowCommandPalette(false)}
         onSelectPortal={handlePortalSelect}
         onSelectTab={handleTabSelect}
-        onOpenLoginModal={() => navigate('/')}
+        onOpenLoginModal={handleLogout}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
       />

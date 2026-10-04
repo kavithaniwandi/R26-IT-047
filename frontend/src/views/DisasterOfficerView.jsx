@@ -62,11 +62,15 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
       const [pledgeData, requestData, donorData] = await Promise.all([
         api.getOfficerPledges(),
         api.getDisasterRequests(),
-        api.getDonors(),
+        api.getComponentUsers({ userType: 'donor' }),
       ]);
       setPledges(pledgeData || []);
       setDisasterRequests(requestData || []);
-      setAllDonors(donorData || []);
+      setAllDonors((donorData || []).map((donor) => ({
+        ...donor,
+        id: donor.userId,
+        name: `${donor.firstName || ''} ${donor.lastName || ''}`.trim(),
+      })));
     } catch (err) {
       console.error('Error fetching officer data:', err);
       setError('Failed to connect to Disaster Officer telemetry.');

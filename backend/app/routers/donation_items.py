@@ -6,19 +6,12 @@ from typing import Any
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-
 from app.core.security import TokenPayload, require_role
 from app.database import donation_items_collection
+from app.models.donation_item import DonationItemCreate
 
 
 router = APIRouter(prefix="/donation-items", tags=["Disaster Donation Catalog (MongoDB)"])
-
-
-class DonationItemCreate(BaseModel):
-    item: str = Field(..., min_length=2)
-    unit: str = Field(default="units", min_length=1)
-    quantityPerPerson: float = Field(default=1.0, gt=0)
 
 
 def _format(document: dict[str, Any]) -> dict[str, Any]:
@@ -48,6 +41,35 @@ async def create_donation_item(
     document = payload.model_dump()
     result = await donation_items_collection.insert_one(document)
     document["_id"] = result.inserted_id
+    return _format(document)
+
+
+@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+async def create_donation_items(
+    payload: list[DonationItemCreate],
+    _current_user: TokenPayload = Depends(require_role(["admin"])),
+):
+    documents = [item.model_dump() for item in payload]
+    if not documents:
+        raise HTTPException(status_code=400, detail="At least one donation item is required")
+    result = await donation_items_collection.insert_many(documents)
+    for document, inserted_id in zip(documents, result.inserted_ids):
+        document["_id"] = inserted_id
+    return [_format(document) for document in documents]
+
+
+@router.get("/{item_id}")
+async def get_donation_item(
+    item_id: str,
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
+):
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid donation item ID")
+    document = await donation_items_collection.find_one({"_id": ObjectId(item_id)})
+    if not document:
+        raise HTTPException(status_code=404, detail="Donation item not found")
     return _format(document)
 
 

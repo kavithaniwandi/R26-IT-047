@@ -25,6 +25,10 @@ class Settings(BaseSettings):
         default="Research047",
         validation_alias=AliasChoices("MONGODB_DB_NAME", "DATABASE_NAME"),
     )
+    # Optional second connection for the imported disaster-operations
+    # component. When omitted, it safely reuses the research Mongo database.
+    COMPONENT_MONGODB_URI: str | None = None
+    COMPONENT_MONGODB_DB_NAME: str | None = None
 
     APP_TITLE: str = "Disaster Relief Medical Donation Module API"
     APP_VERSION: str = "1.0.0"
