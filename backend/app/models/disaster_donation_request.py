@@ -1,16 +1,21 @@
-from pydantic import BaseModel, Field
-from typing import List, Literal, Optional
+from __future__ import annotations
+
 from datetime import datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
+
 
 class RequestItem(BaseModel):
     itemId: Optional[str] = None
     itemName: str = Field(..., min_length=2)
-    unit: str = Field(...)
+    unit: str = Field(..., min_length=1)
     neededQuantity: float = Field(..., gt=0)
     pledgedQuantity: float = Field(default=0.0, ge=0)
     donatedQuantity: float = Field(default=0.0, ge=0)
     remainingQuantity: Optional[float] = None
     status: Literal["remaining", "fulfilled"] = "remaining"
+
 
 class DonationEntry(BaseModel):
     donationId: str
@@ -26,22 +31,26 @@ class DonationEntry(BaseModel):
     acceptedByOfficerId: Optional[str] = None
     acceptedAt: Optional[datetime] = None
 
+
 class DisasterDonationRequestCreate(BaseModel):
-    disasterType: Literal["Flood", "Landslide", "Tsunami", "Drought", "Fire", "Other"]
-    severity: Literal["Low", "Moderate", "High", "Critical"]
+    disasterType: Literal["Flood", "Landslide", "Tsunami", "Drought", "Fire", "Other"] = "Flood"
+    severity: Literal["Low", "Moderate", "High", "Critical"] = "High"
     dsArea: str = Field(..., min_length=2)
     gnDivision: str = Field(..., min_length=2)
     reliefCamp: str = Field(..., min_length=2)
-    people_count: int = Field(..., ge=0)
-    items: List[RequestItem] = Field(..., min_items=1)
+    people_count: int = Field(default=1, ge=0)
+    items: List[RequestItem] = Field(..., min_length=1)
+
 
 class PledgeItem(BaseModel):
     itemName: str
     quantity: float = Field(..., gt=0)
     itemId: Optional[str] = None
 
+
 class BatchPledgeCreate(BaseModel):
-    pledges: List[PledgeItem] = Field(..., min_items=1)
+    pledges: List[PledgeItem] = Field(..., min_length=1)
+
 
 class DisasterDonationRequestResponse(BaseModel):
     id: str
@@ -52,7 +61,7 @@ class DisasterDonationRequestResponse(BaseModel):
     reliefCamp: str
     people_count: int
     status: str
-    createdBy: str
-    createdAt: datetime
+    createdBy: Optional[str] = None
+    createdAt: Optional[datetime] = None
     items: List[RequestItem]
     donations: List[DonationEntry]

@@ -55,3 +55,6 @@ package-lock.json
 
 # Local monitor state
 backend/app/services/credit_monitor_state.json
+
+# Generated YOLO previews (model weights remain versioned)
+backend/static/annotated/

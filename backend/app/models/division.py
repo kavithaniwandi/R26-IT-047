@@ -1,14 +1,20 @@
-from pydantic import BaseModel, Field
+from __future__ import annotations
+
 from typing import List
 
+from pydantic import BaseModel, Field
+
+
 class DSDivisionCreate(BaseModel):
-    dsArea: str = Field(..., min_length=2, json_schema_extra={"example": "Kaduwela"})
-    gnDivisions: List[str] = Field(..., min_items=1, json_schema_extra={"example": ["469 Ranala", "470 Nawagamuwa"]})
+    dsArea: str = Field(..., min_length=2)
+    gnDivisions: List[str] = Field(..., min_length=1)
+
 
 class DSDivisionResponse(BaseModel):
     id: str
     dsArea: str
     gnDivisions: List[str]
 
+
 class AddGNDivision(BaseModel):
-    gnDivision: str = Field(..., min_length=2, json_schema_extra={"example": "471 Ihala Bomiriya"})
+    gnDivision: str = Field(..., min_length=2)

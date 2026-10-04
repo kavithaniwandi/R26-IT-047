@@ -100,15 +100,48 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
       features: ['On-Ground Rescue Routing', 'Victim Verification', 'Supply Delivery Tasks', 'Live Status Synchronization']
     },
     {
+      id: 'volunteer_dash',
+      title: 'Volunteer Field Command Dashboard',
+      subtitle: 'Port :5178',
+      badge: 'Assigned Relief Camps',
+      desc: 'MongoDB-backed assigned shelter operations, population telemetry, forecasts, and camp-specific relief requests.',
+      icon: Tent,
+      color: 'amber',
+      actionText: 'Open Volunteer Dashboard',
+      features: ['Assigned Camp Access', 'Population Tracking', 'Influx Forecasting', 'Camp Supply Requests']
+    },
+    {
+      id: 'disaster_officer',
+      title: 'Disaster Officer Command Hub',
+      subtitle: 'Port :5179',
+      badge: 'DS Ground Command',
+      desc: 'Role-protected verification of incoming pledges, unmet field demand analysis, and targeted donor coordination.',
+      icon: Shield,
+      color: 'blue',
+      actionText: 'Open Disaster Officer Hub',
+      features: ['Dedicated Officer RBAC', 'Pledge Verification', 'Deficit Monitoring', 'Donor Outreach']
+    },
+    {
+      id: 'disaster_donation',
+      title: 'Disaster Donation Requests Manager',
+      subtitle: 'Port :5180',
+      badge: 'Volunteer Appeals',
+      desc: 'Publish location-specific MongoDB relief requests without mixing them into the existing SQL donor marketplace.',
+      icon: FileText,
+      color: 'emerald',
+      actionText: 'Open Request Manager',
+      features: ['Camp-Based Requests', 'Live Supply Deficits', 'Severity Classification', 'MongoDB Persistence']
+    },
+    {
       id: 'admin',
       title: 'National Executive Command Center',
       subtitle: 'Port :5173',
       badge: 'National Directorate',
-      desc: 'Complete national triage orchestration, 4 active machine learning predictive intelligence engines, and 5-role claims authorization directory.',
+      desc: 'Complete national triage orchestration, 4 active machine learning predictive intelligence engines, and 6-role claims authorization directory.',
       icon: ShieldCheck,
       color: 'blue',
       actionText: 'Open Command Center',
-      features: ['4 ML Predictive Engines', 'National Triage Queue', '5-Role RBAC Directory', 'Audit Trail & Telemetry']
+      features: ['4 ML Predictive Engines', 'National Triage Queue', '6-Role RBAC Directory', 'Audit Trail & Telemetry']
     }
   ];
 

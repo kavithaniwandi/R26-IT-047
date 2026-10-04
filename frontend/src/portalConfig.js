@@ -75,26 +75,38 @@ export const PORTAL_CONFIG = {
     badge: 'Port :5177',
   },
   volunteer_dash: {
-    port: 5178,
+    id: 'volunteer_dash',
     name: 'Volunteer Field Command',
-    badge: 'Field Station',
+    port: 5178,
+    path: '/volunteer-dash',
+    defaultRole: 'volunteer',
+    defaultEmail: 'volunteer@relief.lk',
+    defaultPassword: 'Volunteer@2026!',
+    badge: 'Port :5178',
     color: 'amber',
-    defaultRole: 'volunteer',
   },
-  officer_dash: {
+  disaster_officer: {
+    id: 'disaster_officer',
+    name: 'Disaster Officer Portal',
     port: 5179,
-    name: 'Disaster Officer Console',
-    badge: 'DS Command',
-    color: 'blue',
+    path: '/disaster-officer',
     defaultRole: 'disaster_officer',
+    defaultEmail: 'officer@disaster.relief.lk',
+    defaultPassword: 'Officer@2026!',
+    badge: 'Port :5179',
+    color: 'blue',
   },
-  donation_req_dash: {
+  disaster_donation: {
+    id: 'disaster_donation',
+    name: 'Disaster Donation Portal',
     port: 5180,
-    name: 'Disaster Donation Requests',
-    badge: 'Appeals',
-    color: 'rose',
+    path: '/disaster-donation',
     defaultRole: 'volunteer',
-  }
+    defaultEmail: 'volunteer@relief.lk',
+    defaultPassword: 'Volunteer@2026!',
+    badge: 'Port :5180',
+    color: 'emerald',
+  },
 };
 
 /**
@@ -107,31 +119,42 @@ export function detectCurrentPortal() {
     return envPortal;
   }
 
-  // 2. Window location port detection
-  const currentPort = parseInt(window.location.port, 10);
-  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (cfg.port === currentPort) {
-      return key;
-    }
-  }
-
-  // 3. Window pathname detection
-  const pathname = window.location.pathname.toLowerCase();
-  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (pathname.startsWith(cfg.path)) {
-      return key;
-    }
-  }
-
-  // 4. Query param (?portal=victim)
+  // 2. An explicit portal query is used by the common login redirect.
   const params = new URLSearchParams(window.location.search);
   const portalParam = params.get('portal');
   if (portalParam && PORTAL_CONFIG[portalParam]) {
     return portalParam;
   }
 
+  // 3. Window pathname detection
+  const pathname = window.location.pathname.toLowerCase();
+  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
+    if (cfg.path === '/' ? pathname === '/' : pathname.startsWith(cfg.path)) {
+      return key;
+    }
+  }
+
+  // 4. Window location port detection
+  const currentPort = parseInt(window.location.port, 10);
+  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
+    if (cfg.port === currentPort && key !== 'home') {
+      return key;
+    }
+  }
+
   // Default to admin
   return 'admin';
+}
+
+export function getPortalForRole(role) {
+  return {
+    admin: 'admin',
+    victim: 'victim',
+    authority: 'authority',
+    donor: 'donor',
+    volunteer: 'volunteer',
+    disaster_officer: 'disaster_officer',
+  }[role] || 'home';
 }
 
 /**

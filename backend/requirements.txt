@@ -1,3 +1,4 @@
+
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
@@ -7,8 +8,9 @@ pydantic-settings==2.2.1
 email-validator==2.1.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+argon2-cffi>=23.1,<26
 bcrypt==4.1.3
-httpx==0.27.0
+httpx==0.28.1
 pytest==8.1.1
 pytest-asyncio==0.23.6
 python-dotenv==1.0.0
@@ -23,15 +25,20 @@ mysqlclient==2.2.4
 cryptography==42.0.5
 
 # ML Inference
-joblib==1.4.2
+joblib>=1.3.0
 numpy>=1.26,<2.0
+opencv-python==4.11.0.86
+pillow>=10,<12
+torch==2.13.0
+torchvision==0.28.0
+ultralytics==8.4.133
 scikit-learn==1.7.2
-pandas==2.2.3
 lightgbm
 xgboost
 scispacy
 https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
 sentence-transformers
+pandas
 google-genai
 huggingface_hub
 pymongo

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.database import init_db
@@ -25,6 +27,14 @@ from app.routers import sos as sos_router
 from app.routers import triage as triage_router
 from app.routers import users as users_router
 from app.routers import victims as victims_router
+from app.routers import disaster_officer
+from app.routers import donation_items as donation_items_router
+from app.routers import population as population_router
+from app.routers import donors as donors_router
+from app.routers import relief_camps as relief_camps_router
+from app.routers import divisions as divisions_router
+from app.routers import donation_history as donation_history_router
+from app.routers import component_users as component_users_router
 from app.models.schemas import (
     ExtractRequest,
     ExtractResponse,
@@ -84,10 +94,15 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
+    allow_origin_regex=r"https?://(?:localhost|127\.0\.0\.1|(?:\d{1,3}\.){3}\d{1,3}):(?:517[3-9]|5180)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 API_V1_PREFIX = "/api/v1"
@@ -103,6 +118,14 @@ app.include_router(notifications_router.router, prefix=API_V1_PREFIX)
 app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
 app.include_router(triage_router.router, prefix=API_V1_PREFIX)
+app.include_router(disaster_officer.router, prefix=API_V1_PREFIX)
+app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
+app.include_router(population_router.router, prefix=API_V1_PREFIX)
+app.include_router(donors_router.router, prefix=API_V1_PREFIX)
+app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
+app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
+app.include_router(donation_history_router.router, prefix=API_V1_PREFIX)
+app.include_router(component_users_router.router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"], summary="Liveness probe")

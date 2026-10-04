@@ -1,9 +1,17 @@
+"""
+app/routers/relief_camps.py
+----------------------------
+Relief Camps management (user's own module) backed by MongoDB Atlas.
+"""
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 from typing import List, Optional
 from datetime import datetime, timezone
 import math
 
+from app.core.security import require_role, TokenPayload
+from app.database import relief_camp_collection
 from app.models.relief_camp import (
     ReliefCampCreate,
     ReliefCampUpdate,
@@ -13,8 +21,6 @@ from app.models.relief_camp import (
     PopulationPredictionResponse,
     HourlyLogEntry,
 )
-from app.my_database import relief_camp_collection
-from app.utils.security import get_current_user
 
 router = APIRouter(prefix="/relief-camps", tags=["Relief Camps"])
 
@@ -48,9 +54,10 @@ def format_camp(doc) -> ReliefCampResponse:
 # 1. CREATE Relief Camp (Admin Only)
 @router.post("", response_model=ReliefCampResponse, status_code=status.HTTP_201_CREATED)
 async def create_relief_camp(
-    camp: ReliefCampCreate, current_user: dict = Depends(get_current_user)
+    camp: ReliefCampCreate,
+    current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can add relief camps",
@@ -70,9 +77,10 @@ async def create_relief_camp(
     status_code=status.HTTP_201_CREATED,
 )
 async def bulk_create_camps(
-    camps: List[ReliefCampCreate], current_user: dict = Depends(get_current_user)
+    camps: List[ReliefCampCreate],
+    current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can bulk import relief camps",
@@ -96,11 +104,13 @@ async def bulk_create_camps(
 async def get_all_camps(
     dsArea: Optional[str] = None,
     gnDivision: Optional[str] = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer", "volunteer"])
+    ),
 ):
     query = {}
-    if current_user["userType"] == "volunteer":
-        query["assignedVolunteerIds"] = current_user["userId"]
+    if current_user.role == "volunteer":
+        query["assignedVolunteerIds"] = current_user.sub
 
     if dsArea:
         query["dsArea"] = dsArea
@@ -117,9 +127,9 @@ async def get_all_camps(
 async def assign_volunteers_to_camp(
     camp_id: str,
     payload: AssignVolunteersPayload,
-    current_user: dict = Depends(get_current_user),
+    current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can assign volunteers to relief camps",
@@ -149,7 +159,9 @@ async def assign_volunteers_to_camp(
 async def update_camp_population(
     camp_id: str,
     payload: ReliefCampUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "disaster_officer", "volunteer"])
+    ),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")
@@ -157,6 +169,12 @@ async def update_camp_population(
     camp = await relief_camp_collection.find_one({"_id": ObjectId(camp_id)})
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
+
+    if current_user.role == "volunteer" and current_user.sub not in camp.get("assignedVolunteerIds", []):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this relief camp",
+        )
 
     now = datetime.now(timezone.utc)
     update_set = {"lastUpdated": now}
@@ -174,7 +192,7 @@ async def update_camp_population(
         pred_pop = min(payload.predictedPopulation, max_cap)
         update_set["predictedPopulation"] = pred_pop
 
-    if payload.maxCapacityPersons is not None and current_user["userType"] == "admin":
+    if payload.maxCapacityPersons is not None and current_user.role == "admin":
         update_set["maxCapacityPersons"] = payload.maxCapacityPersons
 
     log_entry = {
@@ -198,9 +216,10 @@ async def update_camp_population(
 # 6. DELETE Relief Camp (Admin Only)
 @router.delete("/{camp_id}", status_code=status.HTTP_200_OK)
 async def delete_relief_camp(
-    camp_id: str, current_user: dict = Depends(get_current_user)
+    camp_id: str,
+    current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can delete relief camps",
@@ -217,7 +236,10 @@ async def delete_relief_camp(
 
 # 7. POPULATION PREDICTION MODEL
 @router.post("/predict-population", response_model=PopulationPredictionResponse)
-async def predict_population_progression(req: PopulationPredictionRequest):
+async def predict_population_progression(
+    req: PopulationPredictionRequest,
+    _current_user: TokenPayload = Depends(require_role(["admin", "volunteer", "disaster_officer"])),
+):
     K = req.maxCapacity
     P0 = max(1, req.currentPopulation)
 
@@ -259,7 +281,10 @@ async def predict_population_progression(req: PopulationPredictionRequest):
 # 8. GET Relief Camp by ID
 @router.get("/{camp_id}", response_model=ReliefCampResponse)
 async def get_relief_camp_by_id(
-    camp_id: str, current_user: dict = Depends(get_current_user)
+    camp_id: str,
+    current_user: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer", "volunteer"])
+    ),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")
@@ -268,7 +293,7 @@ async def get_relief_camp_by_id(
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
 
-    if current_user["userType"] == "volunteer" and current_user["userId"] not in camp.get("assignedVolunteerIds", []):
+    if current_user.role == "volunteer" and current_user.sub not in camp.get("assignedVolunteerIds", []):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not assigned to this relief camp"

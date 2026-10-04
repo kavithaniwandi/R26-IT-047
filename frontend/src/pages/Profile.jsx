@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navigation from '../components/Navigation'
 import Footer from '../components/Footer'
@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import './Profile.css'
 
 function Profile() {
-  const { user, logout } = useAuth()
+  const { user, logout, isLoading } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -14,10 +14,11 @@ function Profile() {
     navigate('/')
   }
 
-  if (!user) {
-    navigate('/signin')
-    return null
-  }
+  useEffect(() => {
+    if (!isLoading && !user) navigate('/signin', { replace: true })
+  }, [isLoading, navigate, user])
+
+  if (isLoading || !user) return null
 
   return (
     <div className="profile-page">
@@ -27,7 +28,7 @@ function Profile() {
           <div className="profile-avatar">
             <span className="avatar-icon">👤</span>
           </div>
-          <h1 className="profile-name">{user.name}</h1>
+          <h1 className="profile-name">{user.full_name || user.name}</h1>
           <p className="profile-email">{user.email}</p>
         </div>
 
@@ -37,7 +38,7 @@ function Profile() {
             <div className="info-grid">
               <div className="info-item">
                 <label>Name</label>
-                <p>{user.name}</p>
+                <p>{user.full_name || user.name}</p>
               </div>
               <div className="info-item">
                 <label>Email</label>
@@ -45,11 +46,11 @@ function Profile() {
               </div>
               <div className="info-item">
                 <label>Member Since</label>
-                <p>{new Date(user.id).toLocaleDateString()}</p>
+                <p>{user.id || '—'}</p>
               </div>
               <div className="info-item">
                 <label>Account Type</label>
-                <p>Donor</p>
+                <p>{user.role || 'Stakeholder'}</p>
               </div>
             </div>
           </div>
