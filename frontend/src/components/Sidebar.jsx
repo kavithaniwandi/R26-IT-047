@@ -101,125 +101,128 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Stakeholder Portals Section */}
-      <div className="sidebar-section-container">
-        {!isCollapsed && <span className="sidebar-section-title">Dedicated Portals</span>}
-        <div className="portal-switch-group">
-          {visiblePortals.map((p) => {
-            const Icon = p.icon;
-            const isCurrent = currentPortal === p.id;
-            return (
-              <div
-                key={p.id}
-                className={`portal-btn ${isCurrent ? 'active' : ''}`}
-                onClick={() => setPortal(p.id)}
-                title={`${p.label} (Port :${p.port})`}
-              >
+      {/* Scrollable Middle Body */}
+      <div className="sidebar-middle-scroll">
+        {/* Stakeholder Portals Section */}
+        <div className="sidebar-section-container">
+          {!isCollapsed && <span className="sidebar-section-title">Dedicated Portals</span>}
+          <div className="portal-switch-group">
+            {visiblePortals.map((p) => {
+              const Icon = p.icon;
+              const isCurrent = currentPortal === p.id;
+              return (
                 <div
-                  className="portal-btn-icon"
-                  style={{
-                    backgroundColor: `var(--accent-${p.color}-subtle)`,
-                    color: `var(--accent-${p.color})`,
-                    border: `1px solid hsla(var(--accent-${p.color}), 0.25)`
-                  }}
+                  key={p.id}
+                  className={`portal-btn ${isCurrent ? 'active' : ''}`}
+                  onClick={() => setPortal(p.id)}
+                  title={`${p.label} (Port :${p.port})`}
                 >
-                  <Icon size={15} />
-                </div>
-                {!isCollapsed && (
-                  <div className="portal-btn-info">
-                    <div className="portal-btn-label">{p.label}</div>
-                    <div className="portal-btn-port font-mono">:{p.port}</div>
-                  </div>
-                )}
-                {!isCollapsed && isCurrent && (
-                  <div className="portal-active-indicator" style={{ backgroundColor: `var(--accent-${p.color})` }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Navigation Links (when in Admin mode or global nav) */}
-      <div className="sidebar-nav-container">
-        {currentPortal === 'admin' ? (
-          <>
-            {!isCollapsed && <span className="sidebar-section-title">Command Navigation</span>}
-            <nav className="sidebar-nav">
-              {adminNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    className={`nav-item ${isActive ? 'active' : ''}`}
-                    onClick={() => setTab(item.id)}
-                    title={item.label}
+                  <div
+                    className="portal-btn-icon"
+                    style={{
+                      backgroundColor: `var(--accent-${p.color}-subtle)`,
+                      color: `var(--accent-${p.color})`,
+                      border: `1px solid hsla(var(--accent-${p.color}), 0.25)`
+                    }}
                   >
-                    <div className="nav-item-content">
-                      <Icon size={17} />
-                      {!isCollapsed && <span>{item.label}</span>}
+                    <Icon size={15} />
+                  </div>
+                  {!isCollapsed && (
+                    <div className="portal-btn-info">
+                      <div className="portal-btn-label">{p.label}</div>
+                      <div className="portal-btn-port font-mono">:{p.port}</div>
                     </div>
-                    {!isCollapsed && item.badge && (
-                      <span className={`nav-badge ${item.badgeColor || 'blue'}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </>
-        ) : (
-          <div className="portal-side-banner">
-            {!isCollapsed && (
-              <div className="active-portal-info-box">
-                <div className="active-portal-info-title">Active Dedicated Portal</div>
-                <div className="active-portal-info-name">
-                  {visiblePortals.find((p) => p.id === currentPortal)?.label}
+                  )}
+                  {!isCollapsed && isCurrent && (
+                    <div className="portal-active-indicator" style={{ backgroundColor: `var(--accent-${p.color})` }} />
+                  )}
                 </div>
-                <p className="active-portal-info-desc">
-                  You are currently operating in the dedicated stakeholder interface.
-                </p>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', marginTop: '12px' }}
-                  onClick={() => setPortal(user?.role === 'admin' ? 'admin' : 'home')}
-                >
-                  {user?.role === 'admin'
-                    ? <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
-                    : <Home size={14} style={{ color: 'var(--accent-blue)' }} />}
-                  <span>{user?.role === 'admin' ? 'Return to Admin' : 'Open Public Home'}</span>
-                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Navigation Links (when in Admin mode or global nav) */}
+        <div className="sidebar-nav-container">
+          {currentPortal === 'admin' ? (
+            <>
+              {!isCollapsed && <span className="sidebar-section-title">Command Navigation</span>}
+              <nav className="sidebar-nav">
+                {adminNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      className={`nav-item ${isActive ? 'active' : ''}`}
+                      onClick={() => setTab(item.id)}
+                      title={item.label}
+                    >
+                      <div className="nav-item-content">
+                        <Icon size={17} />
+                        {!isCollapsed && <span>{item.label}</span>}
+                      </div>
+                      {!isCollapsed && item.badge && (
+                        <span className={`nav-badge ${item.badgeColor || 'blue'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </>
+          ) : (
+            <div className="portal-side-banner">
+              {!isCollapsed && (
+                <div className="active-portal-info-box">
+                  <div className="active-portal-info-title">Active Dedicated Portal</div>
+                  <div className="active-portal-info-name">
+                    {visiblePortals.find((p) => p.id === currentPortal)?.label}
+                  </div>
+                  <p className="active-portal-info-desc">
+                    You are currently operating in the dedicated stakeholder interface.
+                  </p>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ width: '100%', marginTop: '12px' }}
+                    onClick={() => setPortal(user?.role === 'admin' ? 'admin' : 'home')}
+                  >
+                    {user?.role === 'admin'
+                      ? <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
+                      : <Home size={14} style={{ color: 'var(--accent-blue)' }} />}
+                    <span>{user?.role === 'admin' ? 'Return to Admin' : 'Open Public Home'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* System Telemetry Status Footer */}
+        {!isCollapsed && (
+          <div className="sidebar-telemetry-box">
+            <div className="telemetry-header">
+              <span className="telemetry-title">System Status</span>
+              <span className="telemetry-live-badge">99.9% ONLINE</span>
+            </div>
+            <div className="telemetry-grid">
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Server size={11} /> API Backend</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-emerald)' }}>OK (14ms)</span>
               </div>
-            )}
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Cpu size={11} /> ML Engine</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-violet)' }}>4/4 Active</span>
+              </div>
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Database size={11} /> DB Storage</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-blue)' }}>SQLite GIS</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* System Telemetry Status Footer */}
-      {!isCollapsed && (
-        <div className="sidebar-telemetry-box">
-          <div className="telemetry-header">
-            <span className="telemetry-title">System Status</span>
-            <span className="telemetry-live-badge">99.9% ONLINE</span>
-          </div>
-          <div className="telemetry-grid">
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Server size={11} /> API Backend</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-emerald)' }}>OK (14ms)</span>
-            </div>
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Cpu size={11} /> ML Engine</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-violet)' }}>4/4 Active</span>
-            </div>
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Database size={11} /> DB Storage</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-blue)' }}>SQLite GIS</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* User Profile Card & Logout Footer */}
       <div className="sidebar-footer">
@@ -233,8 +236,8 @@ export function Sidebar({
           </div>
           {!isCollapsed && (
             <div className="user-info">
-              <div className="user-name" title={user?.full_name || 'Guest User'}>
-                {user?.full_name || 'Guest User'}
+              <div className="user-name" title={user?.full_name || user?.email || 'User'}>
+                {user?.full_name || user?.email || 'User'}
               </div>
               <div
                 className="user-role-tag"
@@ -244,7 +247,7 @@ export function Sidebar({
                   border: `1px solid ${roleStyle.border}`
                 }}
               >
-                {user?.role || 'Stakeholder'}
+                {user?.role ? user.role.replace('_', ' ') : 'Stakeholder'}
               </div>
             </div>
           )}
@@ -254,7 +257,8 @@ export function Sidebar({
             title="Sign Out / Switch Stakeholder"
             aria-label="Sign Out"
           >
-            <LogOut size={16} />
+            <LogOut size={15} />
+            {!isCollapsed && <span>Logout</span>}
           </button>
         </div>
       </div>

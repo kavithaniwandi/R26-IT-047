@@ -126,22 +126,42 @@ export function Header({
           <span className="sync-text">{isRefreshing ? 'Syncing...' : 'Sync Live'}</span>
         </button>
 
-        {/* User profile / Switch account button */}
-        <button
-          className="btn btn-secondary btn-sm user-switch-btn"
-          onClick={onSwitchUserClick}
-          title="Switch Stakeholder Role / Account"
+        {/* Authenticated User Profile Pill */}
+        <div
+          className="header-user-profile-badge"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '5px 12px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.8rem'
+          }}
+          title={`Logged in as ${user?.full_name || user?.email || 'User'} (${user?.role || 'Stakeholder'})`}
         >
           <div className="user-switch-avatar" style={{
             backgroundColor: `var(--accent-${portalInfo.color}-subtle)`,
-            color: `var(--accent-${portalInfo.color})`
+            color: `var(--accent-${portalInfo.color})`,
+            width: '24px',
+            height: '24px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             <UserCheck size={14} />
           </div>
-          <div className="user-switch-label">
-            <span className="user-switch-role">{user?.role?.toUpperCase() || 'SWITCH ROLE'}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: '1.2' }}>
+            <span style={{ fontWeight: '700', fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+              {user?.full_name || user?.email || 'Authenticated User'}
+            </span>
+            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
+              {user?.role ? user.role.replace('_', ' ') : 'Stakeholder'}
+            </span>
           </div>
-        </button>
+        </div>
       </div>
     </header>
   );

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
@@ -15,8 +15,6 @@ import { DonationsView } from './views/DonationsView';
 import { NotificationsView } from './views/NotificationsView';
 import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
 import { VolunteerDashboardView } from './views/VolunteerDashboardView';
-import { DisasterOfficerDashboardView } from './views/DisasterOfficerDashboardView';
-import { DisasterDonationRequestView } from './views/DisasterDonationRequestView';
 import { SMSGatewayView } from './views/SMSGatewayView';
 import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';
@@ -114,14 +112,9 @@ function DashboardApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // All protected portals share the same authenticated session.
+  // Enforce strict authentication for system access
   useEffect(() => {
     if (isAuthLoading) return;
-
-    const portalConfig = PORTAL_CONFIG[currentPortal] || PORTAL_CONFIG.admin;
-    if (!portalConfig.defaultRole) {
-      return;
-    }
 
     if (!authenticatedUser) {
       navigate('/signin', { replace: true, state: { portal: currentPortal } });
@@ -254,19 +247,7 @@ function DashboardApp() {
 
   return (
     <div className="app-container">
-      {/* 0. Home / Landing Page */}
-      {currentPortal === 'home' ? (
-        <main className="main-content" style={{ width: '100%' }}>
-          <HomeView
-            onSelectPortal={(p) => {
-              setCurrentPortal(p);
-              playNotificationPing();
-            }}
-            onOpenLoginModal={() => navigate('/signin')}
-            onAddToast={addToast}
-          />
-        </main>
-      ) : currentPortal === 'victim' && user?.role !== 'admin' ? (
+      {currentPortal === 'victim' && user?.role !== 'admin' ? (
         /* 1. Victim Portal (Dedicated Public Emergency Mode - Isolated from Admin UI) */
         <main className="main-content" style={{ width: '100%' }}>
           <VictimPortalView
@@ -341,6 +322,17 @@ function DashboardApp() {
 
             {/* Dynamic View Body */}
             <div className="view-body">
+              {/* 0. Public Home View */}
+              {currentPortal === 'home' && (
+                <HomeView
+                  onSelectPortal={(p) => {
+                    setCurrentPortal(p);
+                    playNotificationPing();
+                  }}
+                  onOpenLoginModal={() => navigate('/signin')}
+                  onAddToast={addToast}
+                />
+              )}
               {/* Admin preview of the victim portal keeps global navigation available. */}
               {currentPortal === 'victim' && (
                 <VictimPortalView

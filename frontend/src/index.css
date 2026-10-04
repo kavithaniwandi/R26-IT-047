@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    DISASTER RELIEF SMART MEDICAL SYSTEM - DESIGN SYSTEM v4.0
    Blue & White - Clean Minimalist - Professional Dashboard
    ========================================================================== */
@@ -471,6 +471,23 @@ code, pre, .font-mono {
   z-index: 100;
   transition: width var(--transition-smooth);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-middle-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-middle-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-middle-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 .sidebar.collapsed { width: 68px; }
@@ -709,9 +726,13 @@ code, pre, .font-mono {
 .telemetry-val { font-weight: 600; }
 
 .sidebar-footer {
-  padding: 10px 12px;
-  border-top: 1px solid rgba(255,255,255,0.07);
-  background-color: rgba(0,0,0,0.15);
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  background-color: #0b1329;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .user-profile-card { display: flex; align-items: center; gap: 9px; }
@@ -751,23 +772,33 @@ code, pre, .font-mono {
 }
 
 .sidebar-logout-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.08);
-  color: #64748b;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .sidebar-logout-btn:hover {
-  background: rgba(239,68,68,0.15);
-  color: #f87171;
-  border-color: rgba(239,68,68,0.25);
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.sidebar.collapsed .sidebar-logout-btn {
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
 }
 
 /* Portal side banner (non-admin portals) */

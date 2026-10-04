@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, Radio, ShieldAlert, Activity, HeartHandshake, Truck, ShieldCheck, UserCheck } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Navigation from '../components/Navigation'
 import Footer from '../components/Footer'
@@ -12,6 +12,14 @@ function getDestination(user, requestedPortal) {
   const portal = requestedPortal === rolePortal ? requestedPortal : rolePortal
   return `/?portal=${encodeURIComponent(portal)}`
 }
+
+const PRESET_ACCOUNTS = [
+  { label: 'Admin', email: 'admin@disaster.relief.lk', pass: 'Admin@2026!', icon: ShieldCheck, color: 'rose', role: 'admin' },
+  { label: 'MOH Authority', email: 'authority@moh.gov.lk', pass: 'Authority@2026!', icon: Activity, color: 'blue', role: 'authority' },
+  { label: 'Relief Donor', email: 'donor@redcross.lk', pass: 'Donor@2026!', icon: HeartHandshake, color: 'emerald', role: 'donor' },
+  { label: 'Volunteer Dispatch', email: 'volunteer@relief.lk', pass: 'Volunteer@2026!', icon: Truck, color: 'amber', role: 'volunteer' },
+  { label: 'Victim SOS', email: 'victim@kaduwela.lk', pass: 'Victim@2026!', icon: ShieldAlert, color: 'rose', role: 'victim' }
+]
 
 function SignIn() {
   const [email, setEmail] = useState('')
@@ -45,23 +53,53 @@ function SignIn() {
     }
   }
 
+  const handleSelectPreset = (preset) => {
+    setEmail(preset.email)
+    setPassword(preset.pass)
+    setError('')
+  }
+
   return (
     <div className="signin-page">
       <Navigation />
       <main className="signin-container">
         <section className="signin-card" aria-labelledby="signin-title">
           <div className="signin-mark" aria-hidden="true">
-            <ShieldCheck size={28} />
+            <Radio size={28} />
           </div>
+
           <div className="signin-header">
-            <span className="signin-eyebrow">Unified access</span>
-            <h1 id="signin-title">Sign in to MediDonate</h1>
-            <p>One secure login for every disaster relief stakeholder portal.</p>
+            <span className="signin-eyebrow">NATIONAL DISASTER RELIEF SYSTEM</span>
+            <h1 id="signin-title">Stakeholder Authentication</h1>
+            <p>One secure login for every emergency response, MOH, donor & field portal.</p>
+          </div>
+
+          {/* Quick Demo Preset Account Fillers */}
+          <div className="signin-presets-section">
+            <span className="signin-presets-label">Quick 1-Click Demo Login:</span>
+            <div className="signin-presets-grid">
+              {PRESET_ACCOUNTS.map((acc) => {
+                const Icon = acc.icon;
+                const isSelected = email === acc.email;
+                return (
+                  <button
+                    key={acc.role}
+                    type="button"
+                    className={`signin-preset-btn ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleSelectPreset(acc)}
+                    title={`Fill ${acc.label} credentials`}
+                  >
+                    <Icon size={14} />
+                    <span>{acc.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {requestedPortal && (
             <div className="signin-notice">
-              Sign in with an account authorized for the requested portal.
+              Sign in with an account authorized for the requested workspace portal.
             </div>
           )}
 
@@ -69,7 +107,7 @@ function SignIn() {
 
           <form className="signin-form" onSubmit={handleSubmit}>
             <div className="signin-field">
-              <label htmlFor="signin-email">Email address</label>
+              <label htmlFor="signin-email">Stakeholder Email Address</label>
               <div className="signin-input-wrap">
                 <Mail size={18} aria-hidden="true" />
                 <input
@@ -77,7 +115,7 @@ function SignIn() {
                   id="signin-email"
                   name="email"
                   autoComplete="username"
-                  placeholder="name@organisation.lk"
+                  placeholder="e.g. admin@disaster.relief.lk"
                   required
                   autoFocus
                   value={email}
@@ -96,7 +134,7 @@ function SignIn() {
                   id="signin-password"
                   name="password"
                   autoComplete="current-password"
-                  placeholder="Enter your password"
+                  placeholder="Enter account password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -114,15 +152,15 @@ function SignIn() {
             </div>
 
             <button type="submit" className="signin-button" disabled={submitting || isLoading}>
-              {submitting ? <LoaderCircle className="signin-spinner" size={19} /> : <LockKeyhole size={18} />}
-              <span>{submitting ? 'Signing in…' : 'Sign in securely'}</span>
+              {submitting ? <LoaderCircle className="signin-spinner" size={19} /> : <UserCheck size={18} />}
+              <span>{submitting ? 'Authenticating…' : 'Sign In to Workspace'}</span>
             </button>
           </form>
 
           <p className="signin-help">
-            Your account role automatically opens the correct workspace. Need access? Contact your system administrator.
+            Claims-based RBAC automatically opens your designated portal. Need system access? Contact DMC National Directorate.
           </p>
-          <Link to="/home" className="signin-back-link">Return to public site</Link>
+          <Link to="/" className="signin-back-link">Return to Command Center Dashboard</Link>
         </section>
       </main>
       <Footer />

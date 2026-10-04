@@ -1,461 +1,182 @@
 .navigation {
-
-    position: fixed;
-
-    top:0;
-
-    left:0;
-
-    width:100%;
-
-    z-index:1000;
-
-    padding:20px 0;
-
-    background:transparent;
-
-    transition:0.3s ease;
-
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  padding: 10px 0;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
 }
-
-
-
 
 .navigation.scrolled {
-
-    background:white;
-
-    box-shadow:
-    0 5px 25px rgba(0,0,0,0.08);
-
-    padding:14px 0;
-
+  padding: 8px 0;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
 }
-
-
-
-
 
 .nav-container {
-
-
-    width:90%;
-
-    max-width:1200px;
-
-    margin:auto;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-
+  width: 95%;
+  max-width: 1380px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
-
-
-
-
 
 /* LOGO */
-
-
 .nav-logo {
-
-    display:flex;
-
-    align-items:center;
-
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
 }
-
-
-
-.logo-image {
-
-
-    width:190px;
-
-    height:auto;
-
-    object-fit:contain;
-
-
-}
-
-
-
-
-
 
 /* NAV LINKS */
-
-
 .nav-links {
-
-
-    display:flex;
-
-    align-items:center;
-
-    gap:30px;
-
-
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-
-
 
 .nav-link {
-
-
-    text-decoration:none;
-
-    color:white;
-
-    font-size:15px;
-
-    font-weight:600;
-
-    transition:0.3s;
-
-
+  text-decoration: none;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 600;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
-
-
-
-.navigation.scrolled .nav-link {
-
-
-    color:#1E293B;
-
-
-}
-
-
-
 
 .nav-link:hover {
-
-
-    color:#1565C0;
-
-
+  color: #2563eb;
+  background-color: #eff6ff;
 }
 
+.nav-link.active {
+  color: #2563eb;
+  background-color: #dbeafe;
+  font-weight: 700;
+}
 
-
-
-
-
-
-/* PROFILE */
-
-
+/* PROFILE & LOGOUT */
 .profile-link {
-
-
-    cursor:pointer;
-
-
+  cursor: pointer;
+  color: #1e40af;
+  font-weight: 700;
 }
-
-
-
-
-
-
-
-/* LOGOUT */
-
 
 .logout-button {
-
-
-    background:none;
-
-    border:none;
-
-    cursor:pointer;
-
-    color:white;
-
-    font-size:15px;
-
-    font-weight:600;
-
-
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
-
-
-
-.navigation.scrolled .logout-button {
-
-
-    color:#1E293B;
-
-
-}
-
-
 
 .logout-button:hover {
-
-
-    color:#D32F2F;
-
-
+  background: #fee2e2;
+  color: #991b1b;
 }
-
-
-
-
-
-
 
 /* SOS BUTTON */
-
-
 .sos-button {
-
-
-    text-decoration:none;
-
-    background:#D32F2F;
-
-    color:white;
-
-    padding:12px 28px;
-
-    border-radius:8px;
-
-    font-weight:700;
-
-    transition:.3s;
-
-
+  text-decoration: none;
+  background: #ef4444;
+  color: #ffffff;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  transition: all 0.15s ease;
 }
-
-
-
+}
 
 .sos-button:hover {
-
-
-    background:#B71C1C;
-
-    transform:translateY(-3px);
-
-
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
-
-
-
-
-
-
-/* MOBILE BUTTON */
-
-
+/* MOBILE MENU BUTTON */
 .mobile-menu-button {
-
-
-    display:none;
-
-    border:none;
-
-    background:none;
-
-    cursor:pointer;
-
-
+  display: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px;
 }
-
-
-
 
 .hamburger {
-
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:6px;
-
-
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-
-
-
 
 .hamburger span {
-
-
-    width:30px;
-
-    height:3px;
-
-    background:white;
-
-    border-radius:10px;
-
-    transition:.3s;
-
-
+  width: 24px;
+  height: 2px;
+  background: #334155;
+  border-radius: 4px;
+  transition: 0.3s;
 }
 
-
-
-.navigation.scrolled .hamburger span {
-
-
-    background:#0F4C81;
-
-
-}
-
-
-
-
-
-
-/* MOBILE MENU */
-
-
-@media(max-width:900px){
-
-
-
-.mobile-menu-button {
-
-
-    display:block;
-
-
-}
-
-
-
-
-.nav-links {
-
-
-    position:fixed;
-
-    top:0;
-
-    right:-100%;
-
-    width:75%;
-
-    height:100vh;
-
-    background:white;
-
-    flex-direction:column;
-
-    justify-content:center;
-
-    gap:35px;
-
-    transition:.3s;
-
-    box-shadow:
-    -5px 0 25px rgba(0,0,0,.1);
-
-
-}
-
-
-
-.nav-links.open {
-
-
-    right:0;
-
-
-}
-
-
-
-
-.nav-link {
-
-
-    color:#1E293B;
-
-    font-size:18px;
-
-
-}
-
-
-
-
-.logout-button {
-
-
-    color:#1E293B;
-
-
-}
-
-
-
-.sos-button {
-
-
-    padding:14px 35px;
-
-
-}
-
-
-
-
-.logo-image {
-
-
-    width:150px;
-
-
-}
-
-
-
-}
-
-
-
-
-
-/* MOBILE HAMBURGER ANIMATION */
-
-
-.hamburger.active span:nth-child(1){
-
-    transform:
-    rotate(45deg)
-    translate(7px,7px);
-
-}
-
-
-
-.hamburger.active span:nth-child(2){
-
-    opacity:0;
-
-}
-
-
-
-.hamburger.active span:nth-child(3){
-
-    transform:
-    rotate(-45deg)
-    translate(7px,-7px);
-
+/* MOBILE MEDIA QUERY */
+@media (max-width: 900px) {
+  .mobile-menu-button {
+    display: block;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 60px;
+    right: -100%;
+    width: 280px;
+    height: calc(100vh - 60px);
+    background: #ffffff;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 24px 20px;
+    gap: 12px;
+    transition: right 0.3s ease;
+    box-shadow: -10px 0 30px rgba(15, 23, 42, 0.1);
+    border-left: 1px solid #e2e8f0;
+  }
+
+  .nav-links.open {
+    right: 0;
+  }
+
+  .nav-link {
+    font-size: 0.95rem;
+    padding: 10px 14px;
+  }
+
+  .sos-button {
+    justify-content: center;
+    padding: 10px 16px;
+    margin-top: 8px;
+  }
 }
