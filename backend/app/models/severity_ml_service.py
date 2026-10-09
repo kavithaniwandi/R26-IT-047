@@ -15,11 +15,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import warnings
 from pathlib import Path
 from typing import Optional
 
+from .complaint_mapper import ComplaintMapper, to_model_symptoms
 from . import severity_pipeline as sp
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ _MODEL_DIR = Path(os.environ.get("SEVERITY_MODEL_DIR", Path(__file__).resolve().
 
 _BUNDLE = None
 _MANIFEST: dict = {}
+_MAPPER: ComplaintMapper | None = None
 _LOCK = threading.Lock()
 
 SCORE_BANDS = {"CRITICAL": 80.0, "HIGH": 60.0, "MEDIUM": 40.0, "LOW": 0.0}
@@ -62,7 +65,7 @@ def _check_versions(trained_with: Optional[dict]) -> None:
 
 
 def _load_bundle():
-    global _BUNDLE, _MANIFEST
+    global _BUNDLE, _MANIFEST, _MAPPER
     if _BUNDLE is not None:
         return _BUNDLE
     with _LOCK:
@@ -74,6 +77,7 @@ def _load_bundle():
             manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
             _check_versions(manifest.get("libraries"))
             _BUNDLE = sp.load_bundle(str(bundle_path))
+            _MAPPER = ComplaintMapper(_BUNDLE.features.complaint_vec_.vocabulary_)
             _MANIFEST = manifest
             logger.info("severity model loaded: %s (T_HIGH=%.2f, T_LOW=%.2f, layers=%s)",
                         MODEL_VERSION, _BUNDLE.t_high, _BUNDLE.t_low, _BUNDLE.layers)
@@ -119,10 +123,13 @@ def predict_severity_ml_detailed(
     bundle = _load_bundle()
 
     text = (symptoms or "").strip() or (clinical_note or "").strip()
+    mapped_complaints = _MAPPER.map(text) if _MAPPER else []
+    mapping_confidence = _MAPPER.coverage(text, mapped_complaints) if _MAPPER else 0.0
+    model_symptoms = to_model_symptoms(_MAPPER, text) if _MAPPER else text
     flags = {f: 1 for f, v in (rf_flags or {}).items() if f in sp.KNOWN_FLAGS and v}
     clean_vitals = _clean_vitals(vitals)
 
-    row = sp.row_from_request(text, age, flags, clean_vitals)
+    row = sp.row_from_request(model_symptoms, age, flags, clean_vitals)
     if has_red_flag:                                            # keep the app's explicit flag authoritative
         row.loc[0, "has_red_flag"] = 1
     row.loc[0, "red_flag_count"] = max(int(row.loc[0, "red_flag_count"]), int(red_flag_count or 0))
@@ -149,6 +156,15 @@ def predict_severity_ml_detailed(
         "vitals_provided": sorted(clean_vitals),
         "thresholds": {"high": bundle.t_high, "low": bundle.t_low},
         "model_version": MODEL_VERSION,
+        "original_symptoms_text": text,
+        "model_symptoms": model_symptoms,
+        "mapped_complaints": mapped_complaints,
+        "mapped": bool(mapped_complaints),
+        "mapping_confidence": mapping_confidence,
+        "high_acuity_terms": [
+            term for term in sp.HIGH_COMPLAINT_PATTERNS
+            if re.search(re.escape(term), model_symptoms, re.I)
+        ],
     }
 
 

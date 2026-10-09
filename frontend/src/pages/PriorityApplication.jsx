@@ -199,6 +199,7 @@ export default function PriorityApplication() {
         body: JSON.stringify({
           clinical_note: form.clinicalNote,
           symptoms: form.symptoms,
+          age: form.age === "" ? null : Number(form.age),
         }),
       });
 
@@ -321,7 +322,7 @@ export default function PriorityApplication() {
 
     const currentApplications = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     const patientId = `PT-${String(currentApplications.length + 1).padStart(4, "0")}`;
-    const entry = {
+      const entry = {
       id: patientId,
       submittedAt: new Date().toISOString(),
       title: severityResult.queue_title,
@@ -358,6 +359,15 @@ export default function PriorityApplication() {
         : null,
       critical_trigger: severityResult.critical_trigger,
       matched_rules: severityResult.matched_rules,
+      incomplete_vitals: severityResult.incomplete_vitals,
+      incomplete_vitals_reason: severityResult.incomplete_vitals_reason,
+      interpreted_as: severityResult.interpreted_as,
+      mapped: severityResult.mapped,
+      mapping_confidence: severityResult.mapping_confidence,
+      mapped_complaints: severityResult.mapped_complaints,
+      high_acuity_terms: severityResult.high_acuity_terms,
+      model_symptoms: severityResult.model_symptoms,
+      original_symptoms_text: severityResult.original_symptoms_text,
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...currentApplications]));
@@ -534,6 +544,25 @@ export default function PriorityApplication() {
                 </div>
 
                 <p className="priority-result-note">{severityResult.display_note}</p>
+
+                {severityResult.incomplete_vitals && (
+                  <div className="priority-unassigned-alert">
+                    Incomplete vitals - review before confirming. This case cannot be auto-assigned LOW.
+                  </div>
+                )}
+
+                {severityResult.mapped ? (
+                  <p className="priority-result-rules">
+                    Interpreted as: {[
+                      ...(severityResult.interpreted_as?.mapped_phrases || []),
+                      ...(severityResult.interpreted_as?.high_acuity_terms || []),
+                    ].join(", ")}
+                  </p>
+                ) : (
+                  <div className="priority-unassigned-alert">
+                    No complaint recognised - please review.
+                  </div>
+                )}
 
                 <div className="priority-ai-review-note">
                   This classification is AI-assisted. The assigned MO should review and override

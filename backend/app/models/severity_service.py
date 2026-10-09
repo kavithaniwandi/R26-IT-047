@@ -1,8 +1,10 @@
-from app.models.severity_ml_service import predict_severity_ml
+from app.models.severity_ml_service import predict_severity_ml_detailed
+from app.models.config import settings
 
 
 SUPPORTED_MODES = {"rule_based", "ml"}
 MIN_VITALS_FOR_ML = 4
+SEVERITY_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
 ML_VITAL_KEYS = {
     "vital_hr",
     "vital_spo2",
@@ -60,6 +62,70 @@ def _display_risk_score(result: dict, normalized_scores: dict[str, float]) -> in
         return round(max(0, min(100, priority_score)))
 
     return _compute_risk_score(normalized_scores)
+
+
+def _floor_rule_result(result: dict, floor: str, reason: str) -> dict:
+    floor = (floor or "MEDIUM").upper()
+    if floor not in SEVERITY_RANK:
+        floor = "MEDIUM"
+    if SEVERITY_RANK[result["severity"]] >= SEVERITY_RANK[floor]:
+        return result
+
+    raised = dict(result)
+    raised["severity"] = floor
+    raised["priority_score"] = max(float(raised.get("priority_score", 0.0)), {"MEDIUM": 40.0, "HIGH": 60.0}.get(floor, 40.0))
+    scores = dict(raised.get("scores") or {})
+    scores[floor] = max(float(scores.get(floor, 0.0)), 1.0)
+    raised["scores"] = scores
+    matched = list(raised.get("matched_rules") or [])
+    if reason not in matched:
+        matched.append(reason)
+    raised["matched_rules"] = matched
+    return raised
+
+
+def _append_reason(result: dict, reason: str) -> dict:
+    updated = dict(result)
+    matched = list(updated.get("matched_rules") or [])
+    if reason not in matched:
+        matched.append(reason)
+    updated["matched_rules"] = matched
+    return updated
+
+
+def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
+    if age is None or age < 65:
+        return 0
+    checks = (
+        ("vital_spo2", lambda value: value < 94),
+        ("vital_sbp", lambda value: value < 90),
+        ("vital_hr", lambda value: value > 110),
+        ("vital_rr", lambda value: value > 22),
+    )
+    count = 0
+    for key, predicate in checks:
+        value = (vitals or {}).get(key)
+        if value is None or value == "":
+            continue
+        try:
+            count += int(predicate(float(value)))
+        except (TypeError, ValueError):
+            continue
+    return count
+
+
+def apply_age65_abnormal_vitals_layer(result: dict, age: int | None, vitals: dict | None, enabled: bool | None = None) -> dict:
+    if enabled is None:
+        enabled = settings.ENABLE_AGE65_ABNORMAL_VITALS
+    if not enabled:
+        return result
+
+    abnormal_count = _age65_abnormal_vital_count(age, vitals)
+    if abnormal_count <= 0:
+        return result
+
+    floor = "HIGH" if abnormal_count >= 2 else "MEDIUM"
+    return _floor_rule_result(result, floor, f"age65_abnormal_vitals:{abnormal_count}")
 
 
 def _build_queue_policy(
@@ -180,6 +246,10 @@ def classify_note(
 
     from app.models.severity_rules import predict_severity
 
+    numeric_vital_count = _count_numeric_vitals(vitals)
+    incomplete_vitals = numeric_vital_count < MIN_VITALS_FOR_ML
+    incomplete_reason = "incomplete vitals — review"
+
     # CRITICAL pre-check runs regardless of mode.
     # The ML model was trained on 3 classes (LOW/MEDIUM/HIGH) only.
     # Critical trigger detection is handled exclusively by the rule engine
@@ -190,14 +260,15 @@ def classify_note(
     if rule_result["critical_trigger"] is not None:
         result = rule_result
     elif mode == "ml":
-        if _count_numeric_vitals(vitals) < MIN_VITALS_FOR_ML:
+        if incomplete_vitals:
             result = dict(rule_result)
+            result = _floor_rule_result(result, settings.INCOMPLETE_VITALS_FLOOR, incomplete_reason)
             result["method"] = "rule_based"
             result["ml_skipped_reason"] = "insufficient_vitals"
             effective_method = "rule_based"
             ml_skipped_reason = "insufficient_vitals"
         else:
-            result = predict_severity_ml(
+            result = predict_severity_ml_detailed(
                 clinical_note=clinical_note,
                 age=age,
                 condition_group=condition_group,
@@ -207,8 +278,22 @@ def classify_note(
                 rf_flags=rf_flags,
                 symptoms=symptoms,
             )
+            mapping_confidence = float(result.get("mapping_confidence") or 0.0)
+            mapped_complaints = result.get("mapped_complaints") or []
+            low_mapping_coverage = (
+                not mapped_complaints
+                or mapping_confidence < settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD
+            )
+            if low_mapping_coverage:
+                reason = "complaint not recognised — review"
+                result = _floor_rule_result(result, settings.COMPLAINT_MAPPING_FLOOR, reason)
+                result = _append_reason(result, reason)
+                result["mapped"] = False
+                result["mapping_review_reason"] = reason
     else:
         result = rule_result
+
+    result = apply_age65_abnormal_vitals_layer(result, age, vitals)
 
     normalized_scores = _normalize_scores(result["scores"])
     risk_score = _display_risk_score(result, normalized_scores)
@@ -229,5 +314,19 @@ def classify_note(
         "scores": normalized_scores,
         "matched_rules": result["matched_rules"],
         "critical_trigger": result["critical_trigger"],
+        "incomplete_vitals": incomplete_vitals,
+        "incomplete_vitals_reason": incomplete_reason if incomplete_vitals else None,
+        "can_override": result["critical_trigger"] is None,
+        "mapped_complaints": result.get("mapped_complaints", []),
+        "high_acuity_terms": result.get("high_acuity_terms", []),
+        "model_symptoms": result.get("model_symptoms"),
+        "original_symptoms_text": result.get("original_symptoms_text"),
+        "interpreted_as": {
+            "mapped_phrases": result.get("mapped_complaints", []),
+            "high_acuity_terms": result.get("high_acuity_terms", []),
+        },
+        "mapped": bool(result.get("mapped", result.get("mapped_complaints") or result.get("high_acuity_terms"))),
+        "mapping_confidence": float(result.get("mapping_confidence", 1.0 if result.get("mapped_complaints") or result.get("high_acuity_terms") else 0.0)),
+        "mapping_review_reason": result.get("mapping_review_reason"),
         **queue_policy,
     }

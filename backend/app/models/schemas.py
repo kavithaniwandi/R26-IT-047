@@ -103,6 +103,16 @@ class SeverityClassifyResponse(BaseModel):
     scores: dict[Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"], float]
     matched_rules: list[str]
     critical_trigger: str | None
+    incomplete_vitals: bool = False
+    incomplete_vitals_reason: str | None = None
+    can_override: bool = True
+    interpreted_as: dict | None = None
+    mapped: bool = False
+    mapping_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    mapped_complaints: list[str] = Field(default_factory=list)
+    high_acuity_terms: list[str] = Field(default_factory=list)
+    model_symptoms: str | None = None
+    original_symptoms_text: str | None = None
     should_queue: bool
     queue_reason: Literal["auto_triage", "audit_sample", "rule_flag", "not_queued"]
     queue_title: str
@@ -115,6 +125,7 @@ class SeverityClassifyResponse(BaseModel):
 class ExtractRequest(BaseModel):
     clinical_note: str = Field(..., min_length=1)
     symptoms: str = ""
+    age: int | None = Field(default=None, ge=0, le=120)
 
     @field_validator("clinical_note")
     @classmethod
@@ -127,6 +138,7 @@ class ExtractRequest(BaseModel):
 class ExtractResponse(BaseModel):
     condition_group: str
     specialty: str
+    specialties: list[str] = Field(default_factory=list)
     extracted_symptoms: list[str]
     confidence: float = Field(..., ge=0.0, le=1.0)
     valid: bool = True

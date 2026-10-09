@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     MODEL_DIR: Path = Path("ml_models")
     DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal"
+    APPEAL_MODEL_DIR: Path | None = None
     GEMINI_API_KEY: str | None = None
     GEMINI_API_KEY2: str | None = None
     GEMINI_API_KEY3: str | None = None
@@ -26,6 +27,13 @@ class Settings(BaseSettings):
     HF_API_KEY: str | None = None
     MONGODB_URI: str | None = None
     MONGODB_DB_NAME: str = "Research047"
+    INCOMPLETE_VITALS_FLOOR: str = "MEDIUM"
+    COMPLAINT_MAPPING_FLOOR: str = "MEDIUM"
+    COMPLAINT_MAPPING_COVERAGE_THRESHOLD: float = 0.5
+    RETENTION_DAYS: int = 90
+    PEDIATRIC_AGE_CUTOFF: int = 12
+    GERIATRIC_AGE_CUTOFF: int = 65
+    ENABLE_AGE65_ABNORMAL_VITALS: bool = False
 
     def model_path(self, filename: str) -> Path:
         model_dir = self.MODEL_DIR
@@ -34,7 +42,7 @@ class Settings(BaseSettings):
         return model_dir / filename
 
     def donation_appeal_model_path(self, filename: str) -> Path:
-        model_dir = self.DONATION_APPEAL_MODEL_DIR
+        model_dir = self.APPEAL_MODEL_DIR or self.DONATION_APPEAL_MODEL_DIR
         if not model_dir.is_absolute():
             model_dir = BASE_DIR / model_dir
         return model_dir / filename

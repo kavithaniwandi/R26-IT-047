@@ -342,6 +342,7 @@ async def extract_severity_entities(request: ExtractRequest) -> ExtractResponse:
         return extract_clinical_entities(
             clinical_note=request.clinical_note,
             symptoms=request.symptoms,
+            age=request.age,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Clinical NLP extraction failed.") from exc

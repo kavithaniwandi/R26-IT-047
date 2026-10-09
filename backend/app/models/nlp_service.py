@@ -11,7 +11,9 @@ Extracts medical entities from clinical notes and maps them to:
 from __future__ import annotations
 
 from functools import lru_cache
+import json
 import re
+from pathlib import Path
 
 try:
     import spacy
@@ -314,6 +316,17 @@ DEFAULT_ML_GROUP = "OTHER_EMERGENCY"
 MIN_WORD_LENGTH_AVG = 3.5
 MIN_REAL_WORD_RATIO = 0.4
 MIN_TEXT_LENGTH = 10
+ROUTING_CONFIG_PATH = Path(__file__).with_name("triage_routing_config.json")
+ENTITY_STOPLIST = {
+    "severe", "mild", "moderate", "hour", "hours", "day", "days", "week", "weeks",
+    "month", "months", "year", "years", "time", "today", "yesterday", "tomorrow",
+    "morning", "evening", "night", "patient", "complains", "reports", "present",
+    "presents", "history", "symptom", "symptoms",
+}
+COMMON_CLINICAL_WORDS = {
+    "adult", "after", "and", "awaiting", "child", "for", "from", "labs", "meals",
+    "older", "one", "patient", "reports", "stable", "vital", "with",
+}
 
 # Maps human-readable specialty labels to ML model condition_group identifiers.
 # The ML model was trained with these uppercase keys (see ml_models/severity_ml/model_config.json).
@@ -352,6 +365,73 @@ MEDICAL_ABBREVIATIONS: frozenset[str] = frozenset({
 
 
 @lru_cache(maxsize=1)
+def _routing_config() -> dict:
+    defaults = {
+        "pediatric_age_cutoff": 12,
+        "geriatric_age_cutoff": 65,
+        "pediatric_boost_multiplier": 1.2,
+        "geriatric_boost_multiplier": 0.5,
+    }
+    try:
+        return {**defaults, **json.loads(ROUTING_CONFIG_PATH.read_text(encoding="utf-8"))}
+    except Exception:
+        return defaults
+
+
+@lru_cache(maxsize=1)
+def _clinical_keyword_set() -> frozenset[str]:
+    terms = set(MEDICAL_ABBREVIATIONS)
+    for keywords, _group in SPECIALTY_MAP:
+        terms.update(keyword.lower() for keyword in keywords)
+    try:
+        from app.models.severity_ml_service import _load_bundle
+
+        bundle = _load_bundle()
+        terms.update(str(term).lower() for term in bundle.features.complaint_vec_.vocabulary_)
+    except Exception:
+        pass
+    return frozenset(terms)
+
+
+def _is_clinical_entity(text: str, combined_text: str = "") -> bool:
+    cleaned = re.sub(r"[^a-z0-9_ ]", " ", text.lower()).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    if len(cleaned) < 3 or cleaned.isdigit() or cleaned in ENTITY_STOPLIST:
+        return False
+    terms = _clinical_keyword_set()
+    if cleaned in terms:
+        return True
+    return any(term in cleaned or cleaned in term for term in terms if len(term) >= 3)
+
+
+def _filtered_entities(raw_entities: list[str], combined_text: str) -> list[str]:
+    entities: list[str] = []
+    seen: set[str] = set()
+
+    for text in raw_entities:
+        cleaned = re.sub(r"\s+", " ", text.strip())
+        lower = cleaned.lower()
+        if lower in seen or not _is_clinical_entity(cleaned, combined_text):
+            continue
+        seen.add(lower)
+        entities.append(cleaned)
+        if len(entities) >= 5:
+            return entities
+
+    lower_text = combined_text.lower()
+    for term in sorted(_clinical_keyword_set(), key=lambda item: (-len(item), item)):
+        if len(term) < 3 or term in ENTITY_STOPLIST:
+            continue
+        if re.search(rf"(?<![a-z0-9_]){re.escape(term)}(?![a-z0-9_])", lower_text):
+            if term not in seen:
+                seen.add(term)
+                entities.append(term)
+                if len(entities) >= 5:
+                    break
+    return entities
+
+
+@lru_cache(maxsize=1)
 def _load_model():
     if spacy is None:
         return None
@@ -378,6 +458,13 @@ def _is_valid_clinical_text(text: str) -> bool:
 
     vowels = set("aeiouAEIOU")
     abbrev_count = sum(1 for w in words if w.lower() in MEDICAL_ABBREVIATIONS)
+    known_count = sum(
+        1
+        for w in words
+        if w.lower() in COMMON_CLINICAL_WORDS
+        or w.lower() in MEDICAL_ABBREVIATIONS
+        or _is_clinical_entity(w, text)
+    )
     real_word_count = sum(
         1
         for w in words
@@ -387,6 +474,8 @@ def _is_valid_clinical_text(text: str) -> bool:
     )
 
     if (abbrev_count + real_word_count) / len(words) < MIN_REAL_WORD_RATIO:
+        return False
+    if known_count == 0:
         return False
 
     # avg-length check only applies when there are no medical abbreviations present,
@@ -399,7 +488,31 @@ def _is_valid_clinical_text(text: str) -> bool:
     return True
 
 
-def _map_to_specialty(entities: list[str]) -> tuple[str, str, float]:
+def _keyword_hit(keyword: str, combined: str) -> bool:
+    if len(keyword) <= 3:
+        return re.search(rf"(?<![a-z0-9_]){re.escape(keyword)}(?![a-z0-9_])", combined) is not None
+    return keyword in combined
+
+
+def _specialty_scores(entities: list[str], age: int | None = None) -> dict[str, float]:
+    combined = " ".join(entities).lower()
+    scores: dict[str, float] = {}
+    for keywords, group in SPECIALTY_MAP:
+        hit = sum(1 for keyword in keywords if _keyword_hit(keyword, combined))
+        if hit:
+            scores[group] = scores.get(group, 0.0) + float(hit)
+
+    if age is not None:
+        cfg = _routing_config()
+        top = max(scores.values(), default=1.0)
+        if age < int(cfg["pediatric_age_cutoff"]):
+            scores["Pediatric"] = scores.get("Pediatric", 0.0) + top * float(cfg["pediatric_boost_multiplier"])
+        if age >= int(cfg["geriatric_age_cutoff"]):
+            scores["Geriatric"] = scores.get("Geriatric", 0.0) + top * float(cfg["geriatric_boost_multiplier"])
+    return scores
+
+
+def _map_to_specialty(entities: list[str], age: int | None = None) -> tuple[str, str, float]:
     """
     Returns (specialty_label, ml_condition_group, confidence).
     specialty_label is human-readable; ml_condition_group matches model_config.json keys.
@@ -408,11 +521,7 @@ def _map_to_specialty(entities: list[str]) -> tuple[str, str, float]:
     if not combined.strip():
         return DEFAULT_GROUP, DEFAULT_ML_GROUP, 0.0
 
-    scores: dict[str, int] = {}
-    for keywords, group in SPECIALTY_MAP:
-        hit = sum(1 for keyword in keywords if keyword in combined)
-        if hit:
-            scores[group] = scores.get(group, 0) + hit
+    scores = _specialty_scores(entities, age=age)
 
     if not scores:
         return DEFAULT_GROUP, DEFAULT_ML_GROUP, 0.0
@@ -424,7 +533,7 @@ def _map_to_specialty(entities: list[str]) -> tuple[str, str, float]:
     return best_group, ml_group, confidence
 
 
-def extract_clinical_entities(clinical_note: str, symptoms: str = "") -> dict:
+def extract_clinical_entities(clinical_note: str, symptoms: str = "", age: int | None = None) -> dict:
     combined_text = f"{symptoms} {clinical_note}".strip()
 
     if not _is_valid_clinical_text(combined_text):
@@ -437,7 +546,7 @@ def extract_clinical_entities(clinical_note: str, symptoms: str = "") -> dict:
         }
 
     nlp = _load_model()
-    entities: list[str] = []
+    raw_entities: list[str] = []
     seen: set[str] = set()
 
     if nlp is not None:
@@ -449,8 +558,8 @@ def extract_clinical_entities(clinical_note: str, symptoms: str = "") -> dict:
             lower = text.lower()
             if lower not in seen:
                 seen.add(lower)
-                entities.append(text)
-        # Keyword matching runs on the extracted entities
+                raw_entities.append(text)
+        entities = _filtered_entities(raw_entities, combined_text)
         mapping_source = entities
     else:
         # spaCy model not installed: fall back to simple tokenization.
@@ -462,14 +571,17 @@ def extract_clinical_entities(clinical_note: str, symptoms: str = "") -> dict:
             lower = token.lower()
             if lower not in seen:
                 seen.add(lower)
-                entities.append(token)
-        mapping_source = [combined_text]
+                raw_entities.append(token)
+        entities = _filtered_entities(raw_entities, combined_text)
+        mapping_source = entities or [combined_text]
 
-    specialty, condition_group, confidence = _map_to_specialty(mapping_source)
+    specialty_scores = _specialty_scores(mapping_source, age=age)
+    specialty, condition_group, confidence = _map_to_specialty(mapping_source, age=age)
 
     return {
         "condition_group": condition_group,
         "specialty": specialty,
+        "specialties": sorted(specialty_scores, key=lambda key: specialty_scores[key], reverse=True),
         "extracted_symptoms": entities,
         "confidence": confidence,
         "valid": True,

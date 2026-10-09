@@ -146,3 +146,36 @@ class TestExtractClinicalEntities:
     def test_confidence_range(self):
         result = extract_clinical_entities("Severe abdominal pain with nausea and vomiting")
         assert 0.0 <= result["confidence"] <= 1.0
+
+    def test_filters_non_clinical_entities_from_chest_pain_note(self):
+        result = extract_clinical_entities(
+            "Severe chest pain with shortness of breath and sweating for one hour"
+        )
+        lowered = {item.lower() for item in result["extracted_symptoms"]}
+        assert "severe" not in lowered
+        assert "hour" not in lowered
+        assert len(result["extracted_symptoms"]) <= 5
+        assert result["specialty"] == "Cardiovascular"
+
+    def test_child_gastro_symptoms_routes_to_pediatric(self):
+        result = extract_clinical_entities(
+            "Child with fever, diarrhoea and vomiting",
+            age=8,
+        )
+        assert result["specialty"] == "Pediatric"
+        assert "Gastrointestinal" in result["specialties"]
+
+    def test_adult_same_symptoms_route_to_gastrointestinal(self):
+        result = extract_clinical_entities(
+            "Adult with fever, diarrhoea and vomiting",
+            age=30,
+        )
+        assert result["specialty"] == "Gastrointestinal"
+
+    def test_older_chest_pain_keeps_cardiology_and_gains_geriatric(self):
+        result = extract_clinical_entities(
+            "Older patient with chest pain and tachycardia",
+            age=70,
+        )
+        assert result["specialty"] == "Cardiovascular"
+        assert "Geriatric" in result["specialties"]
