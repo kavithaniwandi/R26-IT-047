@@ -7,7 +7,6 @@ import {
   Tent, 
   HeartHandshake, 
   Bell, 
-  LogOut, 
   ShieldCheck,
   Truck, 
   Radio, 
@@ -17,7 +16,6 @@ import {
   ChevronRight,
   Cpu,
   Database,
-  Home,
   LayoutDashboard,
   Shield, 
   Gift  
@@ -35,7 +33,6 @@ export function Sidebar({
   onToggleCollapse
 }) {
   const portals = [
-    { id: 'home', label: 'Public Home', icon: Home, color: 'blue', port: PORTAL_CONFIG.home.port },
     { id: 'admin', label: 'Admin Command', icon: ShieldCheck, color: 'rose', port: PORTAL_CONFIG.admin.port },
     { id: 'victim', label: 'Victim SOS Portal', icon: ShieldAlert, color: 'rose', port: PORTAL_CONFIG.victim.port },
     { id: 'authority', label: 'Medical Authority', icon: Activity, color: 'blue', port: PORTAL_CONFIG.authority.port },
@@ -49,7 +46,7 @@ export function Sidebar({
   const visiblePortals = user?.role === 'admin'
     ? portals
     : portals.filter((portal) => (
-        portal.id === 'home' || PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
+        PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
       ));
 
   const adminNavItems = [
@@ -63,20 +60,6 @@ export function Sidebar({
     { id: 'notifications', label: 'Audit Log Trail', icon: Bell, badge: null },
     { id: 'sms', label: 'SMS Gateway', icon: Radio, badge: 'Twilio', badgeColor: 'rose' },
   ];
-
-  const getRoleBadgeStyle = (role) => {
-    switch (role) {
-      case 'admin': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
-      case 'authority': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
-      case 'donor': return { bg: 'var(--accent-emerald-subtle)', text: 'var(--accent-emerald)', border: 'hsla(150, 84%, 42%, 0.35)' };
-      case 'volunteer': return { bg: 'var(--accent-amber-subtle)', text: 'var(--accent-amber)', border: 'hsla(38, 92%, 50%, 0.35)' };
-      case 'disaster_officer': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
-      case 'victim': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
-      default: return { bg: 'var(--border-subtle)', text: 'var(--text-secondary)', border: 'transparent' };
-    }
-  };
-
-  const roleStyle = getRoleBadgeStyle(user?.role);
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -172,31 +155,7 @@ export function Sidebar({
                 })}
               </nav>
             </>
-          ) : (
-            <div className="portal-side-banner">
-              {!isCollapsed && (
-                <div className="active-portal-info-box">
-                  <div className="active-portal-info-title">Active Dedicated Portal</div>
-                  <div className="active-portal-info-name">
-                    {visiblePortals.find((p) => p.id === currentPortal)?.label}
-                  </div>
-                  <p className="active-portal-info-desc">
-                    You are currently operating in the dedicated stakeholder interface.
-                  </p>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', marginTop: '12px' }}
-                    onClick={() => setPortal(user?.role === 'admin' ? 'admin' : 'home')}
-                  >
-                    {user?.role === 'admin'
-                      ? <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
-                      : <Home size={14} style={{ color: 'var(--accent-blue)' }} />}
-                    <span>{user?.role === 'admin' ? 'Return to Admin' : 'Open Public Home'}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* System Telemetry Status Footer */}
@@ -224,44 +183,6 @@ export function Sidebar({
         )}
       </div>
 
-      {/* User Profile Card & Logout Footer */}
-      <div className="sidebar-footer">
-        <div className="user-profile-card">
-          <div className="user-avatar" style={{
-            background: roleStyle.bg,
-            color: roleStyle.text,
-            border: `1px solid ${roleStyle.border}`
-          }}>
-            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
-          </div>
-          {!isCollapsed && (
-            <div className="user-info">
-              <div className="user-name" title={user?.full_name || user?.email || 'User'}>
-                {user?.full_name || user?.email || 'User'}
-              </div>
-              <div
-                className="user-role-tag"
-                style={{
-                  backgroundColor: roleStyle.bg,
-                  color: roleStyle.text,
-                  border: `1px solid ${roleStyle.border}`
-                }}
-              >
-                {user?.role ? user.role.replace('_', ' ') : 'Stakeholder'}
-              </div>
-            </div>
-          )}
-          <button
-            className="sidebar-logout-btn"
-            onClick={onLogout}
-            title="Sign Out / Switch Stakeholder"
-            aria-label="Sign Out"
-          >
-            <LogOut size={15} />
-            {!isCollapsed && <span>Logout</span>}
-          </button>
-        </div>
-      </div>
     </aside>
   );
 }

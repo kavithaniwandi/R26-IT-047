@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, Radio, ShieldAlert, Activity, HeartHandshake, Truck, ShieldCheck, UserCheck } from 'lucide-react'
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, Radio, UserCheck, User, Phone, ShieldAlert, LogIn } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Navigation from '../components/Navigation'
 import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
 import { getPortalForRole } from '../portalConfig'
+import { api } from '../api'
 import './SignIn.css'
 
 function getDestination(user, requestedPortal) {
@@ -13,24 +14,31 @@ function getDestination(user, requestedPortal) {
   return `/?portal=${encodeURIComponent(portal)}`
 }
 
-const PRESET_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@disaster.relief.lk', pass: 'Admin@2026!', icon: ShieldCheck, color: 'rose', role: 'admin' },
-  { label: 'MOH Authority', email: 'authority@moh.gov.lk', pass: 'Authority@2026!', icon: Activity, color: 'blue', role: 'authority' },
-  { label: 'Relief Donor', email: 'donor@redcross.lk', pass: 'Donor@2026!', icon: HeartHandshake, color: 'emerald', role: 'donor' },
-  { label: 'Volunteer Dispatch', email: 'volunteer@relief.lk', pass: 'Volunteer@2026!', icon: Truck, color: 'amber', role: 'volunteer' },
-  { label: 'Victim SOS', email: 'victim@kaduwela.lk', pass: 'Victim@2026!', icon: ShieldAlert, color: 'rose', role: 'victim' }
-]
-
 function SignIn() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const navigate = useNavigate()
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, login, isLoading } = useAuth()
   const requestedPortal = location.state?.portal
+
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.state?.tab === 'victim_signup' || requestedPortal === 'victim_signup') return 'victim_signup'
+    return 'signin'
+  })
+
+  // Sign In fields
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  // Victim Sign Up fields
+  const [fullName, setFullName] = useState('')
+  const [victimEmail, setVictimEmail] = useState('')
+  const [victimPhone, setVictimPhone] = useState('')
+  const [victimPassword, setVictimPassword] = useState('')
+
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -38,9 +46,10 @@ function SignIn() {
     }
   }, [isLoading, navigate, requestedPortal, user])
 
-  const handleSubmit = async (event) => {
+  const handleSignInSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    setSuccess('')
     setSubmitting(true)
 
     try {
@@ -53,10 +62,29 @@ function SignIn() {
     }
   }
 
-  const handleSelectPreset = (preset) => {
-    setEmail(preset.email)
-    setPassword(preset.pass)
+  const handleVictimSignUpSubmit = async (event) => {
+    event.preventDefault()
     setError('')
+    setSuccess('')
+    setSubmitting(true)
+
+    try {
+      await api.register({
+        full_name: fullName.trim(),
+        email: victimEmail.trim(),
+        password: victimPassword,
+        phone: victimPhone.trim() || '+94 77 123 4567'
+      })
+
+      setSuccess('Victim account registered successfully! Logging you in...')
+      // Auto login
+      const loggedInUser = await login(victimEmail.trim(), victimPassword)
+      navigate('/?portal=victim', { replace: true })
+    } catch (err) {
+      setError(err.message || 'Victim registration failed. Please check the details provided.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -68,99 +96,223 @@ function SignIn() {
             <Radio size={28} />
           </div>
 
-          <div className="signin-header">
-            <span className="signin-eyebrow">NATIONAL DISASTER RELIEF SYSTEM</span>
-            <h1 id="signin-title">Stakeholder Authentication</h1>
-            <p>One secure login for every emergency response, MOH, donor & field portal.</p>
+          {/* Mode Switch Tabs */}
+          <div className="signin-tab-group" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'signin'}
+              className={`signin-tab-btn ${activeTab === 'signin' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('signin'); setError(''); setSuccess(''); }}
+            >
+              <LogIn size={14} />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'victim_signup'}
+              className={`signin-tab-btn ${activeTab === 'victim_signup' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('victim_signup'); setError(''); setSuccess(''); }}
+            >
+              <ShieldAlert size={14} style={{ color: '#ef4444' }} />
+              <span>Victim Sign Up</span>
+            </button>
           </div>
 
-          {/* Quick Demo Preset Account Fillers */}
-          <div className="signin-presets-section">
-            <span className="signin-presets-label">Quick 1-Click Demo Login:</span>
-            <div className="signin-presets-grid">
-              {PRESET_ACCOUNTS.map((acc) => {
-                const Icon = acc.icon;
-                const isSelected = email === acc.email;
-                return (
-                  <button
-                    key={acc.role}
-                    type="button"
-                    className={`signin-preset-btn ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleSelectPreset(acc)}
-                    title={`Fill ${acc.label} credentials`}
-                  >
-                    <Icon size={14} />
-                    <span>{acc.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {requestedPortal && (
-            <div className="signin-notice">
-              Sign in with an account authorized for the requested workspace portal.
-            </div>
-          )}
-
-          {error && <div className="error-message" role="alert">{error}</div>}
-
-          <form className="signin-form" onSubmit={handleSubmit}>
-            <div className="signin-field">
-              <label htmlFor="signin-email">Stakeholder Email Address</label>
-              <div className="signin-input-wrap">
-                <Mail size={18} aria-hidden="true" />
-                <input
-                  type="email"
-                  id="signin-email"
-                  name="email"
-                  autoComplete="username"
-                  placeholder="e.g. admin@disaster.relief.lk"
-                  required
-                  autoFocus
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  disabled={submitting}
-                />
+          {activeTab === 'signin' ? (
+            <>
+              <div className="signin-header">
+                <span className="signin-eyebrow">SRI LANKA DISASTER RELIEF SYSTEM</span>
+                <h1 id="signin-title">Stakeholder Authentication</h1>
+                <p>Secure login for Ministry of Health (MOH), relief donors, field volunteers, disaster officers & victims.</p>
               </div>
-            </div>
 
-            <div className="signin-field">
-              <label htmlFor="signin-password">Password</label>
-              <div className="signin-input-wrap">
-                <LockKeyhole size={18} aria-hidden="true" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="signin-password"
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="Enter account password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  disabled={submitting}
-                />
+              {requestedPortal && requestedPortal !== 'victim_signup' && (
+                <div className="signin-notice">
+                  Please sign in with credentials authorized for the requested portal workspace.
+                </div>
+              )}
+
+              {error && <div className="error-message" role="alert">{error}</div>}
+              {success && <div className="signin-notice" role="status">{success}</div>}
+
+              <form className="signin-form" onSubmit={handleSignInSubmit}>
+                <div className="signin-field">
+                  <label htmlFor="signin-email">Stakeholder Email Address</label>
+                  <div className="signin-input-wrap">
+                    <Mail size={18} aria-hidden="true" />
+                    <input
+                      type="email"
+                      id="signin-email"
+                      name="email"
+                      autoComplete="username"
+                      placeholder="e.g. admin@disaster.relief.lk"
+                      required
+                      autoFocus
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="signin-field">
+                  <label htmlFor="signin-password">Password</label>
+                  <div className="signin-input-wrap">
+                    <LockKeyhole size={18} aria-hidden="true" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="signin-password"
+                      name="password"
+                      autoComplete="current-password"
+                      placeholder="Enter account password"
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      disabled={submitting}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" className="signin-button" disabled={submitting || isLoading}>
+                  {submitting ? <LoaderCircle className="signin-spinner" size={19} /> : <UserCheck size={18} />}
+                  <span>{submitting ? 'Authenticating…' : 'Sign In'}</span>
+                </button>
+              </form>
+
+              <p className="signin-help">
+                Are you a disaster-affected civilian?{' '}
                 <button
                   type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((visible) => !visible)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                  onClick={() => { setActiveTab('victim_signup'); setError(''); }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  Register for Victim Relief Services &rarr;
                 </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="signin-header">
+                <span className="signin-eyebrow" style={{ color: '#ef4444' }}>PUBLIC EMERGENCY RELIEF SERVICES</span>
+                <h1 id="signin-title">Victim Sign Up</h1>
+                <p>Register as a disaster-affected citizen for 24/7 SOS rescue, medical intake, and camp allocation.</p>
               </div>
-            </div>
 
-            <button type="submit" className="signin-button" disabled={submitting || isLoading}>
-              {submitting ? <LoaderCircle className="signin-spinner" size={19} /> : <UserCheck size={18} />}
-              <span>{submitting ? 'Authenticating…' : 'Sign In to Workspace'}</span>
-            </button>
-          </form>
+              <div className="victim-register-notice">
+                <strong>Public Victim Registration:</strong> This account gives you immediate access to the <strong>Victim Emergency SOS Portal</strong> with GPS distress broadcasting and registered family safe-zone tracking.
+              </div>
 
-          <p className="signin-help">
-            Claims-based RBAC automatically opens your designated portal. Need system access? Contact DMC National Directorate.
-          </p>
-          <Link to="/" className="signin-back-link">Return to Command Center Dashboard</Link>
+              {error && <div className="error-message" role="alert">{error}</div>}
+              {success && <div className="signin-notice" role="status">{success}</div>}
+
+              <form className="signin-form" onSubmit={handleVictimSignUpSubmit}>
+                <div className="signin-field">
+                  <label htmlFor="victim-fullname">Full Name</label>
+                  <div className="signin-input-wrap">
+                    <User size={18} aria-hidden="true" />
+                    <input
+                      type="text"
+                      id="victim-fullname"
+                      name="fullName"
+                      placeholder="e.g. Chamari Perera"
+                      required
+                      autoFocus
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="signin-field">
+                  <label htmlFor="victim-email">Email Address</label>
+                  <div className="signin-input-wrap">
+                    <Mail size={18} aria-hidden="true" />
+                    <input
+                      type="email"
+                      id="victim-email"
+                      name="victimEmail"
+                      placeholder="e.g. victim@kaduwela.lk"
+                      required
+                      value={victimEmail}
+                      onChange={(event) => setVictimEmail(event.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="signin-field">
+                  <label htmlFor="victim-phone">Mobile Phone Number</label>
+                  <div className="signin-input-wrap">
+                    <Phone size={18} aria-hidden="true" />
+                    <input
+                      type="tel"
+                      id="victim-phone"
+                      name="victimPhone"
+                      placeholder="e.g. +94 77 123 4567"
+                      required
+                      value={victimPhone}
+                      onChange={(event) => setVictimPhone(event.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="signin-field">
+                  <label htmlFor="victim-password">Create Secure Password</label>
+                  <div className="signin-input-wrap">
+                    <LockKeyhole size={18} aria-hidden="true" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="victim-password"
+                      name="victimPassword"
+                      placeholder="At least 8 chars (1 letter, 1 number)"
+                      required
+                      value={victimPassword}
+                      onChange={(event) => setVictimPassword(event.target.value)}
+                      disabled={submitting}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" className="signin-button" disabled={submitting || isLoading}>
+                  {submitting ? <LoaderCircle className="signin-spinner" size={19} /> : <ShieldAlert size={18} />}
+                  <span>{submitting ? 'Creating Victim Account…' : 'Register Victim Account'}</span>
+                </button>
+              </form>
+
+              <p className="signin-help">
+                Already registered?{' '}
+                <button
+                  type="button"
+                  style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                  onClick={() => { setActiveTab('signin'); setError(''); }}
+                >
+                  Sign in with your email & password &rarr;
+                </button>
+              </p>
+            </>
+          )}
+
+          <Link to="/" className="signin-back-link">← Return to Home Page</Link>
         </section>
       </main>
       <Footer />

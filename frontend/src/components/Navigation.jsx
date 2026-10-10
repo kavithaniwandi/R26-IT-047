@@ -1,102 +1,126 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import CreditStatusBar from "./CreditStatusBar";
-import { Radio, ShieldAlert } from "lucide-react";
-import "./Navigation.css";
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Radio, ShieldAlert, LogIn, UserCheck } from 'lucide-react';
+import './Navigation.css';
 
-function Navigation() {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
+export function Navigation() {
   const { user, logout } = useAuth();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 30);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const closeMenu = () => setMobileMenuOpen(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate("/signin");
-    closeMenu();
-  };
+  const location = useLocation();
+  const isSignInPage = location.pathname === '/signin';
 
   return (
-    <nav className={`navigation ${scrolled ? "scrolled" : ""}`}>
-      <div className="nav-container">
-        {/* LOGO */}
-        <Link to="/" className="nav-logo">
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <header className="site-public-navbar">
+      <div className="site-public-navbar-container">
+        {/* Brand Logo */}
+        <Link to="/" className="site-public-brand">
+          <div className="site-public-brand-icon">
             <Radio size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '0.94rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#0f172a', lineHeight: '1.2' }}>
-              DISASTER RELIEF
+            <div className="site-public-brand-title">
+              SRI LANKA DISASTER RELIEF
             </div>
-            <div style={{ fontSize: '0.62rem', color: '#2563eb', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Smart Medical Telemetry
+            <div className="site-public-brand-subtitle">
+              Smart Medical & Emergency Telemetry Cloud
             </div>
           </div>
         </Link>
 
-        {/* NAVIGATION LINKS */}
-        <div className={`nav-links ${mobileMenuOpen ? "open" : ""}`}>
-          <Link to="/" className="nav-link" onClick={closeMenu}>
-            Home
+        {/* Center Nav Links */}
+        <nav className="site-public-nav-links">
+          <Link to="/" className="site-public-nav-link">
+            Stakeholder Portals
           </Link>
-          <Link to="/map" className="nav-link" onClick={closeMenu}>
-            Disaster Map
+          <Link to="/map" className="site-public-nav-link">
+            Live GIS Map
           </Link>
-          <Link to="/donations" className="nav-link" onClick={closeMenu}>
-            Donations
+          <a href="/#ai-models" className="site-public-nav-link">
+            ML Intelligence
+          </a>
+          <a href="/#helplines" className="site-public-nav-link">
+            Emergency Helplines
+          </a>
+          <Link to="/donation-appeal" className="site-public-nav-link">
+            Donation Appeals
           </Link>
-          <Link to="/contacts" className="nav-link" onClick={closeMenu}>
-            Contacts
-          </Link>
+        </nav>
 
-          {user ? (
-            <>
-              <Link to="/profile" className="nav-link profile-link" onClick={closeMenu}>
-                {user.full_name || user.email || "Profile"}
-              </Link>
-              <button className="logout-button" onClick={handleLogout}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link to="/signin" className="nav-link" onClick={closeMenu}>
-              Sign In
-            </Link>
-          )}
-
-          <CreditStatusBar />
-
-          <Link to="/sos-public" className="sos-button" onClick={closeMenu}>
+        {/* Right CTA buttons */}
+        <div className="site-public-nav-actions">
+          <Link
+            to="/sos-public"
+            className="btn btn-danger btn-sm site-public-sos-btn"
+          >
             <ShieldAlert size={15} />
             <span>Emergency SOS</span>
           </Link>
-        </div>
 
-        {/* MOBILE MENU */}
-        <button
-          className="mobile-menu-button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          <span className={`hamburger ${mobileMenuOpen ? "active" : ""}`}>
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-        </button>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link
+                to={`/?portal=${encodeURIComponent(user.role || 'admin')}`}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: '600',
+                  padding: '7px 14px'
+                }}
+              >
+                <UserCheck size={14} style={{ color: 'var(--blue-600, #2563eb)' }} />
+                <span>{user.full_name || user.email || 'Dashboard'}</span>
+              </Link>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ fontWeight: '600', padding: '7px 12px' }}
+                onClick={logout}
+                title="Sign out"
+              >
+                Logout
+              </button>
+            </div>
+          ) : isSignInPage ? (
+            <Link
+              to="/"
+              className="btn btn-secondary btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '600',
+                padding: '7px 14px',
+                textDecoration: 'none'
+              }}
+            >
+              <span>Back to Home</span>
+            </Link>
+          ) : (
+            <Link
+              to="/signin"
+              className="btn btn-primary btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '700',
+                padding: '7px 18px',
+                backgroundColor: 'var(--color-primary, #2563eb)',
+                color: '#ffffff',
+                borderRadius: 'var(--radius-md, 8px)',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+                textDecoration: 'none'
+              }}
+              title="Sign in to your Stakeholder Portal"
+            >
+              <LogIn size={15} />
+              <span>Signin</span>
+            </Link>
+          )}
+        </div>
       </div>
-    </nav>
+    </header>
   );
 }
 

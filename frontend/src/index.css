@@ -205,7 +205,7 @@ code, pre, .font-mono {
   gap: 16px;
   font-size: 0.78rem;
   position: relative;
-  z-index: 95;
+  z-index: 1001;
 }
 
 .ticker-left {
@@ -271,7 +271,7 @@ code, pre, .font-mono {
   justify-content: space-between;
   position: sticky;
   top: 0;
-  z-index: 90;
+  z-index: 1000;
   gap: 16px;
   box-shadow: var(--shadow-xs);
 }
@@ -468,7 +468,7 @@ code, pre, .font-mono {
   position: sticky;
   top: 0;
   height: 100vh;
-  z-index: 100;
+  z-index: 1050;
   transition: width var(--transition-smooth);
   flex-shrink: 0;
   overflow: hidden;
@@ -799,6 +799,14 @@ code, pre, .font-mono {
   width: 32px;
   height: 32px;
   justify-content: center;
+}
+
+.header-logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #dc2626 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Portal side banner (non-admin portals) */
@@ -1133,7 +1141,7 @@ code, pre, .font-mono {
   background-color: rgba(15,23,42,0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 1000;
+  z-index: 2000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1314,7 +1322,7 @@ code, pre, .font-mono {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 1100;
+  z-index: 2100;
   max-width: 360px;
   pointer-events: none;
 }
@@ -1372,7 +1380,7 @@ code, pre, .font-mono {
   background-color: rgba(15,23,42,0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 1000;
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;

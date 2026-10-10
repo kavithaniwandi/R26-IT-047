@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { CommandPalette } from './components/CommandPalette';
 import { ToastContainer } from './components/Toast';
@@ -57,9 +57,15 @@ import { Radio } from 'lucide-react';
 
 function DashboardApp() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authenticatedUser, logout, isLoading: isAuthLoading } = useAuth();
   const user = authenticatedUser;
   const [selectedPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
+
+  useEffect(() => {
+    setCurrentPortal(detectCurrentPortal());
+  }, [location.search, location.pathname]);
+
   const selectedPortalRole = PORTAL_CONFIG[selectedPortal]?.defaultRole;
   const canAccessSelectedPortal = authenticatedUser?.role === 'admin'
     || !selectedPortalRole
@@ -67,6 +73,13 @@ function DashboardApp() {
   const currentPortal = authenticatedUser && !canAccessSelectedPortal
     ? getPortalForRole(authenticatedUser.role)
     : selectedPortal;
+
+  const showSidebar = Boolean(
+    user &&
+    currentPortal !== 'home' &&
+    (currentPortal !== 'victim' || user?.role === 'admin')
+  );
+
   const [currentTab, setCurrentTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -112,16 +125,21 @@ function DashboardApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Enforce strict authentication for system access
+  // Enforce authentication for protected stakeholder portals, while allowing public access to 'home'
   useEffect(() => {
     if (isAuthLoading) return;
 
-    if (!authenticatedUser) {
+    const portalConfig = PORTAL_CONFIG[currentPortal] || PORTAL_CONFIG.admin;
+    const isPublicPortal = currentPortal === 'home' || !portalConfig.defaultRole;
+
+    if (!authenticatedUser && !isPublicPortal) {
       navigate('/signin', { replace: true, state: { portal: currentPortal } });
       return;
     }
 
-    fetchStats();
+    if (authenticatedUser) {
+      fetchStats();
+    }
   }, [authenticatedUser, currentPortal, isAuthLoading, navigate]);
 
   async function fetchStats() {
@@ -160,6 +178,11 @@ function DashboardApp() {
 
   const getPortalTitle = () => {
     switch (currentPortal) {
+      case 'home':
+        return {
+          title: 'National Disaster Relief Command Center',
+          sub: 'Sri Lanka Emergency Command & Medical Response Cloud'
+        };
       case 'victim':
         return {
           title: 'Victim & Public Emergency SOS Portal',
@@ -254,93 +277,108 @@ function DashboardApp() {
             user={user}
             onAddToast={addToast}
             onReturnToAdmin={() => setCurrentPortal('admin')}
+            onLogout={handleLogout}
+            onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
           />
         </main>
       ) : (
         <>
-          {/* Collapsible Left Navigation Sidebar for Admin / Authorities */}
-          <Sidebar
-            currentPortal={currentPortal}
-            setPortal={(p) => {
-              setCurrentPortal(p);
-              playNotificationPing();
-            }}
-            currentTab={currentTab}
-            setTab={(t) => {
-              setCurrentTab(t);
-              playNotificationPing();
-            }}
-            user={user}
-            onLogout={handleLogout}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-          />
+          {/* Collapsible Left Navigation Sidebar: Rendered ONLY for logged-in stakeholder portals */}
+          {showSidebar && (
+            <Sidebar
+              currentPortal={currentPortal}
+              setPortal={(p) => {
+                setCurrentPortal(p);
+                playNotificationPing();
+              }}
+              currentTab={currentTab}
+              setTab={(t) => {
+                setCurrentTab(t);
+                playNotificationPing();
+              }}
+              user={user}
+              onLogout={handleLogout}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+            />
+          )}
 
           {/* Main Canvas Area */}
-          <main className="main-content">
-            {/* Top Emergency Situational Ticker */}
-            <div className="emergency-broadcast-ticker">
-              <div className="ticker-left">
-                <span className="ticker-beacon">
-                  <Radio size={12} />
-                  <span>LIVE ADVISORY</span>
-                </span>
-                <span className="ticker-message">
-                  Kelani River Basin Alert: Moderate Risk upstream - 14 Medical Camps active in Western & Central Provinces - Model 4 Urgency Triage Online
-                </span>
-              </div>
-              <div className="ticker-stats">
-                <div className="ticker-stat-item">
-                  <span>Active SOS:</span>
-                  <strong style={{ color: 'var(--accent-rose)' }}>{stats?.sos?.active ?? 0}</strong>
-                </div>
-                <div className="ticker-stat-item">
-                  <span>Camps:</span>
-                  <strong style={{ color: 'var(--accent-blue)' }}>{(stats?.camps?.approved ?? 0) + (stats?.camps?.operational ?? 0)}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Global Mission Control Header */}
-            <Header
-              title={title}
-              subtitle={sub}
-              portalId={currentPortal}
-              onRefresh={() => {
-                fetchStats();
-                playNotificationPing();
-                addToast('Synchronized latest telemetry from FastAPI Cloud.', 'info', 'Telemetry Synced');
-              }}
-              isRefreshing={isRefreshing}
-              user={user}
-              onSwitchUserClick={handleSwitchAccount}
-              onOpenCommandPalette={() => setShowCommandPalette(true)}
-              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-              soundEnabled={soundActive}
-              onToggleSound={handleToggleSound}
-            />
-
-            {/* Dynamic View Body */}
-            <div className="view-body">
-              {/* 0. Public Home View */}
-              {currentPortal === 'home' && (
-                <HomeView
-                  onSelectPortal={(p) => {
+          <main className="main-content" style={{ width: showSidebar ? undefined : '100%' }}>
+            {currentPortal === 'home' ? (
+              <HomeView
+                onSelectPortal={(p) => {
+                  if (!user) {
+                    navigate('/signin', { state: { portal: p } });
+                  } else {
                     setCurrentPortal(p);
                     playNotificationPing();
+                  }
+                }}
+                onOpenLoginModal={() => navigate('/signin')}
+                onAddToast={addToast}
+                user={user}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <>
+                {/* Top Emergency Situational Ticker */}
+                <div className="emergency-broadcast-ticker">
+                  <div className="ticker-left">
+                    <span className="ticker-beacon">
+                      <Radio size={12} />
+                      <span>LIVE ADVISORY</span>
+                    </span>
+                    <span className="ticker-message">
+                      Kelani River Basin Alert: Moderate Risk upstream - 14 Medical Camps active in Western & Central Provinces - Model 4 Urgency Triage Online
+                    </span>
+                  </div>
+                  <div className="ticker-stats">
+                    <div className="ticker-stat-item">
+                      <span>Active SOS:</span>
+                      <strong style={{ color: 'var(--accent-rose)' }}>{stats?.sos?.active ?? 0}</strong>
+                    </div>
+                    <div className="ticker-stat-item">
+                      <span>Camps:</span>
+                      <strong style={{ color: 'var(--accent-blue)' }}>{(stats?.camps?.approved ?? 0) + (stats?.camps?.operational ?? 0)}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Global Mission Control Header */}
+                <Header
+                  title={title}
+                  subtitle={sub}
+                  portalId={currentPortal}
+                  onRefresh={() => {
+                    fetchStats();
+                    playNotificationPing();
+                    addToast('Synchronized latest telemetry from FastAPI Cloud.', 'info', 'Telemetry Synced');
                   }}
-                  onOpenLoginModal={() => navigate('/signin')}
-                  onAddToast={addToast}
-                />
-              )}
-              {/* Admin preview of the victim portal keeps global navigation available. */}
-              {currentPortal === 'victim' && (
-                <VictimPortalView
+                  isRefreshing={isRefreshing}
                   user={user}
-                  onAddToast={addToast}
-                  onReturnToAdmin={() => setCurrentPortal('admin')}
+                  onSwitchUserClick={handleSwitchAccount}
+                  onSignInClick={() => navigate('/signin')}
+                  onLogout={handleLogout}
+                  showSidebarToggle={showSidebar}
+                  onOpenCommandPalette={() => setShowCommandPalette(true)}
+                  onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+                  soundEnabled={soundActive}
+                  onToggleSound={handleToggleSound}
                 />
-              )}
+
+                {/* Dynamic View Body */}
+                <div className="view-body">
+                  {/* Admin preview of the victim portal keeps global navigation available. */}
+                  {currentPortal === 'victim' && (
+                    <VictimPortalView
+                      user={user}
+                      onAddToast={addToast}
+                      onReturnToAdmin={() => setCurrentPortal('admin')}
+                      onLogout={handleLogout}
+                      onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
+                    />
+                  )}
 
               {/* 2. Authority Portal */}
               {currentPortal === 'authority' && (
@@ -446,9 +484,11 @@ function DashboardApp() {
                 </>
               )}
             </div>
-          </main>
-        </>
-      )}
+          </>
+        )}
+      </main>
+    </>
+  )}
 
       {/* Global Command Palette (Ctrl+K) */}
       <CommandPalette
@@ -555,6 +595,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
           isRefreshing={false}
           user={user}
           onSwitchUserClick={handleLogout}
+          onLogout={handleLogout}
           onOpenCommandPalette={() => setShowCommandPalette(true)}
           onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
           soundEnabled={soundActive}
