@@ -59,7 +59,7 @@ class TokenResponse(BaseModel):
 # ── User output (safe — no hashed_password, no internal IDs) ─────────────────
 
 class UserOut(BaseModel):
-    id: int
+    id: int | str
     full_name: str
     email: EmailStr
     phone: str | None

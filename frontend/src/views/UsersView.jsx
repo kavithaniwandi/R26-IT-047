@@ -140,6 +140,7 @@ export function UsersView({ currentUser }) {
       case 'authority': return <span className="badge badge-triaged">Authority</span>;
       case 'donor': return <span className="badge badge-low">Donor</span>;
       case 'volunteer': return <span className="badge badge-medium">Volunteer</span>;
+      case 'disaster_officer': return <span className="badge badge-triaged">Disaster Officer</span>;
       default: return <span className="badge badge-low" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>Victim</span>;
     }
   };
@@ -252,6 +253,7 @@ export function UsersView({ currentUser }) {
                 <option value="authority">Medical Authority</option>
                 <option value="donor">Relief Donor</option>
                 <option value="volunteer">Field Volunteer</option>
+                <option value="disaster_officer">Disaster Officer</option>
                 <option value="victim">Disaster Victim</option>
               </select>
             </div>
@@ -517,6 +519,7 @@ export function UsersView({ currentUser }) {
                   <option value="authority">Medical Authority (MOH)</option>
                   <option value="donor">Relief Donor</option>
                   <option value="volunteer">Field Volunteer</option>
+                  <option value="disaster_officer">Disaster Officer</option>
                   <option value="victim">Disaster Victim</option>
                 </select>
               </div>
@@ -580,6 +583,7 @@ export function UsersView({ currentUser }) {
                   <option value="donor">Relief Donor</option>
                   <option value="volunteer">Field Volunteer</option>
                   <option value="authority">Medical Authority</option>
+                  <option value="disaster_officer">Disaster Officer</option>
                   <option value="admin">System Admin</option>
                 </select>
               </div>

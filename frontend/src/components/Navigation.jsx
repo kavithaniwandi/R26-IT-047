@@ -169,7 +169,7 @@ function Navigation() {
                   onClick={closeMenu}
                 >
 
-                  {user.name || "Profile"}
+                  {user.full_name || user.name || "Profile"}
 
                 </Link>
 

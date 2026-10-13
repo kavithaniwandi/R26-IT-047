@@ -31,11 +31,56 @@ export function DonorPortalView({ currentUser, onAddToast }) {
 
   const loadDonorData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const needsData = await api.getDonationNeeds({ category_filter: categoryFilter });
-      setNeeds(needsData);
-      const pledgesData = await api.getAllPledges();
-      setPledges(pledgesData);
+      const [sqlNeedsResult, sqlPledgesResult, mongoRequestsResult, mongoHistoryResult] = await Promise.allSettled([
+        api.getDonationNeeds({ category_filter: categoryFilter }),
+        api.getAllPledges(),
+        api.getDisasterRequests(),
+        api.getDonationHistory(),
+      ]);
+
+      const sqlNeeds = sqlNeedsResult.status === 'fulfilled' ? sqlNeedsResult.value : [];
+      const sqlPledges = sqlPledgesResult.status === 'fulfilled' ? sqlPledgesResult.value : [];
+      const mongoRequests = mongoRequestsResult.status === 'fulfilled' ? mongoRequestsResult.value : [];
+      const mongoHistory = mongoHistoryResult.status === 'fulfilled' ? mongoHistoryResult.value : [];
+
+      const mongoNeeds = (mongoRequests || []).flatMap((request) =>
+        (request.items || [])
+          .map((item) => ({
+            id: `mongo-${request.id}-${item.itemId || item.itemName}`,
+            source: 'mongo',
+            request_id: request.id,
+            item_id: item.itemId,
+            item_name: item.itemName,
+            category: request.disasterType,
+            quantity_required: item.neededQuantity,
+            quantity_fulfilled: Number(item.donatedQuantity || 0) + Number(item.pledgedQuantity || 0),
+            remaining_needed: Math.max(0, Number(item.neededQuantity || 0) - Number(item.donatedQuantity || 0) - Number(item.pledgedQuantity || 0)),
+            unit: item.unit,
+            district: `${request.gnDivision}, ${request.dsArea}`,
+            priority_score: request.severity,
+          }))
+          .filter((item) => item.remaining_needed > 0)
+      );
+      const mongoPledges = (mongoHistory || []).map((entry) => ({
+        id: `mongo-${entry.donationId}`,
+        source: 'mongo',
+        tracking_code: entry.donationId,
+        item_name: entry.itemName,
+        category: entry.disasterType,
+        quantity_pledged: entry.quantity,
+        unit: 'units',
+        delivery_status: entry.status,
+        pledged_at: entry.donatedAt,
+      }));
+
+      setNeeds([...(sqlNeeds || []).map((item) => ({ ...item, source: 'sql' })), ...mongoNeeds]);
+      setPledges([...(sqlPledges || []).map((item) => ({ ...item, source: 'sql' })), ...mongoPledges]);
+
+      if ([sqlNeedsResult, mongoRequestsResult].every((result) => result.status === 'rejected')) {
+        throw sqlNeedsResult.reason || mongoRequestsResult.reason;
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -51,11 +96,21 @@ export function DonorPortalView({ currentUser, onAddToast }) {
     e.preventDefault();
     if (!selectedItem) return;
     try {
-      const res = await api.pledgeDonation({
-        donation_item_id: selectedItem.id,
-        quantity_pledged: pledgeQty,
-      });
-      const msg = `Pledge confirmed! Tracking Code: ${res.tracking_code} (${res.quantity_pledged} ${res.unit} of ${res.item_name}).`;
+      let msg;
+      if (selectedItem.source === 'mongo') {
+        await api.pledgeDisasterRequest(selectedItem.request_id, [{
+          itemId: selectedItem.item_id,
+          itemName: selectedItem.item_name,
+          quantity: pledgeQty,
+        }]);
+        msg = `Disaster-relief pledge confirmed: ${pledgeQty} ${selectedItem.unit} of ${selectedItem.item_name}.`;
+      } else {
+        const res = await api.pledgeDonation({
+          donation_item_id: selectedItem.id,
+          quantity_pledged: pledgeQty,
+        });
+        msg = `Pledge confirmed! Tracking Code: ${res.tracking_code} (${res.quantity_pledged} ${res.unit} of ${res.item_name}).`;
+      }
       setSuccessMsg(msg);
       if (onAddToast) {
         onAddToast(msg, 'success', 'Pledge Recorded');

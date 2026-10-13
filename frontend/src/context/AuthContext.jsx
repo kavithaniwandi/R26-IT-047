@@ -1,28 +1,73 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import {
+  api,
+  getAuthToken,
+  getStoredUser,
+  removeAuthToken,
+  setAuthToken,
+  setStoredUser,
+} from '../api'
 
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => getStoredUser())
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is logged in from localStorage
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    let active = true
+
+    const restoreSession = async () => {
+      if (!getAuthToken()) {
+        if (active) setIsLoading(false)
+        return
+      }
+
+      try {
+        const currentUser = await api.getMe()
+        if (active) {
+          setStoredUser(currentUser)
+          setUser(currentUser)
+        }
+      } catch {
+        removeAuthToken()
+        if (active) setUser(null)
+      } finally {
+        if (active) setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+
+    restoreSession()
+    return () => { active = false }
   }, [])
 
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
+  const login = async (email, password) => {
+    let tokenResponse
+    try {
+      tokenResponse = await api.login(email, password)
+    } catch (primaryError) {
+      try {
+        tokenResponse = await api.componentLogin(email, password)
+      } catch {
+        throw primaryError
+      }
+    }
+
+    setAuthToken(tokenResponse.access_token)
+    try {
+      const currentUser = await api.getMe()
+      setStoredUser(currentUser)
+      setUser(currentUser)
+      return currentUser
+    } catch (error) {
+      removeAuthToken()
+      throw error
+    }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('user')
+    removeAuthToken()
   }
 
   return (

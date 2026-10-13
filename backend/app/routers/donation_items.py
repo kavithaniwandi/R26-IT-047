@@ -1,98 +1,86 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+"""MongoDB donation-item catalog used by the disaster request workflow."""
+
+from __future__ import annotations
+
+from typing import Any
+
 from bson import ObjectId
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.core.security import TokenPayload, require_role
+from app.database import donation_items_collection
+from app.models.donation_item import DonationItemCreate
 
-from app.models.donation_item import (
-    DonationItemCreate,
-    DonationItemResponse
-)
-from app.my_database import donation_items_collection
-from app.utils.security import get_current_user
 
-router = APIRouter(prefix="/donation-items", tags=["Donation Items"])
+router = APIRouter(prefix="/donation-items", tags=["Disaster Donation Catalog (MongoDB)"])
 
-def format_donation_item(doc) -> DonationItemResponse:
-    return DonationItemResponse(
-        itemId=str(doc["_id"]),
-        item=doc["item"],
-        quantityPerPerson=doc["quantityPerPerson"],
-        unit=doc["unit"]
-    )
 
-# 1. CREATE Donation Item (Admin only)
-@router.post("", response_model=DonationItemResponse, status_code=status.HTTP_201_CREATED)
+def _format(document: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "itemId": str(document["_id"]),
+        "item": document.get("item", "Relief Item"),
+        "unit": document.get("unit", "units"),
+        "quantityPerPerson": float(document.get("quantityPerPerson", 1.0)),
+    }
+
+
+@router.get("")
+async def list_donation_items(
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
+):
+    documents = await donation_items_collection.find().sort("item", 1).to_list(length=300)
+    return [_format(document) for document in documents]
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_donation_item(
-    item_data: DonationItemCreate,
-    current_user: dict = Depends(get_current_user)
+    payload: DonationItemCreate,
+    _current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can create donation catalog items"
-        )
+    document = payload.model_dump()
+    result = await donation_items_collection.insert_one(document)
+    document["_id"] = result.inserted_id
+    return _format(document)
 
-    new_item = item_data.model_dump()
-    result = await donation_items_collection.insert_one(new_item)
 
-    return DonationItemResponse(
-        itemId=str(result.inserted_id),
-        item=item_data.item,
-        quantityPerPerson=item_data.quantityPerPerson,
-        unit=item_data.unit
-    )
-
-# 2. VIEW ALL Donation Items (Accessible by authenticated users)
-@router.get("", response_model=List[DonationItemResponse])
-async def get_all_donation_items(
-    current_user: dict = Depends(get_current_user)
+@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+async def create_donation_items(
+    payload: list[DonationItemCreate],
+    _current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    cursor = donation_items_collection.find()
-    items = await cursor.to_list(length=100)
-    return [format_donation_item(doc) for doc in items]
+    documents = [item.model_dump() for item in payload]
+    if not documents:
+        raise HTTPException(status_code=400, detail="At least one donation item is required")
+    result = await donation_items_collection.insert_many(documents)
+    for document, inserted_id in zip(documents, result.inserted_ids):
+        document["_id"] = inserted_id
+    return [_format(document) for document in documents]
 
-# 3. VIEW Donation Item BY ID
-@router.get("/{item_id}", response_model=DonationItemResponse)
-async def get_donation_item_by_id(
+
+@router.get("/{item_id}")
+async def get_donation_item(
     item_id: str,
-    current_user: dict = Depends(get_current_user)
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
+    ),
 ):
     if not ObjectId.is_valid(item_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Item ID format"
-        )
+        raise HTTPException(status_code=400, detail="Invalid donation item ID")
+    document = await donation_items_collection.find_one({"_id": ObjectId(item_id)})
+    if not document:
+        raise HTTPException(status_code=404, detail="Donation item not found")
+    return _format(document)
 
-    doc = await donation_items_collection.find_one({"_id": ObjectId(item_id)})
-    if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Donation item not found"
-        )
-    return format_donation_item(doc)
 
-# BULK CREATE Donation Items
-@router.post("/bulk", response_model=List[DonationItemResponse], status_code=status.HTTP_201_CREATED)
-async def create_bulk_donation_items(
-    items_data: List[DonationItemCreate],
-    current_user: dict = Depends(get_current_user)
+@router.delete("/{item_id}")
+async def delete_donation_item(
+    item_id: str,
+    _current_user: TokenPayload = Depends(require_role(["admin"])),
 ):
-    if current_user["userType"] != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can create donation catalog items"
-        )
-
-    new_items = [item.model_dump() for item in items_data]
-    result = await donation_items_collection.insert_many(new_items)
-
-    response = []
-    for doc_id, item in zip(result.inserted_ids, items_data):
-        response.append(
-            DonationItemResponse(
-                itemId=str(doc_id),
-                item=item.item,
-                quantityPerPerson=item.quantityPerPerson,
-                unit=item.unit
-            )
-        )
-    return response
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(status_code=400, detail="Invalid donation item ID")
+    result = await donation_items_collection.delete_one({"_id": ObjectId(item_id)})
+    if not result.deleted_count:
+        raise HTTPException(status_code=404, detail="Donation item not found")
+    return {"message": "Donation item deleted"}

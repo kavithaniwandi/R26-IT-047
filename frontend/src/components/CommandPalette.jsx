@@ -1,21 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  ShieldAlert, 
-  Activity, 
-  HeartHandshake, 
-  Truck, 
-  ShieldCheck, 
-  MapPin, 
-  Tent, 
-  Users, 
-  Bell, 
-  BarChart3, 
-  Layers, 
-  UserCheck, 
-  Volume2, 
-  VolumeX, 
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  ShieldAlert,
+  Activity,
+  HeartHandshake,
+  Truck,
+  ShieldCheck,
+  MapPin,
+  Tent,
+  Users,
+  Bell,
+  BarChart3,
+  Layers,
+  Shield,
+  Gift,
+  Sparkles,
+  UserCheck,
+  VolumeX,
+  Volume2,
   X,
   ArrowRight,
   Sparkles,
@@ -112,21 +115,21 @@ export function CommandPalette({
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-officer-dashboard',
-      title: 'Disaster Officer Console',
-      subtitle: `Port :${PORTAL_CONFIG.officer_dash.port} · Verify incoming donor supplies & trigger AI-targeted outreach`,
-      icon: ShieldCheck,
+      id: 'portal-disaster-officer',
+      title: 'Disaster Officer Portal',
+      subtitle: `Port :${PORTAL_CONFIG.disaster_officer?.port || 5179} · Camp triage, MO routing & patient severity queue`,
+      icon: Shield,
       color: 'blue',
-      action: () => { onSelectPortal('officer_dash'); onClose(); }
+      action: () => { onSelectPortal('disaster_officer'); onClose(); }
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-donation-requests',
-      title: 'Disaster Donation Requests',
-      subtitle: `Port :${PORTAL_CONFIG.donation_req_dash.port} · Coordinate population crowd estimation & supply requests`,
-      icon: HeartHandshake,
-      color: 'rose',
-      action: () => { onSelectPortal('donation_req_dash'); onClose(); }
+      id: 'portal-disaster-donation',
+      title: 'Disaster Donation Hub',
+      subtitle: `Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} · Medical appeals, inventory shortages & public pledges`,
+      icon: Gift,
+      color: 'emerald',
+      action: () => { onSelectPortal('disaster_donation'); onClose(); }
     },
 
     // Admin Console Views
@@ -197,7 +200,7 @@ export function CommandPalette({
       category: 'Command Center Views',
       id: 'tab-users',
       title: 'Stakeholder User Directory',
-      subtitle: '5-Role RBAC authorization & permissions',
+      subtitle: '6-Role RBAC authorization & permissions',
       icon: Users,
       color: 'blue',
       action: () => { onSelectPortal('admin'); onSelectTab('users'); onClose(); }

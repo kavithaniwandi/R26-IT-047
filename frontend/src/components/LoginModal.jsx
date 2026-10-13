@@ -71,6 +71,17 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }) {
       port: 5177
     },
     {
+      label: 'District Disaster Officer',
+      email: 'officer@disaster.relief.lk',
+      pw: 'Officer@2026!',
+      role: 'disaster_officer',
+      badge: 'DS Command',
+      desc: 'Verify incoming relief pledges, assess ground impact, and coordinate donor outreach.',
+      icon: Shield,
+      color: 'blue',
+      port: 5179
+    },
+    {
       label: 'Disaster Victim (Public)',
       email: 'victim@kaduwela.lk',
       pw: 'Victim@2026!',
@@ -106,7 +117,16 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const res = await api.login(email, password);
+      let res;
+      try {
+        res = await api.login(email, password);
+      } catch (sqlError) {
+        try {
+          res = await api.componentLogin(email, password);
+        } catch {
+          throw sqlError;
+        }
+      }
       setAuthToken(res.access_token);
       const me = await api.getMe();
       setStoredUser(me);
