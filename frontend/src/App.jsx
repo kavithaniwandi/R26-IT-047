@@ -15,8 +15,6 @@ import { DonationsView } from './views/DonationsView';
 import { NotificationsView } from './views/NotificationsView';
 import { AnalyticsDashboardView } from './views/AnalyticsDashboardView';
 import { VolunteerDashboardView } from './views/VolunteerDashboardView';
-import { DisasterOfficerDashboardView } from './views/DisasterOfficerDashboardView';
-import { DisasterDonationRequestView } from './views/DisasterDonationRequestView';
 import { SMSGatewayView } from './views/SMSGatewayView';
 import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';

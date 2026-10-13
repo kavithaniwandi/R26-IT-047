@@ -19,7 +19,6 @@ from app.database import init_db
 from app.routers import admin_stats as admin_router
 from app.routers import auth as auth_router
 from app.routers import camps as camps_router
-from app.routers import disaster_donation_requests as disaster_donation_requests_router
 from app.routers import divisions as divisions_router
 from app.routers import donation_items as donation_items_router
 from app.routers import donation_history as donation_history_router
@@ -40,12 +39,7 @@ from app.routers import triage as triage_router
 from app.routers import users as users_router
 from app.routers import victims as victims_router
 from app.routers import disaster_officer
-from app.routers import donation_items as donation_items_router
-from app.routers import population as population_router
 from app.routers import donors as donors_router
-from app.routers import relief_camps as relief_camps_router
-from app.routers import divisions as divisions_router
-from app.routers import donation_history as donation_history_router
 from app.routers import component_users as component_users_router
 from app.models.schemas import (
     ExtractRequest,
@@ -136,7 +130,6 @@ app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
 app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
 if population_router is not None:
     app.include_router(population_router.router, prefix=API_V1_PREFIX)
-app.include_router(disaster_donation_requests_router.router, prefix=API_V1_PREFIX)
 app.include_router(heatmap_router.router, prefix=API_V1_PREFIX)
 app.include_router(donations_router.router, prefix=API_V1_PREFIX)
 app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
@@ -146,12 +139,7 @@ app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
 app.include_router(triage_router.router, prefix=API_V1_PREFIX)
 app.include_router(disaster_officer.router, prefix=API_V1_PREFIX)
-app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
-app.include_router(population_router.router, prefix=API_V1_PREFIX)
 app.include_router(donors_router.router, prefix=API_V1_PREFIX)
-app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
-app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
-app.include_router(donation_history_router.router, prefix=API_V1_PREFIX)
 app.include_router(component_users_router.router, prefix=API_V1_PREFIX)
 
 

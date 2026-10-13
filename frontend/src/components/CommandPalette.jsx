@@ -21,7 +21,6 @@ import {
   Volume2,
   X,
   ArrowRight,
-  Sparkles,
   Radio
 } from 'lucide-react';
 import { PORTAL_CONFIG } from '../portalConfig';
