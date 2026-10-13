@@ -109,6 +109,82 @@ def _clean_vitals(vitals: Optional[dict]) -> dict:
     return out
 
 
+def diagnose_complaint_mapping(
+    symptoms: str = "",
+    clinical_note: str = "",
+    coverage_mode: str = "legacy",
+    approved_synonyms: bool = False,
+    conditional_synonyms: list[str] | tuple[str, ...] | set[str] | None = None,
+) -> dict:
+    """Map complaint text without running severity prediction."""
+    _load_bundle()
+    symptom_text = (symptoms or "").strip()
+    note_text = (clinical_note or "").strip()
+    complaint_texts = []
+    for value in (symptom_text, note_text):
+        if value and value not in complaint_texts:
+            complaint_texts.append(value)
+    mapping_text = " | ".join(complaint_texts)
+    mapped_complaints = (
+        _MAPPER.map(mapping_text, approved_synonyms, conditional_synonyms)
+        if _MAPPER
+        else []
+    )
+    mapping_confidence = (
+        _MAPPER.coverage(
+            mapping_text,
+            mapped_complaints,
+            mode=coverage_mode,
+            approved_synonyms=approved_synonyms,
+            conditional_synonyms=conditional_synonyms,
+        )
+        if _MAPPER
+        else 0.0
+    )
+    mapping_diagnostic = (
+        _MAPPER.diagnostic(
+            mapping_text,
+            mapped_complaints,
+            mode=coverage_mode,
+            approved_synonyms=approved_synonyms,
+            conditional_synonyms=conditional_synonyms,
+        )
+        if _MAPPER
+        else {
+            "normalized_tokens": [],
+            "mapped_terms": mapped_complaints,
+            "unmapped_terms": [],
+            "coverage": mapping_confidence,
+        }
+    )
+    danger_terms = _MAPPER.danger_terms(mapping_text) if _MAPPER else []
+    base_mapped_complaints = (
+        _MAPPER.map(mapping_text, approved_synonyms=False, conditional_synonyms=[])
+        if _MAPPER and (approved_synonyms or conditional_synonyms)
+        else mapped_complaints
+    )
+    added_synonym_terms = [
+        term for term in mapped_complaints if term not in base_mapped_complaints
+    ]
+    if mapped_complaints and added_synonym_terms:
+        model_symptoms = "|".join([*mapped_complaints, mapping_text])
+    else:
+        model_symptoms = "|".join(mapped_complaints) if mapped_complaints else mapping_text
+
+    return {
+        "mapping_text": mapping_text,
+        "mapped_complaints": mapped_complaints,
+        "mapping_confidence": mapping_confidence,
+        "mapping_diagnostic": mapping_diagnostic,
+        "coverage_mode": coverage_mode,
+        "approved_synonyms": approved_synonyms,
+        "conditional_synonyms": list(conditional_synonyms or []),
+        "added_synonym_terms": added_synonym_terms,
+        "danger_terms": danger_terms,
+        "model_symptoms": model_symptoms,
+    }
+
+
 def predict_severity_ml_detailed(
     clinical_note: str,
     age: float | None = None,
@@ -118,14 +194,25 @@ def predict_severity_ml_detailed(
     red_flag_count: int = 0,
     rf_flags: dict | None = None,
     symptoms: str = "",
+    coverage_mode: str = "legacy",
+    approved_synonyms: bool = False,
+    conditional_synonyms: list[str] | tuple[str, ...] | set[str] | None = None,
 ) -> dict:
     """Full result including model-only decision, layers and version (for stats / auditing)."""
     bundle = _load_bundle()
 
     text = (symptoms or "").strip() or (clinical_note or "").strip()
-    mapped_complaints = _MAPPER.map(text) if _MAPPER else []
-    mapping_confidence = _MAPPER.coverage(text, mapped_complaints) if _MAPPER else 0.0
-    model_symptoms = to_model_symptoms(_MAPPER, text) if _MAPPER else text
+    mapping = diagnose_complaint_mapping(
+        symptoms=symptoms,
+        clinical_note=clinical_note,
+        coverage_mode=coverage_mode,
+        approved_synonyms=approved_synonyms,
+        conditional_synonyms=conditional_synonyms,
+    )
+    mapped_complaints = mapping["mapped_complaints"]
+    mapping_confidence = mapping["mapping_confidence"]
+    mapping_diagnostic = mapping["mapping_diagnostic"]
+    model_symptoms = mapping["model_symptoms"]
     flags = {f: 1 for f, v in (rf_flags or {}).items() if f in sp.KNOWN_FLAGS and v}
     clean_vitals = _clean_vitals(vitals)
 
@@ -161,6 +248,8 @@ def predict_severity_ml_detailed(
         "mapped_complaints": mapped_complaints,
         "mapped": bool(mapped_complaints),
         "mapping_confidence": mapping_confidence,
+        "mapping_diagnostic": mapping_diagnostic,
+        "coverage_mode": coverage_mode,
         "high_acuity_terms": [
             term for term in sp.HIGH_COMPLAINT_PATTERNS
             if re.search(re.escape(term), model_symptoms, re.I)
@@ -177,6 +266,9 @@ def predict_severity_ml(
     red_flag_count: int = 0,
     rf_flags: dict | None = None,
     symptoms: str = "",
+    coverage_mode: str = "legacy",
+    approved_synonyms: bool = False,
+    conditional_synonyms: list[str] | tuple[str, ...] | set[str] | None = None,
 ) -> dict:
     """
     Run the ML inference pipeline for a single patient.
@@ -184,5 +276,8 @@ def predict_severity_ml(
         severity, priority_score, scores, matched_rules, critical_trigger
     """
     full = predict_severity_ml_detailed(clinical_note, age, condition_group, vitals,
-                                        has_red_flag, red_flag_count, rf_flags, symptoms)
+                                        has_red_flag, red_flag_count, rf_flags, symptoms,
+                                        coverage_mode=coverage_mode,
+                                        approved_synonyms=approved_synonyms,
+                                        conditional_synonyms=conditional_synonyms)
     return {k: full[k] for k in ("severity", "priority_score", "scores", "matched_rules", "critical_trigger")}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import "./CampSetup.css";
 
@@ -15,6 +15,7 @@ const SPECIALTIES = [
   "Pediatric", "Geriatric", "Infection & Systemic",
   "Renal & Urinary", "Mental & Behavioral", "Obstetric & Gynecologic",
   "Endocrine & Metabolic", "Allergy & Immunology", "General Practice",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const SECONDARY_SKILLS = [
@@ -23,6 +24,7 @@ const SECONDARY_SKILLS = [
   "Infection & Systemic", "Renal & Urinary",
   "Mental & Behavioral", "Obstetric & Gynecologic", "Endocrine & Metabolic",
   "Allergy & Immunology", "Emergency Medicine",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const ROLES = ["Medical Administrator", "Senior MO", "Medical Officer", "Resident", "Intern"];
@@ -291,6 +293,11 @@ export default function CampSetup() {
               Activate the camps that are operational, then select the one this session is
               operating under. Standby camps cannot be selected until activated.
             </p>
+            <div className="cs-page-actions">
+              <Link className="cs-btn-secondary" to="/camp-analyzer">
+                Open camp analyzer
+              </Link>
+            </div>
 
             {campsLoading && (
               <div className="cs-alert-info">
@@ -414,6 +421,11 @@ export default function CampSetup() {
               Set the number of MOs on duty, then fill in each profile. Role,
               specialty and skills determine how patient cases are routed.
             </p>
+            <div className="cs-page-actions">
+              <Link className="cs-btn-secondary" to="/camp-analyzer">
+                View analytics
+              </Link>
+            </div>
 
             {!registrationStarted && (
               <div className="cs-card">

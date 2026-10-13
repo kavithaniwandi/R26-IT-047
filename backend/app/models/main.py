@@ -132,6 +132,17 @@ app.include_router(sms_router.router, prefix=API_V1_PREFIX)
 app.include_router(triage_router.router, prefix=API_V1_PREFIX)
 
 
+@app.get("/", tags=["Health"], summary="API landing")
+def api_landing() -> dict[str, object]:
+    return {
+        "message": "Disaster Relief Medical Donation Module API is running.",
+        "health": "/health",
+        "docs": "/api/docs",
+        "api_prefix": API_V1_PREFIX,
+        "frontend_ports": [5173, 5174, 5175, 5176, 5177],
+    }
+
+
 @app.get("/health", tags=["Health"], summary="Liveness probe")
 def health() -> dict[str, str]:
     return {
@@ -371,6 +382,17 @@ async def classify_severity(request: SeverityClassifyRequest) -> SeverityClassif
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Severity classification failed.") from exc
+
+
+@app.get("/api/severity/unmapped-terms")
+async def severity_unmapped_terms(limit: int = 50) -> dict:
+    """Return the most frequent unmapped complaint terms from saved triage patients."""
+    try:
+        from app.services.mongo_service import get_unmapped_terms
+
+        return {"terms": await get_unmapped_terms(limit=limit)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unmapped terms aggregation failed.") from exc
 
 
 @app.get("/api/system/credit-status", tags=["System"])

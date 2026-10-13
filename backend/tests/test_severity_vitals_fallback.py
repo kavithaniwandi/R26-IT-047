@@ -1,4 +1,5 @@
-from app.models.severity_service import classify_note
+from app.models.config import settings
+from app.models.severity_service import COMPLAINT_MAPPING_REVIEW_REASON, classify_note
 
 
 VITALS_6 = {
@@ -52,7 +53,7 @@ def test_three_vitals_falls_back_to_rule_based_and_floors_low_to_medium():
     assert result["ml_skipped_reason"] == "insufficient_vitals"
     assert result["incomplete_vitals"] is True
     assert result["severity"] == "MEDIUM"
-    assert "incomplete vitals — review" in result["matched_rules"]
+    assert "incomplete vitals" in " ".join(result["matched_rules"])
 
 
 def test_no_vitals_falls_back_to_rule_based_and_floors_low_to_medium():
@@ -67,7 +68,7 @@ def test_no_vitals_falls_back_to_rule_based_and_floors_low_to_medium():
     assert result["ml_skipped_reason"] == "insufficient_vitals"
     assert result["incomplete_vitals"] is True
     assert result["severity"] == "MEDIUM"
-    assert "incomplete vitals — review" in result["matched_rules"]
+    assert "incomplete vitals" in " ".join(result["matched_rules"])
 
 
 def test_incomplete_vitals_preserves_high_rule_result():
@@ -110,4 +111,137 @@ def test_unrecognised_complaint_with_complete_vitals_floors_low_to_medium():
     assert result["incomplete_vitals"] is False
     assert result["mapped"] is False
     assert result["severity"] == "MEDIUM"
-    assert result["mapping_review_reason"] == "complaint not recognised — review"
+    assert result["mapping_review_reason"] == COMPLAINT_MAPPING_REVIEW_REASON
+
+
+def test_low_acuity_synonyms_map_without_review_floor():
+    result = classify_note(
+        clinical_note="Mild headache, ran out of diabetes medication",
+        symptoms="Mild headache, ran out of diabetes medication",
+        age=55,
+        mode="ml",
+        vitals=VITALS_6,
+    )
+
+    assert result["incomplete_vitals"] is False
+    assert result["mapped"] is True
+    assert result["mapping_review_reason"] is None
+    assert COMPLAINT_MAPPING_REVIEW_REASON not in result["matched_rules"]
+    assert result["mapping_confidence"] >= settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD
+    assert "headache pain in head" in result["mapped_complaints"]
+    assert "medication refill" in result["mapped_complaints"]
+    assert any(term in result["mapped_complaints"] for term in ("diabetes follow up", "diabetes management"))
+
+
+def test_common_refill_phrase_maps_without_review_floor():
+    result = classify_note(
+        clinical_note="requesting medication refill, no complaints",
+        symptoms="requesting medication refill, no complaints",
+        age=55,
+        mode="ml",
+        vitals=VITALS_6,
+    )
+
+    assert result["mapped"] is True
+    assert result["mapping_review_reason"] is None
+    assert "medication refill" in result["mapped_complaints"]
+
+
+def test_mapper_uses_clinical_note_when_symptoms_are_present():
+    result = classify_note(
+        clinical_note="Ran out of diabetes medication and needs refill.",
+        symptoms="Mild headache",
+        age=55,
+        mode="ml",
+        vitals=VITALS_6,
+    )
+
+    assert result["mapping_review_reason"] is None
+    assert "headache pain in head" in result["mapped_complaints"]
+    assert "medication refill" in result["mapped_complaints"]
+    assert any(term in result["mapped_complaints"] for term in ("diabetes follow up", "diabetes management"))
+
+
+def test_nonsense_complaint_still_triggers_review_floor():
+    result = classify_note(
+        clinical_note="xqzv blorp",
+        symptoms="xqzv blorp",
+        age=25,
+        mode="ml",
+        vitals=VITALS_6,
+    )
+
+    assert result["incomplete_vitals"] is False
+    assert result["mapped"] is False
+    assert result["severity"] == "MEDIUM"
+    assert result["priority_score"] >= 40.0
+    assert result["mapping_review_reason"] == COMPLAINT_MAPPING_REVIEW_REASON
+
+
+def test_red_flag_case_is_unaffected_by_low_acuity_synonyms():
+    result = classify_note(
+        clinical_note="Mild headache, ran out of diabetes medication, now with chest pain",
+        symptoms="Mild headache, ran out of diabetes medication",
+        age=55,
+        mode="ml",
+        vitals=VITALS_6,
+        has_red_flag=1,
+        red_flag_count=1,
+        rf_flags={"chest_pain": 1},
+    )
+
+    assert result["severity"] == "HIGH"
+    assert result["mapping_review_reason"] is None
+    assert result["mapped"] is True
+
+
+def test_sudden_severe_headache_with_neuro_red_flag_and_high_sbp_is_not_low():
+    result = classify_note(
+        clinical_note="sudden severe headache with altered consciousness",
+        symptoms="sudden severe headache",
+        age=55,
+        mode="ml",
+        vitals={
+            **VITALS_6,
+            "vital_sbp": 190,
+            "pain_score": 8,
+        },
+        has_red_flag=1,
+        red_flag_count=1,
+        rf_flags={"focal_neurologic_deficit": 1},
+    )
+
+    assert result["severity"] != "LOW"
+
+
+def test_headache_with_hypoxia_and_tachycardia_is_not_low():
+    result = classify_note(
+        clinical_note="headache",
+        symptoms="headache",
+        age=45,
+        mode="ml",
+        vitals={
+            **VITALS_6,
+            "vital_hr": 130,
+            "vital_spo2": 88,
+        },
+    )
+
+    assert result["severity"] != "LOW"
+
+
+def test_ran_out_of_insulin_with_confusion_and_abnormal_vitals_is_not_low():
+    result = classify_note(
+        clinical_note="ran out of insulin, confused and drowsy",
+        symptoms="ran out of insulin, confused and drowsy",
+        age=60,
+        mode="ml",
+        vitals={
+            **VITALS_6,
+            "vital_hr": 130,
+            "vital_spo2": 88,
+            "vital_rr": 26,
+        },
+    )
+
+    assert result["severity"] != "LOW"

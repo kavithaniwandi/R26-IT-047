@@ -1,9 +1,16 @@
-from app.models.severity_ml_service import predict_severity_ml_detailed
+from app.models.severity_ml_service import diagnose_complaint_mapping, predict_severity_ml_detailed
 from app.models.config import settings
+from app.models.specialty_service import suggest_specialty
 
 
 SUPPORTED_MODES = {"rule_based", "ml"}
 MIN_VITALS_FOR_ML = 4
+COMPLAINT_MAPPING_REVIEW_REASON = "complaint not recognised - review"
+COMPLAINT_REASON_NO_MAPPING = "NO_MAPPING"
+COMPLAINT_REASON_LOW_COVERAGE = "LOW_COVERAGE"
+COMPLAINT_REASON_PARTIAL_MATCH = "PARTIAL_MATCH"
+COMPLAINT_REASON_DANGER_TERM_UNMAPPED = "DANGER_TERM_UNMAPPED"
+DANGER_TERM_REVIEW_REASON = "danger term unmapped - review"
 SEVERITY_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
 ML_VITAL_KEYS = {
     "vital_hr",
@@ -13,19 +20,31 @@ ML_VITAL_KEYS = {
     "vital_temp",
     "pain_score",
 }
+ZERO_IS_MISSING_VITAL_KEYS = {"vital_spo2", "vital_hr", "vital_sbp"}
+
+
+def _numeric_vital_or_none(vitals: dict | None, key: str) -> float | None:
+    value = (vitals or {}).get(key)
+    if value is None or value == "":
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if numeric != numeric:
+        return None
+    # A literal zero for SpO2, HR, or SBP is physiologically implausible in
+    # intake data and is treated as missing rather than as a valid measurement.
+    if key in ZERO_IS_MISSING_VITAL_KEYS and numeric <= 0:
+        return None
+    return numeric
 
 
 def _count_numeric_vitals(vitals: dict | None) -> int:
     count = 0
     for key in ML_VITAL_KEYS:
-        value = (vitals or {}).get(key)
-        if value is None or value == "":
-            continue
-        try:
-            float(value)
-        except (TypeError, ValueError):
-            continue
-        count += 1
+        if _numeric_vital_or_none(vitals, key) is not None:
+            count += 1
     return count
 
 
@@ -93,6 +112,61 @@ def _append_reason(result: dict, reason: str) -> dict:
     return updated
 
 
+def _complaint_reason_code(mapped_terms: list[str], unmapped_terms: list[str], coverage: float, threshold: float) -> str | None:
+    if not mapped_terms:
+        return COMPLAINT_REASON_NO_MAPPING
+    if coverage < threshold:
+        return COMPLAINT_REASON_LOW_COVERAGE
+    if unmapped_terms:
+        return COMPLAINT_REASON_PARTIAL_MATCH
+    return None
+
+
+def _coverage_below_threshold(coverage: float, threshold: float) -> bool:
+    """Floor applies only when coverage < threshold; coverage == threshold does not floor."""
+    return coverage < threshold
+
+
+def _complaint_mapping_payload(
+    result: dict,
+    threshold: float,
+    floor_applied: bool = False,
+    floor_changed_result: bool = False,
+    reason_code: str | None = None,
+) -> dict:
+    diagnostic = dict(result.get("mapping_diagnostic") or {})
+    mapped_terms = list(diagnostic.get("mapped_terms") or result.get("mapped_complaints") or [])
+    unmapped_terms = list(diagnostic.get("unmapped_terms") or [])
+    coverage = float(diagnostic.get("coverage", result.get("mapping_confidence") or 0.0))
+    return {
+        "mapped_terms": mapped_terms,
+        "unmapped_terms": unmapped_terms,
+        "coverage": coverage,
+        "threshold": threshold,
+        "floor_applied": floor_applied,
+        "floor_changed_result": floor_changed_result,
+        "reason_code": reason_code or _complaint_reason_code(mapped_terms, unmapped_terms, coverage, threshold),
+        "danger_terms": list(result.get("danger_terms") or []),
+    }
+
+
+def _complaint_coverage_mode() -> str:
+    mode = str(getattr(settings, "COMPLAINT_COVERAGE_MODE", "legacy") or "legacy").lower()
+    return "clinical" if mode == "clinical" else "legacy"
+
+
+def _approved_synonyms_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_APPROVED_SYNONYMS_ENABLED", False))
+
+
+def _conditional_synonyms_enabled() -> list[str]:
+    return list(getattr(settings, "COMPLAINT_CONDITIONAL_SYNONYMS_ENABLED", []) or [])
+
+
+def _danger_term_floor_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_DANGER_TERM_FLOOR_ENABLED", False))
+
+
 def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
     if age is None or age < 65:
         return 0
@@ -104,13 +178,9 @@ def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
     )
     count = 0
     for key, predicate in checks:
-        value = (vitals or {}).get(key)
-        if value is None or value == "":
-            continue
-        try:
-            count += int(predicate(float(value)))
-        except (TypeError, ValueError):
-            continue
+        value = _numeric_vital_or_none(vitals, key)
+        if value is not None:
+            count += int(predicate(value))
     return count
 
 
@@ -257,6 +327,21 @@ def classify_note(
     rule_result = predict_severity(clinical_note, age=age)
     effective_method = mode
     ml_skipped_reason = None
+    mapping_probe = (
+        diagnose_complaint_mapping(
+            symptoms=symptoms,
+            clinical_note=clinical_note,
+            coverage_mode=_complaint_coverage_mode(),
+            approved_synonyms=_approved_synonyms_enabled(),
+            conditional_synonyms=_conditional_synonyms_enabled(),
+        )
+        if mode == "ml"
+        else {}
+    )
+    complaint_mapping = _complaint_mapping_payload(
+        mapping_probe,
+        settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+    )
     if rule_result["critical_trigger"] is not None:
         result = rule_result
     elif mode == "ml":
@@ -277,21 +362,64 @@ def classify_note(
                 red_flag_count=red_flag_count,
                 rf_flags=rf_flags,
                 symptoms=symptoms,
+                coverage_mode=_complaint_coverage_mode(),
+                approved_synonyms=_approved_synonyms_enabled(),
+                conditional_synonyms=_conditional_synonyms_enabled(),
             )
             mapping_confidence = float(result.get("mapping_confidence") or 0.0)
             mapped_complaints = result.get("mapped_complaints") or []
+            base_complaint_mapping = _complaint_mapping_payload(
+                result,
+                settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+            )
+            danger_terms = list(result.get("danger_terms") or [])
+            danger_floor = _danger_term_floor_enabled() and bool(danger_terms)
             low_mapping_coverage = (
                 not mapped_complaints
-                or mapping_confidence < settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD
+                or _coverage_below_threshold(
+                    mapping_confidence,
+                    settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+                )
             )
-            if low_mapping_coverage:
-                reason = "complaint not recognised — review"
+            if danger_floor or low_mapping_coverage:
+                reason = DANGER_TERM_REVIEW_REASON if danger_floor else COMPLAINT_MAPPING_REVIEW_REASON
+                reason_code = COMPLAINT_REASON_DANGER_TERM_UNMAPPED if danger_floor else None
+                floor_changed_result = (
+                    SEVERITY_RANK[result["severity"]]
+                    < SEVERITY_RANK.get(settings.COMPLAINT_MAPPING_FLOOR.upper(), SEVERITY_RANK["MEDIUM"])
+                )
                 result = _floor_rule_result(result, settings.COMPLAINT_MAPPING_FLOOR, reason)
                 result = _append_reason(result, reason)
                 result["mapped"] = False
                 result["mapping_review_reason"] = reason
+                complaint_mapping = {
+                    **base_complaint_mapping,
+                    "floor_applied": True,
+                    "floor_changed_result": floor_changed_result,
+                    "reason_code": reason_code or base_complaint_mapping["reason_code"],
+                    "danger_terms": danger_terms,
+                }
+            else:
+                complaint_mapping = base_complaint_mapping
     else:
         result = rule_result
+
+    danger_terms = list(mapping_probe.get("danger_terms") or result.get("danger_terms") or [])
+    if mode == "ml" and _danger_term_floor_enabled() and danger_terms:
+        floor_changed_result = (
+            SEVERITY_RANK[result["severity"]]
+            < SEVERITY_RANK.get(settings.COMPLAINT_MAPPING_FLOOR.upper(), SEVERITY_RANK["MEDIUM"])
+        )
+        result = _floor_rule_result(result, settings.COMPLAINT_MAPPING_FLOOR, DANGER_TERM_REVIEW_REASON)
+        result = _append_reason(result, DANGER_TERM_REVIEW_REASON)
+        result["mapping_review_reason"] = DANGER_TERM_REVIEW_REASON
+        complaint_mapping = {
+            **complaint_mapping,
+            "floor_applied": True,
+            "floor_changed_result": floor_changed_result,
+            "reason_code": COMPLAINT_REASON_DANGER_TERM_UNMAPPED,
+            "danger_terms": danger_terms,
+        }
 
     result = apply_age65_abnormal_vitals_layer(result, age, vitals)
 
@@ -304,6 +432,18 @@ def classify_note(
         result["matched_rules"],
         result["critical_trigger"],
         source=source,
+    )
+    red_flag_payload = dict(rf_flags or {})
+    if has_red_flag and not red_flag_payload:
+        red_flag_payload["has_red_flag"] = 1
+    suggested_specialty = suggest_specialty(
+        symptoms=symptoms,
+        clinical_note=clinical_note,
+        red_flags=red_flag_payload,
+        age=age,
+        severity=result["severity"],
+        mapped_complaints=result.get("mapped_complaints", []),
+        vitals=vitals,
     )
     return {
         "severity": result["severity"],
@@ -328,5 +468,7 @@ def classify_note(
         "mapped": bool(result.get("mapped", result.get("mapped_complaints") or result.get("high_acuity_terms"))),
         "mapping_confidence": float(result.get("mapping_confidence", 1.0 if result.get("mapped_complaints") or result.get("high_acuity_terms") else 0.0)),
         "mapping_review_reason": result.get("mapping_review_reason"),
+        "complaint_mapping": complaint_mapping,
+        "suggested_specialty": suggested_specialty,
         **queue_policy,
     }

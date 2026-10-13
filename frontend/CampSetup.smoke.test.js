@@ -23,6 +23,7 @@ const SPECIALTIES = [
   "Pediatric", "Geriatric", "Infection & Systemic",
   "Renal & Urinary", "Mental & Behavioral", "Obstetric & Gynecologic",
   "Endocrine & Metabolic", "Allergy & Immunology", "General Practice",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const SECONDARY_SKILLS = [
@@ -31,6 +32,7 @@ const SECONDARY_SKILLS = [
   "Infection & Systemic", "Renal & Urinary",
   "Mental & Behavioral", "Obstetric & Gynecologic", "Endocrine & Metabolic",
   "Allergy & Immunology", "Emergency Medicine",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const ROLES = ["Medical Administrator", "Senior MO", "Medical Officer", "Resident", "Intern"];
@@ -108,7 +110,7 @@ function updateShiftPart(currentShift, part, value) {
 
 console.log("\n-- 1. SPECIALTIES array --");
 assert("No duplicate entries", new Set(SPECIALTIES).size === SPECIALTIES.length);
-assert("Count is 17", SPECIALTIES.length === 17, `Got ${SPECIALTIES.length}`);
+assert("Count is 20", SPECIALTIES.length === 20, `Got ${SPECIALTIES.length}`);
 assert("No empty strings", SPECIALTIES.every((specialty) => specialty.trim().length > 0));
 NLP_REQUIRED_SPECIALTIES.forEach((term) => {
   assert(`NLP term present as specialty: ${term}`, SPECIALTIES.includes(term));
@@ -116,13 +118,14 @@ NLP_REQUIRED_SPECIALTIES.forEach((term) => {
 [
   "Emergency Medicine", "Cardiovascular", "Respiratory", "Neurological",
   "General Practice", "Trauma & Surgery", "Mental & Behavioral",
+  "Dermatology", "ENT", "Ophthalmology",
 ].forEach((specialty) => {
   assert(`Core specialty present: ${specialty}`, SPECIALTIES.includes(specialty));
 });
 
 console.log("\n-- 2. SECONDARY_SKILLS array --");
 assert("No duplicate entries", new Set(SECONDARY_SKILLS).size === SECONDARY_SKILLS.length);
-assert("Count is 16", SECONDARY_SKILLS.length === 16, `Got ${SECONDARY_SKILLS.length}`);
+assert("Count is 19", SECONDARY_SKILLS.length === 19, `Got ${SECONDARY_SKILLS.length}`);
 assert("No empty strings", SECONDARY_SKILLS.every((skill) => skill.trim().length > 0));
 NLP_REQUIRED_SKILLS.forEach((term) => {
   assert(`NLP term present as skill: ${term}`, SECONDARY_SKILLS.includes(term));

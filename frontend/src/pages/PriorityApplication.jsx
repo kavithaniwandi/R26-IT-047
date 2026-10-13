@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import {
+  chooseRoutedMO,
+  findRecommendedMO,
+  isSpecialtyUnmatched,
+  specialtyUnmatchedWarningText,
+  useSuggestedSpecialtyRoutingFlag,
+} from "../utils/triageRouting";
+import { complaintMappingNotice, visibleMatchedRules } from "../utils/triageMappingDisplay";
+import { buildVitalsPayload, priorityVitalFields } from "../utils/vitalsPayload";
 import "./PriorityApplication.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -38,42 +47,9 @@ const OVERRIDE_REASONS = [
   "Other clinical judgement",
 ];
 
-function routeMO(mos, severity, conditionGroup) {
-  const eligible = mos.filter((mo) => {
-    const isJuniorWithoutSupervisor =
-      ["Intern", "Resident"].includes(mo.role) && mo.supervisor !== "yes";
-    return !(severity === "HIGH" && isJuniorWithoutSupervisor);
-  });
-
-  if (!eligible.length) return null;
-
-  const roleWeight = {
-    "Senior MO": 1.0,
-    "Medical Officer": 0.85,
-    Resident: 0.65,
-    Intern: 0.45,
-  };
-
-  const scored = eligible.map((mo) => {
-    const condition = conditionGroup.toLowerCase();
-    const specMatch =
-      mo.specialty.toLowerCase().includes(condition) ||
-      mo.skills.some((skill) => skill.name.toLowerCase().includes(condition));
-    const roleScore = roleWeight[mo.role] || 0.5;
-    const loadScore = 1 / (1 + (mo.queueDepth || 0));
-
-    return {
-      mo,
-      score: roleScore * (0.5 + 0.5 * Number(specMatch)) * loadScore,
-    };
-  });
-
-  scored.sort((first, second) => second.score - first.score);
-  return scored[0].mo;
-}
-
 export default function PriorityApplication() {
   const navigate = useNavigate();
+  const useSuggestedSpecialtyRouting = useSuggestedSpecialtyRoutingFlag();
   const [session, setSession] = useState(null);
   const [form, setForm] = useState({
     age: "",
@@ -89,6 +65,7 @@ export default function PriorityApplication() {
   const [checkedFlags, setCheckedFlags] = useState([]);
   const [severityResult, setSeverityResult] = useState(null);
   const [assignedMO, setAssignedMO] = useState(null);
+  const [routingAuditLabel, setRoutingAuditLabel] = useState("");
   const [extractResult, setExtractResult] = useState(null);
   const [overrideSeverity, setOverrideSeverity] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
@@ -108,8 +85,16 @@ export default function PriorityApplication() {
     if (!severityResult || !extractResult || !overrideSeverity) return;
 
     const currentSession = JSON.parse(localStorage.getItem(SESSION_KEY));
-    setAssignedMO(routeMO(currentSession.mos, overrideSeverity, extractResult.specialty));
-  }, [extractResult, overrideSeverity, severityResult]);
+    const routed = chooseRoutedMO(
+      currentSession.mos,
+      overrideSeverity,
+      extractResult.specialty,
+      severityResult.suggested_specialty,
+      useSuggestedSpecialtyRouting
+    );
+    setAssignedMO(routed.mo);
+    setRoutingAuditLabel(routed.auditLabel);
+  }, [extractResult, overrideSeverity, severityResult, useSuggestedSpecialtyRouting]);
 
   const handleFlagToggle = (flag) => {
     setCheckedFlags((previous) =>
@@ -122,22 +107,6 @@ export default function PriorityApplication() {
   const updateFormField = (field, value) => {
     setForm((previous) => ({ ...previous, [field]: value }));
   };
-
-  const vitalFields = [
-    { key: "vital_hr", label: "Heart rate", unit: "bpm", min: 20, max: 250, step: "1" },
-    { key: "vital_spo2", label: "SpO2", unit: "%", min: 50, max: 100, step: "1" },
-    { key: "vital_sbp", label: "Systolic BP", unit: "mmHg", min: 50, max: 300, step: "1" },
-    { key: "vital_rr", label: "Respiratory rate", unit: "/min", min: 4, max: 80, step: "1" },
-    { key: "vital_temp", label: "Temperature", unit: "C", min: 30, max: 43, step: "0.1" },
-    { key: "pain_score", label: "Pain", unit: "0-10", min: 0, max: 10, step: "1" },
-  ];
-
-  const buildVitalsPayload = () =>
-    Object.fromEntries(
-      vitalFields
-        .filter(({ key }) => form[key] !== "")
-        .map(({ key }) => [key, Number(form[key])])
-    );
 
   const validatePatientForm = () => {
     const age = form.age === "" ? null : Number(form.age);
@@ -162,7 +131,7 @@ export default function PriorityApplication() {
       return "Clinical note must include enough detail to classify.";
     }
 
-    for (const field of vitalFields) {
+    for (const field of priorityVitalFields) {
       if (form[field.key] === "") continue;
       const value = Number(form[field.key]);
       if (!Number.isFinite(value) || value < field.min || value > field.max) {
@@ -188,6 +157,7 @@ export default function PriorityApplication() {
     setError("");
     setSeverityResult(null);
     setAssignedMO(null);
+    setRoutingAuditLabel("");
     setExtractResult(null);
     setOverrideSeverity("");
     setOverrideReason("");
@@ -230,7 +200,7 @@ export default function PriorityApplication() {
       const specialty = extractData.specialty;
       const hasRedFlag = checkedFlags.length > 0 ? 1 : 0;
       const rfFlagsObj = Object.fromEntries(checkedFlags.map((flag) => [flag, 1]));
-      const vitals = buildVitalsPayload();
+      const vitals = buildVitalsPayload(form);
 
       const classifyRes = await fetch(`${API_BASE_URL}/api/severity/classify`, {
         method: "POST",
@@ -266,10 +236,17 @@ export default function PriorityApplication() {
       }
 
       const currentSession = JSON.parse(localStorage.getItem(SESSION_KEY));
-      const mo = routeMO(currentSession.mos, classifyData.severity, specialty);
+      const routed = chooseRoutedMO(
+        currentSession.mos,
+        classifyData.severity,
+        specialty,
+        classifyData.suggested_specialty,
+        useSuggestedSpecialtyRouting
+      );
 
       setSeverityResult(classifyData);
-      setAssignedMO(mo);
+      setAssignedMO(routed.mo);
+      setRoutingAuditLabel(routed.auditLabel);
       setOverrideSeverity(classifyData.severity);
       setOverrideReason("");
       setExtractResult({
@@ -309,7 +286,14 @@ export default function PriorityApplication() {
     const conditionGroup = extractResult?.conditionGroup || "General Practice";
     const specialty = extractResult?.specialty || "General Practice";
 
-    const routedMO = routeMO(currentSession.mos, finalSeverity, specialty);
+    const routed = chooseRoutedMO(
+      currentSession.mos,
+      finalSeverity,
+      specialty,
+      severityResult.suggested_specialty,
+      useSuggestedSpecialtyRouting
+    );
+    const routedMO = routed.mo;
 
     if (routedMO) {
       currentSession.mos = currentSession.mos.map((mo) =>
@@ -341,14 +325,23 @@ export default function PriorityApplication() {
       priority_score: severityResult.priority_score,
       method: severityResult.method,
       symptoms: form.symptoms,
+      complaint_text: form.symptoms.trim(),
       age: form.age,
       red_flags: checkedFlags,
       condition_group: conditionGroup,
       specialty,
+      suggested_specialty: severityResult.suggested_specialty,
       extracted_symptoms: extractResult?.extractedSymptoms || [],
       camp: session?.camp || null,
       assigned_mo_id: routedMO?.id || null,
       assigned_mo_name: routedMO?.name || null,
+      routing_source: routed.source,
+      routing_audit_label: routed.auditLabel,
+      routed_specialty: routed.specialty,
+      specialty_unmatched: isSpecialtyUnmatched(
+        currentSession.mos || [],
+        severityResult.suggested_specialty
+      ),
       clinician_override: hasOverride
         ? {
             from: severityResult.severity,
@@ -365,9 +358,14 @@ export default function PriorityApplication() {
       mapped: severityResult.mapped,
       mapping_confidence: severityResult.mapping_confidence,
       mapped_complaints: severityResult.mapped_complaints,
+      complaint_mapping: severityResult.complaint_mapping,
+      mapped_terms: severityResult.complaint_mapping?.mapped_terms || [],
+      unmapped_terms: severityResult.complaint_mapping?.unmapped_terms || [],
+      complaint_mapping_reason_code: severityResult.complaint_mapping?.reason_code || null,
       high_acuity_terms: severityResult.high_acuity_terms,
       model_symptoms: severityResult.model_symptoms,
-      original_symptoms_text: severityResult.original_symptoms_text,
+      original_symptoms_text: severityResult.original_symptoms_text || form.symptoms.trim(),
+      mapping_review_reason: severityResult.mapping_review_reason,
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...currentApplications]));
@@ -381,6 +379,27 @@ export default function PriorityApplication() {
   };
 
   if (!session) return null;
+
+  const suggestedSpecialty = severityResult?.suggested_specialty;
+  const mappingNotice = complaintMappingNotice(
+    severityResult?.complaint_mapping,
+    suggestedSpecialty
+  );
+  const recommendedMO = findRecommendedMO(session?.mos || [], suggestedSpecialty, overrideSeverity || severityResult?.severity);
+  const specialtyUnmatchedWarning = specialtyUnmatchedWarningText(
+    session?.mos || [],
+    suggestedSpecialty,
+    assignedMO
+  );
+  const strongSpecialtyUnmatchedWarning = ["HIGH", "CRITICAL"].includes(
+    overrideSeverity || severityResult?.severity
+  );
+  const shouldHintReassign =
+    recommendedMO && assignedMO && recommendedMO.id !== assignedMO.id;
+  const matchedRulesForDisplay = visibleMatchedRules(
+    severityResult?.matched_rules || [],
+    severityResult?.complaint_mapping
+  );
 
   return (
     <div className="priority-application-page">
@@ -428,7 +447,7 @@ export default function PriorityApplication() {
                 Enter at least 4 vitals for ML triage; otherwise rule-based triage is used.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px" }}>
-                {vitalFields.map((field) => (
+                {priorityVitalFields.map((field) => (
                   <label key={field.key} style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#475569" }}>
                     <span>{field.label} ({field.unit})</span>
                     <input
@@ -551,18 +570,34 @@ export default function PriorityApplication() {
                   </div>
                 )}
 
-                {severityResult.mapped ? (
+                {mappingNotice ? (
+                  <div
+                    className={`priority-mapping-notice ${
+                      mappingNotice.tone === "warning" ? "warning" : "info"
+                    }`}
+                  >
+                    <p>{mappingNotice.message}</p>
+                    {mappingNotice.mappedTerms.length > 0 && (
+                      <p>Mapped: {mappingNotice.mappedTerms.join(", ")}</p>
+                    )}
+                    {mappingNotice.specialtyRecognized && (
+                      <p>Specialty recognised from clinical keywords.</p>
+                    )}
+                    {mappingNotice.unmappedTerms.length > 0 && (
+                      <details>
+                        <summary>What wasn't understood</summary>
+                        <p>{mappingNotice.unmappedTerms.join(", ")}</p>
+                      </details>
+                    )}
+                  </div>
+                ) : severityResult.mapped ? (
                   <p className="priority-result-rules">
                     Interpreted as: {[
                       ...(severityResult.interpreted_as?.mapped_phrases || []),
                       ...(severityResult.interpreted_as?.high_acuity_terms || []),
                     ].join(", ")}
                   </p>
-                ) : (
-                  <div className="priority-unassigned-alert">
-                    No complaint recognised - please review.
-                  </div>
-                )}
+                ) : null}
 
                 <div className="priority-ai-review-note">
                   This classification is AI-assisted. The assigned MO should review and override
@@ -624,23 +659,73 @@ export default function PriorityApplication() {
                   </p>
                 )}
 
-                {severityResult.matched_rules?.length > 0 && (
+                {matchedRulesForDisplay.length > 0 && (
                   <p className="priority-result-rules">
-                    Matched rules: {severityResult.matched_rules.join(", ")}
+                    Matched rules: {matchedRulesForDisplay.join(", ")}
                   </p>
                 )}
 
-                {assignedMO ? (
-                  <div className="priority-assigned-mo">
-                    <span>Assigned MO</span>
-                    <strong>{assignedMO.name}</strong>
-                    <p>{assignedMO.role} - {assignedMO.specialty}</p>
-                  </div>
-                ) : (
-                  <div className="priority-unassigned-alert">
-                    No eligible MO available - manual assignment required.
-                  </div>
-                )}
+                <div className="priority-assignment-row">
+                  {assignedMO ? (
+                    <div className="priority-assigned-mo">
+                      <span>Assigned MO</span>
+                      <strong>{assignedMO.name}</strong>
+                      <p>{assignedMO.role} - {assignedMO.specialty}</p>
+                      {routingAuditLabel && <p>{routingAuditLabel}</p>}
+                    </div>
+                  ) : (
+                    <div className="priority-unassigned-alert">
+                      No eligible MO available - manual assignment required.
+                    </div>
+                  )}
+
+                  {suggestedSpecialty && (
+                    <div className="priority-suggested-specialty">
+                      <span>Suggested specialty</span>
+                      <div className="priority-specialty-chip-row">
+                        <strong
+                          className={`priority-specialty-chip ${
+                            suggestedSpecialty.fallback ? "default" : ""
+                          }`}
+                        >
+                          {suggestedSpecialty.primary}
+                          {suggestedSpecialty.fallback ? " (default)" : ""}
+                        </strong>
+                        {(suggestedSpecialty.secondary || []).map((specialty) => (
+                          <span key={specialty} className="priority-specialty-chip secondary">
+                            {specialty}
+                          </span>
+                        ))}
+                      </div>
+                      <details className="priority-specialty-details">
+                        <summary>Why this suggestion?</summary>
+                        <p>{suggestedSpecialty.reason}</p>
+                        {(suggestedSpecialty.matched_keywords || []).length > 0 && (
+                          <p>
+                            Matched: {suggestedSpecialty.matched_keywords.join(", ")}
+                          </p>
+                        )}
+                      </details>
+                      <p className="priority-specialty-note">
+                        Suggestion only. The assigned MO can reassign.
+                      </p>
+                      {shouldHintReassign && (
+                        <p className="priority-specialty-hint">
+                          Consider reassigning to {recommendedMO.name} ({recommendedMO.specialty}).
+                        </p>
+                      )}
+                      {specialtyUnmatchedWarning && (
+                        <p
+                          className={`priority-specialty-unmatched ${
+                            strongSpecialtyUnmatchedWarning ? "strong" : ""
+                          }`}
+                        >
+                          {specialtyUnmatchedWarning}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

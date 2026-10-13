@@ -174,19 +174,36 @@ async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
             "priority_score": patient_data.get("priority_score"),
             "method": patient_data.get("method"),
             "symptoms": patient_data.get("symptoms"),
+            "complaint_text": patient_data.get("complaint_text") or patient_data.get("symptoms"),
             "age": patient_data.get("age"),
             "red_flags": patient_data.get("red_flags", []),
             "condition_group": patient_data.get("condition_group"),
             "specialty": patient_data.get("specialty"),
+            "suggested_specialty": patient_data.get("suggested_specialty"),
             "extracted_symptoms": patient_data.get("extracted_symptoms", []),
             "assigned_mo_id": patient_data.get("assigned_mo_id"),
             "assigned_mo_name": patient_data.get("assigned_mo_name"),
+            "routing_source": patient_data.get("routing_source"),
+            "routing_audit_label": patient_data.get("routing_audit_label"),
+            "routed_specialty": patient_data.get("routed_specialty"),
+            "specialty_unmatched": patient_data.get("specialty_unmatched", False),
             "queue_reason": patient_data.get("queue_reason"),
             "queue_reason_text": patient_data.get("queue_reason_text"),
             "source": patient_data.get("source"),
             "clinician_override": patient_data.get("clinician_override"),
             "critical_trigger": patient_data.get("critical_trigger"),
             "matched_rules": patient_data.get("matched_rules", []),
+            "mapped": patient_data.get("mapped"),
+            "mapping_confidence": patient_data.get("mapping_confidence"),
+            "mapping_review_reason": patient_data.get("mapping_review_reason"),
+            "mapped_complaints": patient_data.get("mapped_complaints", []),
+            "complaint_mapping": patient_data.get("complaint_mapping"),
+            "mapped_terms": patient_data.get("mapped_terms", []),
+            "unmapped_terms": patient_data.get("unmapped_terms", []),
+            "complaint_mapping_reason_code": patient_data.get("complaint_mapping_reason_code"),
+            "high_acuity_terms": patient_data.get("high_acuity_terms", []),
+            "model_symptoms": patient_data.get("model_symptoms"),
+            "original_symptoms_text": patient_data.get("original_symptoms_text"),
             "display_note": patient_data.get("display_note"),
             "recommended_action": patient_data.get("recommended_action"),
         }
@@ -454,3 +471,29 @@ async def get_triage_stats(camp_id: str | None = None) -> dict:
     camps = await _db.triage_archives.aggregate(camp_pipeline).to_list(None)
     patients = await _db.triage_archives.aggregate(patient_pipeline).to_list(None)
     return {"camps": camps, "patients": patients[0] if patients else {}}
+
+
+async def get_unmapped_terms(limit: int = 50) -> list[dict[str, Any]]:
+    """Aggregate the most frequent unmapped complaint terms from saved patients."""
+    if _db is None:
+        return []
+
+    pipeline = [
+        {
+            "$project": {
+                "terms": {
+                    "$ifNull": [
+                        "$unmapped_terms",
+                        {"$ifNull": ["$complaint_mapping.unmapped_terms", []]},
+                    ]
+                }
+            }
+        },
+        {"$unwind": "$terms"},
+        {"$match": {"terms": {"$type": "string", "$ne": ""}}},
+        {"$group": {"_id": "$terms", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1, "_id": 1}},
+        {"$limit": min(max(int(limit or 50), 1), 500)},
+    ]
+    rows = await _db.triage_patients.aggregate(pipeline).to_list(None)
+    return [{"term": row["_id"], "count": row["count"]} for row in rows]

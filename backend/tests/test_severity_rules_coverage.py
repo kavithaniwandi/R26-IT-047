@@ -20,16 +20,26 @@ def trigger_notes(trigger: str) -> list[str]:
 
 @pytest.mark.parametrize("trigger", RULES["critical_triggers"])
 def test_every_critical_trigger_returns_critical(trigger):
-    earlier = RULES["critical_triggers"][:RULES["critical_triggers"].index(trigger)]
-    shadowed_by = [item for item in earlier if item in trigger and item != trigger]
-    if shadowed_by:
-        pytest.xfail(f"{trigger!r} is shadowed by earlier trigger(s): {shadowed_by}")
     for note in trigger_notes(trigger):
         result = classify_note(note, age=40, mode="rule_based")
         assert result["severity"] == "CRITICAL", trigger
         assert result["priority_score"] == 100.0, trigger
         assert result["critical_trigger"] == trigger, trigger
         assert result["can_override"] is False, trigger
+
+
+@pytest.mark.parametrize("trigger", RULES["critical_triggers"])
+def test_critical_triggers_bypass_ml(monkeypatch, trigger):
+    def fail_ml(*args, **kwargs):
+        raise AssertionError("ML path should not run for critical triggers")
+
+    monkeypatch.setattr("app.models.severity_service.predict_severity_ml_detailed", fail_ml)
+    result = classify_note(trigger, age=40, mode="ml", vitals={})
+
+    assert result["severity"] == "CRITICAL", trigger
+    assert result["priority_score"] == 100.0, trigger
+    assert result["critical_trigger"] == trigger, trigger
+    assert result["can_override"] is False, trigger
 
 
 @pytest.mark.parametrize(
