@@ -100,7 +100,15 @@ def authenticate_user(payload: LoginRequest, db: Session) -> TokenResponse:
       - The JWT payload includes the role so that subsequent require_role()
         checks are stateless (no DB round-trip per request).
     """
-    user = db.query(User).filter(User.email == payload.email).first()
+    # Legacy databases may contain duplicate emails from older seed runs.
+    # Prefer the newest account deterministically so login and assignments
+    # resolve to the same user ID.
+    user = (
+        db.query(User)
+        .filter(User.email == payload.email)
+        .order_by(User.id.desc())
+        .first()
+    )
 
     # Unified 401 — do not distinguish "no user" from "bad password"
     if user is None or not _verify_password(payload.password, user.hashed_password):
