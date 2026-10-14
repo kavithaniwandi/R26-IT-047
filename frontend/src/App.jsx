@@ -18,6 +18,7 @@ import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 import { SMSGatewayView } from './views/SMSGatewayView';
 import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';
+import { ReliefCampsManagementView } from './views/ReliefCampsManagementView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -239,6 +240,11 @@ function DashboardApp() {
             return {
               title: 'Temporary Medical Camps Planning Hub',
               sub: 'Model 3 Spatial Suitability Scoring & Official Approvals'
+            };
+          case 'relief-camps':
+            return {
+              title: 'Disaster Relief Camp Registry',
+              sub: 'Shelter Capacity, Population Monitoring & Field Assignments'
             };
           case 'donations':
             return {
@@ -477,6 +483,7 @@ function DashboardApp() {
                   {currentTab === 'sos' && <SOSView onAddToast={addToast} />}
                   {currentTab === 'heatmap' && <HeatmapView onAddToast={addToast} />}
                   {currentTab === 'camps' && <CampsView currentUser={user} onAddToast={addToast} />}
+                  {currentTab === 'relief-camps' && <ReliefCampsManagementView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'donations' && <DonationsView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'users' && <UsersView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'notifications' && <NotificationsView onAddToast={addToast} />}
