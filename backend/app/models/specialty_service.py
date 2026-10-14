@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.text_negation import is_span_negated, normalize_clinical_text
+from app.models.vitals_normalizer import normalized_vital_value
 
 
 RULES_PATH = Path(__file__).resolve().parents[2] / "ml_models" / "specialty_rules.json"
@@ -24,7 +25,6 @@ HR_EMERGENCY_BOOST_THRESHOLD = 120.0
 RESPIRATORY_VITAL_BOOST = 3.0
 EMERGENCY_VITAL_BOOST = 4.0
 EMERGENCY_MENTAL_STATUS_BOOST = 4.5
-ZERO_IS_MISSING_VITAL_KEYS = {"vital_spo2", "vital_hr", "vital_sbp"}
 
 
 @lru_cache(maxsize=1)
@@ -71,20 +71,7 @@ def _confidence(top_score: float, total_score: float, fallback: bool) -> float:
 
 
 def _numeric_vital(vitals: dict | None, key: str) -> float | None:
-    value = (vitals or {}).get(key)
-    if value is None or value == "":
-        return None
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return None
-    if numeric != numeric:
-        return None
-    # A literal zero for SpO2, HR, or SBP is physiologically implausible here;
-    # treat it as missing so blank UI values cannot become threshold hits.
-    if key in ZERO_IS_MISSING_VITAL_KEYS and numeric <= 0:
-        return None
-    return numeric
+    return normalized_vital_value(vitals, key)
 
 
 def _add_score(

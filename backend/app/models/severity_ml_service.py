@@ -23,6 +23,7 @@ from typing import Optional
 
 from .complaint_mapper import ComplaintMapper, to_model_symptoms
 from . import severity_pipeline as sp
+from .vitals_normalizer import normalize_vitals_for_scoring
 
 logger = logging.getLogger(__name__)
 
@@ -93,20 +94,16 @@ def warm_up() -> bool:
 # ----------------------------------------------------------------------------------------------
 # Input mapping
 # ----------------------------------------------------------------------------------------------
-def _clean_vitals(vitals: Optional[dict]) -> dict:
-    out = {}
+def _clean_vitals(vitals: Optional[dict]) -> tuple[dict, list[dict]]:
     unknown = sorted(set(vitals or {}) - set(sp.VITAL_COLS))
     if unknown:
         logger.warning("severity model: ignoring unknown vital keys %s (expected %s)", unknown, list(sp.VITAL_COLS))
-    for key in sp.VITAL_COLS:
-        value = (vitals or {}).get(key)
-        if value is None or value == "":
-            continue
-        try:
-            out[key] = float(value)
-        except (TypeError, ValueError):
-            logger.warning("severity model: ignoring non-numeric vital %s=%r", key, value)
-    return out
+    normalized = normalize_vitals_for_scoring(vitals)
+    return {
+        key: value
+        for key, value in normalized.values.items()
+        if key in sp.VITAL_COLS
+    }, normalized.warnings
 
 
 def diagnose_complaint_mapping(
@@ -214,7 +211,7 @@ def predict_severity_ml_detailed(
     mapping_diagnostic = mapping["mapping_diagnostic"]
     model_symptoms = mapping["model_symptoms"]
     flags = {f: 1 for f, v in (rf_flags or {}).items() if f in sp.KNOWN_FLAGS and v}
-    clean_vitals = _clean_vitals(vitals)
+    clean_vitals, vitals_warnings = _clean_vitals(vitals)
 
     row = sp.row_from_request(model_symptoms, age, flags, clean_vitals)
     if has_red_flag:                                            # keep the app's explicit flag authoritative
@@ -241,6 +238,7 @@ def predict_severity_ml_detailed(
         "model_severity": sp.LABELS[model_idx],
         "layers_fired": masks,
         "vitals_provided": sorted(clean_vitals),
+        "vitals_warnings": vitals_warnings,
         "thresholds": {"high": bundle.t_high, "low": bundle.t_low},
         "model_version": MODEL_VERSION,
         "original_symptoms_text": text,

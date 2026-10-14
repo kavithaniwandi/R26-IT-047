@@ -255,6 +255,7 @@ def test_missing_spo2_does_not_trigger_respiratory_vital_rule():
 
 def test_normal_spo2_does_not_trigger_respiratory_vital_rule():
     assert "SpO2 < 92" not in _matched_keywords_for_vitals({"vital_spo2": 95})
+    assert "SpO2 < 92" not in _matched_keywords_for_vitals({"vital_spo2": 0.99})
 
 
 def test_low_spo2_triggers_respiratory_vital_rule():

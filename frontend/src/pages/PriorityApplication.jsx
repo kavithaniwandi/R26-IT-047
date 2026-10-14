@@ -354,6 +354,7 @@ export default function PriorityApplication() {
       matched_rules: severityResult.matched_rules,
       incomplete_vitals: severityResult.incomplete_vitals,
       incomplete_vitals_reason: severityResult.incomplete_vitals_reason,
+      vitals_warnings: severityResult.vitals_warnings || [],
       interpreted_as: severityResult.interpreted_as,
       mapped: severityResult.mapped,
       mapping_confidence: severityResult.mapping_confidence,
@@ -567,6 +568,16 @@ export default function PriorityApplication() {
                 {severityResult.incomplete_vitals && (
                   <div className="priority-unassigned-alert">
                     Incomplete vitals - review before confirming. This case cannot be auto-assigned LOW.
+                  </div>
+                )}
+
+                {severityResult.vitals_warnings?.length > 0 && (
+                  <div className="priority-unassigned-alert">
+                    {severityResult.vitals_warnings.map((warning) => (
+                      <p key={`${warning.field}-${warning.code}-${warning.raw_value}`}>
+                        {warning.message}
+                      </p>
+                    ))}
                   </div>
                 )}
 

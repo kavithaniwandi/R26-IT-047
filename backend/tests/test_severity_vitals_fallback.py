@@ -230,6 +230,51 @@ def test_headache_with_hypoxia_and_tachycardia_is_not_low():
     assert result["severity"] != "LOW"
 
 
+def test_fractional_spo2_is_percent_with_warning_and_not_hypoxia_high():
+    result = classify_note(
+        clinical_note="Superficial 2 cm laceration from broken glass, bleeding controlled. Wound cleaned and dressed. Vitals stable.",
+        symptoms="Small cut on the hand, mild pain",
+        age=29,
+        mode="ml",
+        vitals={**VITALS_6, "vital_spo2": 0.99, "pain_score": 2},
+    )
+
+    assert result["vitals_warnings"][0]["code"] == "spo2_fraction_converted"
+    assert result["vitals_warnings"][0]["used_value"] == 99
+    assert result["severity"] != "HIGH"
+    assert "SpO2 < 92" not in result["suggested_specialty"]["matched_keywords"]
+
+
+def test_spo2_boundary_and_invalid_values():
+    boundary = classify_note(
+        clinical_note="Small cut, bleeding controlled, stable.",
+        symptoms="Small cut",
+        age=29,
+        mode="ml",
+        vitals={**VITALS_6, "vital_spo2": 92, "pain_score": 2},
+    )
+    dangerous_low = classify_note(
+        clinical_note="Small cut, bleeding controlled, stable.",
+        symptoms="Small cut",
+        age=29,
+        mode="ml",
+        vitals={**VITALS_6, "vital_spo2": 9.9, "pain_score": 2},
+    )
+    harmless_high = classify_note(
+        clinical_note="Small cut, bleeding controlled, stable.",
+        symptoms="Small cut",
+        age=29,
+        mode="ml",
+        vitals={**VITALS_6, "vital_spo2": 150, "pain_score": 2},
+    )
+
+    assert "SpO2 < 92" not in boundary["suggested_specialty"]["matched_keywords"]
+    assert dangerous_low["vitals_warnings"][0]["code"] == "implausible_dangerous_low"
+    assert "SpO2 < 92" in dangerous_low["suggested_specialty"]["matched_keywords"]
+    assert harmless_high["vitals_warnings"][0]["code"] == "invalid_harmless_high"
+    assert "SpO2 < 92" not in harmless_high["suggested_specialty"]["matched_keywords"]
+
+
 def test_ran_out_of_insulin_with_confusion_and_abnormal_vitals_is_not_low():
     result = classify_note(
         clinical_note="ran out of insulin, confused and drowsy",

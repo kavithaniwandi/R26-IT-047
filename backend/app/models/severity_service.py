@@ -1,6 +1,7 @@
 from app.models.severity_ml_service import diagnose_complaint_mapping, predict_severity_ml_detailed
 from app.models.config import settings
 from app.models.specialty_service import suggest_specialty
+from app.models.vitals_normalizer import ML_VITAL_KEYS, normalize_vitals_for_scoring
 
 
 SUPPORTED_MODES = {"rule_based", "ml"}
@@ -12,40 +13,9 @@ COMPLAINT_REASON_PARTIAL_MATCH = "PARTIAL_MATCH"
 COMPLAINT_REASON_DANGER_TERM_UNMAPPED = "DANGER_TERM_UNMAPPED"
 DANGER_TERM_REVIEW_REASON = "danger term unmapped - review"
 SEVERITY_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
-ML_VITAL_KEYS = {
-    "vital_hr",
-    "vital_spo2",
-    "vital_sbp",
-    "vital_rr",
-    "vital_temp",
-    "pain_score",
-}
-ZERO_IS_MISSING_VITAL_KEYS = {"vital_spo2", "vital_hr", "vital_sbp"}
-
-
-def _numeric_vital_or_none(vitals: dict | None, key: str) -> float | None:
-    value = (vitals or {}).get(key)
-    if value is None or value == "":
-        return None
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return None
-    if numeric != numeric:
-        return None
-    # A literal zero for SpO2, HR, or SBP is physiologically implausible in
-    # intake data and is treated as missing rather than as a valid measurement.
-    if key in ZERO_IS_MISSING_VITAL_KEYS and numeric <= 0:
-        return None
-    return numeric
-
-
 def _count_numeric_vitals(vitals: dict | None) -> int:
-    count = 0
-    for key in ML_VITAL_KEYS:
-        if _numeric_vital_or_none(vitals, key) is not None:
-            count += 1
-    return count
+    normalized = normalize_vitals_for_scoring(vitals)
+    return sum(1 for key in ML_VITAL_KEYS if normalized.get(key) is not None)
 
 
 def _normalize_scores(scores: dict[str, float]) -> dict[str, float]:
@@ -178,7 +148,7 @@ def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
     )
     count = 0
     for key, predicate in checks:
-        value = _numeric_vital_or_none(vitals, key)
+        value = normalize_vitals_for_scoring(vitals).get(key)
         if value is not None:
             count += int(predicate(value))
     return count
@@ -316,7 +286,10 @@ def classify_note(
 
     from app.models.severity_rules import predict_severity
 
-    numeric_vital_count = _count_numeric_vitals(vitals)
+    normalized_vitals = normalize_vitals_for_scoring(vitals)
+    scoring_vitals = normalized_vitals.values
+    vitals_warnings = normalized_vitals.warnings
+    numeric_vital_count = normalized_vitals.count_for_ml()
     incomplete_vitals = numeric_vital_count < MIN_VITALS_FOR_ML
     incomplete_reason = "incomplete vitals — review"
 
@@ -357,7 +330,7 @@ def classify_note(
                 clinical_note=clinical_note,
                 age=age,
                 condition_group=condition_group,
-                vitals=vitals,
+                vitals=scoring_vitals,
                 has_red_flag=has_red_flag,
                 red_flag_count=red_flag_count,
                 rf_flags=rf_flags,
@@ -421,7 +394,7 @@ def classify_note(
             "danger_terms": danger_terms,
         }
 
-    result = apply_age65_abnormal_vitals_layer(result, age, vitals)
+    result = apply_age65_abnormal_vitals_layer(result, age, scoring_vitals)
 
     normalized_scores = _normalize_scores(result["scores"])
     risk_score = _display_risk_score(result, normalized_scores)
@@ -443,7 +416,7 @@ def classify_note(
         age=age,
         severity=result["severity"],
         mapped_complaints=result.get("mapped_complaints", []),
-        vitals=vitals,
+        vitals=scoring_vitals,
     )
     return {
         "severity": result["severity"],
@@ -456,6 +429,7 @@ def classify_note(
         "critical_trigger": result["critical_trigger"],
         "incomplete_vitals": incomplete_vitals,
         "incomplete_vitals_reason": incomplete_reason if incomplete_vitals else None,
+        "vitals_warnings": vitals_warnings,
         "can_override": result["critical_trigger"] is None,
         "mapped_complaints": result.get("mapped_complaints", []),
         "high_acuity_terms": result.get("high_acuity_terms", []),

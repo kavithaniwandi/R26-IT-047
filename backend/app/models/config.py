@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     PEDIATRIC_AGE_CUTOFF: int = 12
     GERIATRIC_AGE_CUTOFF: int = 65
     ENABLE_AGE65_ABNORMAL_VITALS: bool = False
+    TRIAGE_DEBUG_VITALS: bool = False
 
     def model_path(self, filename: str) -> Path:
         model_dir = self.MODEL_DIR

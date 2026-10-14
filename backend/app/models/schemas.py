@@ -114,6 +114,14 @@ class ComplaintMapping(BaseModel):
     danger_terms: list[str] = Field(default_factory=list)
 
 
+class VitalWarning(BaseModel):
+    field: str
+    raw_value: str | int | float | None = None
+    used_value: float | None = None
+    code: str
+    message: str
+
+
 class SeverityClassifyResponse(BaseModel):
     severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     priority_score: float = Field(..., ge=0.0, le=100.0)
@@ -125,6 +133,7 @@ class SeverityClassifyResponse(BaseModel):
     critical_trigger: str | None
     incomplete_vitals: bool = False
     incomplete_vitals_reason: str | None = None
+    vitals_warnings: list[VitalWarning] = Field(default_factory=list)
     can_override: bool = True
     interpreted_as: dict | None = None
     mapped: bool = False

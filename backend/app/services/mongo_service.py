@@ -240,6 +240,7 @@ async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
             "clinician_override": patient_data.get("clinician_override"),
             "critical_trigger": patient_data.get("critical_trigger"),
             "matched_rules": patient_data.get("matched_rules", []),
+            "vitals_warnings": patient_data.get("vitals_warnings", []),
             "mapped": patient_data.get("mapped"),
             "mapping_confidence": patient_data.get("mapping_confidence"),
             "mapping_review_reason": patient_data.get("mapping_review_reason"),
