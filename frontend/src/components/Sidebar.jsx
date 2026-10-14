@@ -7,7 +7,6 @@ import {
   Tent, 
   HeartHandshake, 
   Bell, 
-  LogOut, 
   ShieldCheck,
   Truck, 
   Radio, 
@@ -17,7 +16,6 @@ import {
   ChevronRight,
   Cpu,
   Database,
-  Home,
   LayoutDashboard,
   Shield, 
   Gift  
@@ -35,7 +33,6 @@ export function Sidebar({
   onToggleCollapse
 }) {
   const portals = [
-    { id: 'home', label: 'Public Home', icon: Home, color: 'blue', port: PORTAL_CONFIG.home.port },
     { id: 'admin', label: 'Admin Command', icon: ShieldCheck, color: 'rose', port: PORTAL_CONFIG.admin.port },
     { id: 'victim', label: 'Victim SOS Portal', icon: ShieldAlert, color: 'rose', port: PORTAL_CONFIG.victim.port },
     { id: 'authority', label: 'Medical Authority', icon: Activity, color: 'blue', port: PORTAL_CONFIG.authority.port },
@@ -49,7 +46,7 @@ export function Sidebar({
   const visiblePortals = user?.role === 'admin'
     ? portals
     : portals.filter((portal) => (
-        portal.id === 'home' || PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
+        PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
       ));
 
   const adminNavItems = [
@@ -63,20 +60,6 @@ export function Sidebar({
     { id: 'notifications', label: 'Audit Log Trail', icon: Bell, badge: null },
     { id: 'sms', label: 'SMS Gateway', icon: Radio, badge: 'Twilio', badgeColor: 'rose' },
   ];
-
-  const getRoleBadgeStyle = (role) => {
-    switch (role) {
-      case 'admin': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
-      case 'authority': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
-      case 'donor': return { bg: 'var(--accent-emerald-subtle)', text: 'var(--accent-emerald)', border: 'hsla(150, 84%, 42%, 0.35)' };
-      case 'volunteer': return { bg: 'var(--accent-amber-subtle)', text: 'var(--accent-amber)', border: 'hsla(38, 92%, 50%, 0.35)' };
-      case 'disaster_officer': return { bg: 'var(--accent-blue-subtle)', text: 'var(--accent-blue)', border: 'hsla(217, 91%, 60%, 0.35)' };
-      case 'victim': return { bg: 'var(--accent-rose-subtle)', text: 'var(--accent-rose)', border: 'hsla(350, 89%, 60%, 0.35)' };
-      default: return { bg: 'var(--border-subtle)', text: 'var(--text-secondary)', border: 'transparent' };
-    }
-  };
-
-  const roleStyle = getRoleBadgeStyle(user?.role);
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -101,163 +84,105 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Stakeholder Portals Section */}
-      <div className="sidebar-section-container">
-        {!isCollapsed && <span className="sidebar-section-title">Dedicated Portals</span>}
-        <div className="portal-switch-group">
-          {visiblePortals.map((p) => {
-            const Icon = p.icon;
-            const isCurrent = currentPortal === p.id;
-            return (
-              <div
-                key={p.id}
-                className={`portal-btn ${isCurrent ? 'active' : ''}`}
-                onClick={() => setPortal(p.id)}
-                title={`${p.label} (Port :${p.port})`}
-              >
+      {/* Scrollable Middle Body */}
+      <div className="sidebar-middle-scroll">
+        {/* Stakeholder Portals Section */}
+        <div className="sidebar-section-container">
+          {!isCollapsed && <span className="sidebar-section-title">Dedicated Portals</span>}
+          <div className="portal-switch-group">
+            {visiblePortals.map((p) => {
+              const Icon = p.icon;
+              const isCurrent = currentPortal === p.id;
+              return (
                 <div
-                  className="portal-btn-icon"
-                  style={{
-                    backgroundColor: `var(--accent-${p.color}-subtle)`,
-                    color: `var(--accent-${p.color})`,
-                    border: `1px solid hsla(var(--accent-${p.color}), 0.25)`
-                  }}
+                  key={p.id}
+                  className={`portal-btn ${isCurrent ? 'active' : ''}`}
+                  onClick={() => setPortal(p.id)}
+                  title={`${p.label} (Port :${p.port})`}
                 >
-                  <Icon size={15} />
-                </div>
-                {!isCollapsed && (
-                  <div className="portal-btn-info">
-                    <div className="portal-btn-label">{p.label}</div>
-                    <div className="portal-btn-port font-mono">:{p.port}</div>
-                  </div>
-                )}
-                {!isCollapsed && isCurrent && (
-                  <div className="portal-active-indicator" style={{ backgroundColor: `var(--accent-${p.color})` }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Navigation Links (when in Admin mode or global nav) */}
-      <div className="sidebar-nav-container">
-        {currentPortal === 'admin' ? (
-          <>
-            {!isCollapsed && <span className="sidebar-section-title">Command Navigation</span>}
-            <nav className="sidebar-nav">
-              {adminNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    className={`nav-item ${isActive ? 'active' : ''}`}
-                    onClick={() => setTab(item.id)}
-                    title={item.label}
+                  <div
+                    className="portal-btn-icon"
+                    style={{
+                      backgroundColor: `var(--accent-${p.color}-subtle)`,
+                      color: `var(--accent-${p.color})`,
+                      border: `1px solid hsla(var(--accent-${p.color}), 0.25)`
+                    }}
                   >
-                    <div className="nav-item-content">
-                      <Icon size={17} />
-                      {!isCollapsed && <span>{item.label}</span>}
+                    <Icon size={15} />
+                  </div>
+                  {!isCollapsed && (
+                    <div className="portal-btn-info">
+                      <div className="portal-btn-label">{p.label}</div>
+                      <div className="portal-btn-port font-mono">:{p.port}</div>
                     </div>
-                    {!isCollapsed && item.badge && (
-                      <span className={`nav-badge ${item.badgeColor || 'blue'}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </>
-        ) : (
-          <div className="portal-side-banner">
-            {!isCollapsed && (
-              <div className="active-portal-info-box">
-                <div className="active-portal-info-title">Active Dedicated Portal</div>
-                <div className="active-portal-info-name">
-                  {visiblePortals.find((p) => p.id === currentPortal)?.label}
+                  )}
+                  {!isCollapsed && isCurrent && (
+                    <div className="portal-active-indicator" style={{ backgroundColor: `var(--accent-${p.color})` }} />
+                  )}
                 </div>
-                <p className="active-portal-info-desc">
-                  You are currently operating in the dedicated stakeholder interface.
-                </p>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', marginTop: '12px' }}
-                  onClick={() => setPortal(user?.role === 'admin' ? 'admin' : 'home')}
-                >
-                  {user?.role === 'admin'
-                    ? <ShieldCheck size={14} style={{ color: 'var(--accent-rose)' }} />
-                    : <Home size={14} style={{ color: 'var(--accent-blue)' }} />}
-                  <span>{user?.role === 'admin' ? 'Return to Admin' : 'Open Public Home'}</span>
-                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Navigation Links (when in Admin mode or global nav) */}
+        <div className="sidebar-nav-container">
+          {currentPortal === 'admin' ? (
+            <>
+              {!isCollapsed && <span className="sidebar-section-title">Command Navigation</span>}
+              <nav className="sidebar-nav">
+                {adminNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      className={`nav-item ${isActive ? 'active' : ''}`}
+                      onClick={() => setTab(item.id)}
+                      title={item.label}
+                    >
+                      <div className="nav-item-content">
+                        <Icon size={17} />
+                        {!isCollapsed && <span>{item.label}</span>}
+                      </div>
+                      {!isCollapsed && item.badge && (
+                        <span className={`nav-badge ${item.badgeColor || 'blue'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </>
+          ) : null}
+        </div>
+
+        {/* System Telemetry Status Footer */}
+        {!isCollapsed && (
+          <div className="sidebar-telemetry-box">
+            <div className="telemetry-header">
+              <span className="telemetry-title">System Status</span>
+              <span className="telemetry-live-badge">99.9% ONLINE</span>
+            </div>
+            <div className="telemetry-grid">
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Server size={11} /> API Backend</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-emerald)' }}>OK (14ms)</span>
               </div>
-            )}
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Cpu size={11} /> ML Engine</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-violet)' }}>4/4 Active</span>
+              </div>
+              <div className="telemetry-row">
+                <span className="telemetry-label"><Database size={11} /> DB Storage</span>
+                <span className="telemetry-val font-mono" style={{ color: 'var(--accent-blue)' }}>SQLite GIS</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* System Telemetry Status Footer */}
-      {!isCollapsed && (
-        <div className="sidebar-telemetry-box">
-          <div className="telemetry-header">
-            <span className="telemetry-title">System Status</span>
-            <span className="telemetry-live-badge">99.9% ONLINE</span>
-          </div>
-          <div className="telemetry-grid">
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Server size={11} /> API Backend</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-emerald)' }}>OK (14ms)</span>
-            </div>
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Cpu size={11} /> ML Engine</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-violet)' }}>4/4 Active</span>
-            </div>
-            <div className="telemetry-row">
-              <span className="telemetry-label"><Database size={11} /> DB Storage</span>
-              <span className="telemetry-val font-mono" style={{ color: 'var(--accent-blue)' }}>SQLite GIS</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* User Profile Card & Logout Footer */}
-      <div className="sidebar-footer">
-        <div className="user-profile-card">
-          <div className="user-avatar" style={{
-            background: roleStyle.bg,
-            color: roleStyle.text,
-            border: `1px solid ${roleStyle.border}`
-          }}>
-            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
-          </div>
-          {!isCollapsed && (
-            <div className="user-info">
-              <div className="user-name" title={user?.full_name || 'Guest User'}>
-                {user?.full_name || 'Guest User'}
-              </div>
-              <div
-                className="user-role-tag"
-                style={{
-                  backgroundColor: roleStyle.bg,
-                  color: roleStyle.text,
-                  border: `1px solid ${roleStyle.border}`
-                }}
-              >
-                {user?.role || 'Stakeholder'}
-              </div>
-            </div>
-          )}
-          <button
-            className="sidebar-logout-btn"
-            onClick={onLogout}
-            title="Sign Out / Switch Stakeholder"
-            aria-label="Sign Out"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
-      </div>
     </aside>
   );
 }

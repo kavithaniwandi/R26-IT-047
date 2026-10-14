@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  UserCheck, 
   RefreshCw, 
   Radio, 
   Search, 
@@ -8,10 +7,12 @@ import {
   VolumeX, 
   Clock, 
   ShieldAlert, 
-  AlertTriangle,
-  Sparkles,
-  ChevronRight,
-  Menu
+  AlertTriangle, 
+  Sparkles, 
+  ChevronRight, 
+  Menu,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { PORTAL_CONFIG } from '../portalConfig';
 
@@ -23,7 +24,10 @@ export function Header({
   isRefreshing,
   user,
   onSwitchUserClick,
+  onSignInClick,
+  onLogout,
   onOpenCommandPalette,
+  showSidebarToggle = true,
   onToggleSidebar,
   soundEnabled,
   onToggleSound
@@ -59,14 +63,16 @@ export function Header({
     <header className="top-header">
       {/* Left side: Hamburger (for mobile/toggle), Portal Breadcrumb & Title */}
       <div className="header-left">
-        <button
-          className="header-icon-btn sidebar-toggle-btn"
-          onClick={onToggleSidebar}
-          title="Toggle Sidebar Navigation"
-          aria-label="Toggle Sidebar"
-        >
-          <Menu size={19} />
-        </button>
+        {showSidebarToggle && (
+          <button
+            className="header-icon-btn sidebar-toggle-btn"
+            onClick={onToggleSidebar}
+            title="Toggle Sidebar Navigation"
+            aria-label="Toggle Sidebar"
+          >
+            <Menu size={19} />
+          </button>
+        )}
 
         <div className="header-title-area">
           <div className="header-breadcrumbs">
@@ -126,22 +132,55 @@ export function Header({
           <span className="sync-text">{isRefreshing ? 'Syncing...' : 'Sync Live'}</span>
         </button>
 
-        {/* User profile / Switch account button */}
-        <button
-          className="btn btn-secondary btn-sm user-switch-btn"
-          onClick={onSwitchUserClick}
-          title="Switch Stakeholder Role / Account"
-        >
-          <div className="user-switch-avatar" style={{
-            backgroundColor: `var(--accent-${portalInfo.color}-subtle)`,
-            color: `var(--accent-${portalInfo.color})`
-          }}>
-            <UserCheck size={14} />
-          </div>
-          <div className="user-switch-label">
-            <span className="user-switch-role">{user?.role?.toUpperCase() || 'SWITCH ROLE'}</span>
-          </div>
-        </button>
+        {/* Logout button when logged in, or Sign In button when unauthenticated */}
+        {user ? (
+          <button
+            className="btn btn-outline btn-sm header-logout-btn"
+            onClick={onLogout}
+            title="Sign Out / Logout"
+            aria-label="Sign Out"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: '700',
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              color: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <LogOut size={14} />
+            <span>Logout</span>
+          </button>
+        ) : (
+          <button
+            className="btn btn-primary btn-sm header-signin-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              fontWeight: '700',
+              padding: '7px 18px',
+              fontSize: '0.84rem',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              backgroundColor: 'var(--color-primary, #2563eb)',
+              color: '#ffffff',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+              transition: 'all 0.15s ease'
+            }}
+            onClick={onSignInClick}
+            title="Sign in to your Stakeholder Portal"
+          >
+            <LogIn size={15} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

@@ -154,7 +154,7 @@ export function OverviewView({ stats, onNavigate, onResolveSOS, onAddToast }) {
       </div>
 
       {/* REAL-TIME INTERACTIVE MAP PREVIEW */}
-      <div className="card" style={{ marginBottom: '24px' }}>
+      <div className="card" style={{ marginBottom: '24px', position: 'relative', zIndex: 1, isolation: 'isolate' }}>
         <div className="card-header">
           <div>
             <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
