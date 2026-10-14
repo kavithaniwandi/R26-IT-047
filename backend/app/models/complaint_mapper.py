@@ -69,9 +69,20 @@ def _synonym_groups() -> dict:
 
 
 @lru_cache(maxsize=1)
+def _danger_config() -> dict:
+    return json.loads(COMPLAINT_DANGER_TERMS_PATH.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=1)
 def _danger_terms() -> list[str]:
-    data = json.loads(COMPLAINT_DANGER_TERMS_PATH.read_text(encoding="utf-8"))
+    data = _danger_config()
     return [str(term).lower() for term in data.get("terms") or []]
+
+
+@lru_cache(maxsize=1)
+def _danger_co_occurrence_rules() -> list[dict]:
+    data = _danger_config()
+    return list(data.get("co_occurrence_rules") or [])
 
 
 def _normalize(text: str) -> str:
@@ -109,6 +120,20 @@ class ComplaintMapper:
         self._patterns = [(term, _word_pattern(re.escape(term))) for term in self.terms]
         self._synonym_patterns_by_group = self._build_synonym_patterns()
         self._danger_patterns = [(term, _word_pattern(re.escape(term))) for term in _danger_terms()]
+        self._danger_co_occurrence_rules = [
+            {
+                "label": str(rule.get("label") or "danger co-occurrence"),
+                "allergy_patterns": [
+                    (str(term).lower(), _word_pattern(re.escape(str(term).lower())))
+                    for term in rule.get("allergy_terms") or []
+                ],
+                "airway_patterns": [
+                    (str(term).lower(), _word_pattern(re.escape(str(term).lower())))
+                    for term in rule.get("airway_terms") or []
+                ],
+            }
+            for rule in _danger_co_occurrence_rules()
+        ]
 
     def _build_synonym_patterns(self) -> dict[str, list[tuple[str, re.Pattern]]]:
         groups = {}
@@ -349,7 +374,22 @@ class ComplaintMapper:
                     continue
                 if term not in hits:
                     hits.append(term)
+        for rule in self._danger_co_occurrence_rules:
+            allergy_hit = self._first_active_match(cleaned, rule["allergy_patterns"])
+            airway_hit = self._first_active_match(cleaned, rule["airway_patterns"])
+            if allergy_hit and airway_hit:
+                label = f"{rule['label']}: {allergy_hit} + {airway_hit}"
+                if label not in hits:
+                    hits.append(label)
         return hits
+
+    @staticmethod
+    def _first_active_match(cleaned: str, patterns: list[tuple[str, re.Pattern]]) -> str | None:
+        for term, pattern in patterns:
+            for match in pattern.finditer(cleaned):
+                if not is_span_negated(cleaned, match.start()):
+                    return term
+        return None
 
 
 def to_model_symptoms(

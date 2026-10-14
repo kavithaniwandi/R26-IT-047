@@ -1,9 +1,16 @@
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+
 from app.models.severity_ml_service import diagnose_complaint_mapping, predict_severity_ml_detailed
 from app.models.config import settings
 from app.models.specialty_service import suggest_specialty
+from app.models.text_negation import is_span_negated, normalize_clinical_text
 from app.models.vitals_normalizer import ML_VITAL_KEYS, normalize_vitals_for_scoring
 
 
+SAFETY_FLOORS_PATH = Path(__file__).resolve().parents[2] / "ml_models" / "complaint_safety_floors.json"
 SUPPORTED_MODES = {"rule_based", "ml"}
 MIN_VITALS_FOR_ML = 4
 COMPLAINT_MAPPING_REVIEW_REASON = "complaint not recognised - review"
@@ -135,6 +142,137 @@ def _conditional_synonyms_enabled() -> list[str]:
 
 def _danger_term_floor_enabled() -> bool:
     return bool(getattr(settings, "COMPLAINT_DANGER_TERM_FLOOR_ENABLED", False))
+
+
+def _danger_term_floor() -> str:
+    return str(getattr(settings, "COMPLAINT_DANGER_TERM_FLOOR", "HIGH") or "HIGH").upper()
+
+
+def _safety_floors_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_SAFETY_FLOORS_ENABLED", True))
+
+
+@lru_cache(maxsize=1)
+def _safety_floor_config() -> list[dict]:
+    data = json.loads(SAFETY_FLOORS_PATH.read_text(encoding="utf-8"))
+    return list(data.get("entries") or [])
+
+
+def _term_pattern(term: str) -> re.Pattern:
+    normalized = normalize_clinical_text(term).replace(".", " ")
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    pattern = re.escape(normalized).replace(r"\ ", r"\s+")
+    return re.compile(rf"(?<![a-z0-9_]){pattern}(?![a-z0-9_])")
+
+
+@lru_cache(maxsize=1)
+def _compiled_safety_floor_config() -> list[dict]:
+    compiled = []
+    for entry in _safety_floor_config():
+        compiled.append(
+            {
+                **entry,
+                "all_of": [
+                    [(term, _term_pattern(str(term))) for term in group]
+                    for group in entry.get("all_of") or []
+                ],
+                "any_of": [
+                    [(term, _term_pattern(str(term))) for term in group]
+                    for group in entry.get("any_of") or []
+                ],
+            }
+        )
+    return compiled
+
+
+def _age_condition_matches(age: int | None, condition: dict | None) -> bool:
+    if not condition:
+        return True
+    if "any" in condition:
+        return any(_age_condition_matches(age, part) for part in condition.get("any") or [])
+    if age is None:
+        return False
+    if "lt" in condition and not age < int(condition["lt"]):
+        return False
+    if "lte" in condition and not age <= int(condition["lte"]):
+        return False
+    if "gt" in condition and not age > int(condition["gt"]):
+        return False
+    if "gte" in condition and not age >= int(condition["gte"]):
+        return False
+    return True
+
+
+def _first_non_negated_term(text: str, group: list[tuple[str, re.Pattern]]) -> str | None:
+    for term, pattern in group:
+        for match in pattern.finditer(text):
+            if not is_span_negated(text, match.start()):
+                return str(term)
+    return None
+
+
+def _matching_safety_floors(text: str, age: int | None) -> list[dict]:
+    cleaned = normalize_clinical_text(text)
+    matches = []
+    for entry in _compiled_safety_floor_config():
+        if not _age_condition_matches(age, entry.get("age")):
+            continue
+
+        matched_terms = []
+        all_matched = True
+        for group in entry.get("all_of") or []:
+            term = _first_non_negated_term(cleaned, group)
+            if not term:
+                all_matched = False
+                break
+            matched_terms.append(term)
+        if not all_matched:
+            continue
+
+        any_groups = entry.get("any_of") or []
+        if any_groups:
+            any_matched = False
+            for group in any_groups:
+                term = _first_non_negated_term(cleaned, group)
+                if term:
+                    matched_terms.append(term)
+                    any_matched = True
+                    break
+            if not any_matched:
+                continue
+
+        matches.append(
+            {
+                "id": str(entry.get("id")),
+                "floor": str(entry.get("floor", "MEDIUM")).upper(),
+                "matched_terms": matched_terms,
+                "review_status": entry.get("review_status"),
+            }
+        )
+    return matches
+
+
+def apply_complaint_safety_floors(result: dict, text: str, age: int | None, enabled: bool | None = None) -> dict:
+    if enabled is None:
+        enabled = _safety_floors_enabled()
+    if not enabled:
+        return result
+
+    updated = result
+    applied = list(updated.get("safety_floors") or [])
+    for match in _matching_safety_floors(text, age):
+        floor = match["floor"]
+        if floor not in SEVERITY_RANK:
+            continue
+        reason = f"safety floor: {match['id']} - review"
+        updated = _floor_rule_result(updated, floor, reason)
+        updated = _append_reason(updated, reason)
+        applied.append(match)
+
+    if applied:
+        updated = dict(updated)
+        updated["safety_floors"] = applied
+    return updated
 
 
 def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
@@ -357,11 +495,12 @@ def classify_note(
             if danger_floor or low_mapping_coverage:
                 reason = DANGER_TERM_REVIEW_REASON if danger_floor else COMPLAINT_MAPPING_REVIEW_REASON
                 reason_code = COMPLAINT_REASON_DANGER_TERM_UNMAPPED if danger_floor else None
+                floor = _danger_term_floor() if danger_floor else settings.COMPLAINT_MAPPING_FLOOR
                 floor_changed_result = (
                     SEVERITY_RANK[result["severity"]]
-                    < SEVERITY_RANK.get(settings.COMPLAINT_MAPPING_FLOOR.upper(), SEVERITY_RANK["MEDIUM"])
+                    < SEVERITY_RANK.get(floor, SEVERITY_RANK["MEDIUM"])
                 )
-                result = _floor_rule_result(result, settings.COMPLAINT_MAPPING_FLOOR, reason)
+                result = _floor_rule_result(result, floor, reason)
                 result = _append_reason(result, reason)
                 result["mapped"] = False
                 result["mapping_review_reason"] = reason
@@ -379,11 +518,12 @@ def classify_note(
 
     danger_terms = list(mapping_probe.get("danger_terms") or result.get("danger_terms") or [])
     if mode == "ml" and _danger_term_floor_enabled() and danger_terms:
+        floor = _danger_term_floor()
         floor_changed_result = (
             SEVERITY_RANK[result["severity"]]
-            < SEVERITY_RANK.get(settings.COMPLAINT_MAPPING_FLOOR.upper(), SEVERITY_RANK["MEDIUM"])
+            < SEVERITY_RANK.get(floor, SEVERITY_RANK["MEDIUM"])
         )
-        result = _floor_rule_result(result, settings.COMPLAINT_MAPPING_FLOOR, DANGER_TERM_REVIEW_REASON)
+        result = _floor_rule_result(result, floor, DANGER_TERM_REVIEW_REASON)
         result = _append_reason(result, DANGER_TERM_REVIEW_REASON)
         result["mapping_review_reason"] = DANGER_TERM_REVIEW_REASON
         complaint_mapping = {
@@ -393,6 +533,10 @@ def classify_note(
             "reason_code": COMPLAINT_REASON_DANGER_TERM_UNMAPPED,
             "danger_terms": danger_terms,
         }
+
+    if mode == "ml":
+        safety_floor_text = f"{symptoms or ''} {clinical_note or ''}".strip()
+        result = apply_complaint_safety_floors(result, safety_floor_text, age)
 
     result = apply_age65_abnormal_vitals_layer(result, age, scoring_vitals)
 
@@ -443,6 +587,7 @@ def classify_note(
         "mapping_confidence": float(result.get("mapping_confidence", 1.0 if result.get("mapped_complaints") or result.get("high_acuity_terms") else 0.0)),
         "mapping_review_reason": result.get("mapping_review_reason"),
         "complaint_mapping": complaint_mapping,
+        "safety_floors": result.get("safety_floors", []),
         "suggested_specialty": suggested_specialty,
         **queue_policy,
     }

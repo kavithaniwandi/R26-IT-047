@@ -38,6 +38,20 @@ const warning = complaintMappingNotice(
 assert("Floor-changed mapping issue is warning", warning?.tone === "warning");
 assert("Warning uses review copy", warning?.message === "No complaint recognised - please review.");
 
+const mappedWarning = complaintMappingNotice(
+  {
+    mapped_terms: ["fall"],
+    unmapped_terms: ["twisted", "ankle"],
+    coverage: 0.33,
+    threshold: 0.5,
+    floor_applied: true,
+    floor_changed_result: true,
+    reason_code: "LOW_COVERAGE",
+  },
+  { primary: "Orthopedic", fallback: false }
+);
+assert("Mapped floor warning uses partial-match copy", mappedWarning?.message === "Complaint partly matched - please review.");
+
 const info = complaintMappingNotice(
   {
     mapped_terms: ["vaginal bleeding"],

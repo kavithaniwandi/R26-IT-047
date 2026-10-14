@@ -43,12 +43,15 @@ export function complaintMappingNotice(complaintMapping, suggestedSpecialty) {
     complaintMapping.floor_changed_result ||
     complaintMapping.reason_code === "DANGER_TERM_UNMAPPED"
   ) {
+    const reviewMessage = mappedTerms.length > 0
+      ? "Complaint partly matched - please review."
+      : "No complaint recognised - please review.";
     return {
       tone: "warning",
       message:
         complaintMapping.reason_code === "DANGER_TERM_UNMAPPED"
           ? "Safety-critical term not mapped - please review."
-          : "No complaint recognised - please review.",
+          : reviewMessage,
       mappedTerms,
       unmappedTerms,
       coveragePercent,
