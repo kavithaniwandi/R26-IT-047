@@ -24,6 +24,15 @@
   "default_primary": "General Practice",
   "critical_primary": "Emergency Medicine",
   "secondary_threshold": 1.5,
+  "cardiac_chest_pain_pattern": {
+    "reason": "Chest pain with ischemic features should remain advisory-cardiac even when breathlessness or hypoxia is also present.",
+    "required_terms": ["chest pain"],
+    "feature_terms": ["left arm", "arm", "jaw", "neck", "shoulder", "sweating", "diaphoresis", "crushing", "pressure", "tightness"],
+    "exclusion_terms": ["cough", "fever", "wheeze", "wheezing", "sputum", "pleuritic"],
+    "cardiovascular_boost": 5.0,
+    "emergency_boost": 1.0,
+    "respiratory_spo2_boost": 1.0
+  },
   "age_boosts": {
     "pediatric": { "specialty": "Pediatric", "age_lt": 12, "weight": 3.0 },
     "geriatric": { "specialty": "Geriatric", "age_gte": 65, "weight": 1.4 }

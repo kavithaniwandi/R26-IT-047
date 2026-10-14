@@ -56,6 +56,20 @@ assert("Info carries mapped terms", info?.mappedTerms.includes("vaginal bleeding
 assert("Info carries unmapped terms", info?.unmappedTerms.includes("pregnant"));
 assert("Info notes specialty recognition", info?.specialtyRecognized === true);
 
+const filteredInfo = complaintMappingNotice(
+  {
+    mapped_terms: ["chest pain"],
+    unmapped_terms: ["58", "year", "old", "male", "30", "minutes", "sweating"],
+    coverage: 0.5,
+    threshold: 0.6,
+    floor_applied: false,
+    floor_changed_result: false,
+    reason_code: "PARTIAL_MATCH",
+  },
+  { primary: "Cardiovascular", fallback: false }
+);
+assert("Display filter keeps meaningful unmapped term", filteredInfo?.unmappedTerms.join(",") === "sweating");
+
 const hidden = complaintMappingNotice(
   {
     mapped_terms: ["chest pain"],

@@ -17,6 +17,7 @@ GENERAL_PRACTICE_LABEL = "General Practice"
 PEDIATRIC_LABEL = "Pediatric"
 OBSTETRIC_LABEL = "Obstetric & Gynecologic"
 RESPIRATORY_LABEL = "Respiratory"
+CARDIOVASCULAR_LABEL = "Cardiovascular"
 ENDOCRINE_LABEL = "Endocrine & Metabolic"
 NEURO_LABEL = "Neurological"
 SPO2_RESPIRATORY_BOOST_THRESHOLD = 92.0
@@ -87,6 +88,33 @@ def _add_score(
     clinical_hit_specialties.add(specialty)
 
 
+def _matched_terms(text: str, terms: list[str] | tuple[str, ...] | set[str]) -> list[str]:
+    matches: list[str] = []
+    occupied: list[tuple[int, int]] = []
+    for term in terms:
+        term_text = str(term)
+        for start, end in _keyword_matches(text, term_text):
+            if any(start < used_end and end > used_start for used_start, used_end in occupied):
+                continue
+            if term_text not in matches:
+                matches.append(term_text)
+            occupied.append((start, end))
+            break
+    return matches
+
+
+def _cardiac_chest_pain_pattern(text: str, rules: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+    config = rules.get("cardiac_chest_pain_pattern") or {}
+    required_terms = config.get("required_terms") or ["chest pain"]
+    feature_terms = config.get("feature_terms") or []
+    exclusion_terms = config.get("exclusion_terms") or []
+
+    has_required = all(_keyword_matches(text, str(term)) for term in required_terms)
+    features = _matched_terms(text, feature_terms)
+    exclusions = _matched_terms(text, exclusion_terms)
+    return bool(has_required and features and not exclusions), features, config
+
+
 def suggest_specialty(
     symptoms: str | None,
     clinical_note: str | None,
@@ -113,6 +141,7 @@ def suggest_specialty(
     scores: dict[str, float] = {}
     matched_by_specialty: dict[str, list[str]] = {}
     clinical_hit_specialties: set[str] = set()
+    cardiac_pattern, cardiac_features, cardiac_config = _cardiac_chest_pain_pattern(text, rules)
 
     for rule in rules.get("rules") or []:
         specialty = rule["specialty"]
@@ -127,16 +156,39 @@ def suggest_specialty(
             for flag in sorted(flag_hits):
                 _add_score(scores, matched_by_specialty, clinical_hit_specialties, specialty, boost / len(flag_hits), flag)
 
+    if cardiac_pattern:
+        _add_score(
+            scores,
+            matched_by_specialty,
+            clinical_hit_specialties,
+            CARDIOVASCULAR_LABEL,
+            float(cardiac_config.get("cardiovascular_boost", 0.0)),
+            f"cardiac chest pain pattern: {', '.join(cardiac_features)}",
+        )
+        _add_score(
+            scores,
+            matched_by_specialty,
+            clinical_hit_specialties,
+            EMERGENCY_LABEL,
+            float(cardiac_config.get("emergency_boost", 0.0)),
+            "possible cardiac chest pain",
+        )
+
     spo2 = _numeric_vital(vitals, "vital_spo2")
     sbp = _numeric_vital(vitals, "vital_sbp")
     hr = _numeric_vital(vitals, "vital_hr")
     if spo2 is not None and spo2 < SPO2_RESPIRATORY_BOOST_THRESHOLD:
+        respiratory_spo2_boost = (
+            float(cardiac_config.get("respiratory_spo2_boost", RESPIRATORY_VITAL_BOOST))
+            if cardiac_pattern
+            else RESPIRATORY_VITAL_BOOST
+        )
         _add_score(
             scores,
             matched_by_specialty,
             clinical_hit_specialties,
             RESPIRATORY_LABEL,
-            RESPIRATORY_VITAL_BOOST,
+            respiratory_spo2_boost,
             f"SpO2 < {SPO2_RESPIRATORY_BOOST_THRESHOLD:g}",
         )
         if normalized_severity in {"HIGH", "CRITICAL"}:

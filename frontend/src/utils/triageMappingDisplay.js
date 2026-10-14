@@ -1,9 +1,41 @@
+const UNMAPPED_DISPLAY_STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "for",
+  "from",
+  "hour",
+  "hours",
+  "in",
+  "is",
+  "male",
+  "female",
+  "minute",
+  "minutes",
+  "of",
+  "old",
+  "on",
+  "patient",
+  "the",
+  "to",
+  "with",
+  "year",
+  "years",
+]);
+
+function displayUnmappedTerms(terms = []) {
+  return (terms || []).filter((term) => {
+    const normalized = String(term || "").trim().toLowerCase();
+    return normalized && !/^\d+(?:\.\d+)?$/.test(normalized) && !UNMAPPED_DISPLAY_STOPWORDS.has(normalized);
+  });
+}
+
 export function complaintMappingNotice(complaintMapping, suggestedSpecialty) {
   if (!complaintMapping) return null;
 
   const coveragePercent = Math.round((complaintMapping.coverage || 0) * 100);
   const mappedTerms = complaintMapping.mapped_terms || [];
-  const unmappedTerms = complaintMapping.unmapped_terms || [];
+  const unmappedTerms = displayUnmappedTerms(complaintMapping.unmapped_terms || []);
   const specialtyRecognized =
     suggestedSpecialty && suggestedSpecialty.fallback === false;
 

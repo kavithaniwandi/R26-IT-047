@@ -193,6 +193,142 @@ def test_hypoxic_headache_suggests_emergency_or_respiratory_not_neurological():
     assert result["primary"] != "Neurological"
 
 
+def test_cardiac_chest_pain_pattern_prioritizes_cardiovascular_over_hypoxia():
+    result = suggest_specialty(
+        "Chest pain",
+        "58 year old male, crushing chest pain spreading to the left arm for 30 minutes, sweating, feeling short of breath.",
+        {},
+        58,
+        "HIGH",
+        ["chest pain"],
+        vitals={
+            "vital_hr": 118,
+            "vital_spo2": 88,
+            "vital_sbp": 96,
+            "vital_rr": 26,
+            "vital_temp": 37.2,
+            "pain_score": 9,
+        },
+    )
+
+    assert result["primary"] == "Cardiovascular"
+    assert result["secondary"][0] == "Emergency Medicine"
+    assert "Respiratory" in result["secondary"]
+    assert any("cardiac chest pain pattern" in keyword for keyword in result["matched_keywords"])
+    assert any("crushing" in keyword for keyword in result["matched_keywords"])
+    assert any("left arm" in keyword for keyword in result["matched_keywords"])
+    assert any("sweating" in keyword for keyword in result["matched_keywords"])
+
+
+def test_negated_cardiac_features_do_not_trigger_cardiac_pattern():
+    result = suggest_specialty(
+        "No chest pain, no sweating, shortness of breath, SpO2 88",
+        "No chest pain and no sweating. Shortness of breath with low oxygen.",
+        {},
+        45,
+        "HIGH",
+        [],
+        vitals={"vital_spo2": 88, "vital_hr": 100, "vital_sbp": 118},
+    )
+
+    assert result["primary"] == "Respiratory"
+    assert not any("cardiac chest pain pattern" in keyword for keyword in result["matched_keywords"])
+
+
+def test_pleuritic_chest_pain_with_fever_cough_stays_respiratory():
+    result = suggest_specialty(
+        "pleuritic chest pain with fever and cough",
+        "Pleuritic chest pain, fever, cough and sputum with SpO2 88.",
+        {},
+        40,
+        "HIGH",
+        ["chest pain"],
+        vitals={"vital_spo2": 88, "vital_hr": 108, "vital_sbp": 112},
+    )
+
+    assert result["primary"] == "Respiratory"
+    assert not any("cardiac chest pain pattern" in keyword for keyword in result["matched_keywords"])
+
+
+def test_chest_pain_with_breathlessness_only_does_not_trigger_cardiac_pattern():
+    result = suggest_specialty(
+        "chest pain and breathlessness",
+        "Chest pain with shortness of breath. No sweating, no arm pain, no pressure.",
+        {},
+        50,
+        "HIGH",
+        ["chest pain"],
+        vitals={"vital_spo2": 88, "vital_hr": 106, "vital_sbp": 120},
+    )
+
+    assert result["primary"] == "Respiratory"
+    assert not any("cardiac chest pain pattern" in keyword for keyword in result["matched_keywords"])
+
+
+def test_pure_asthma_wheeze_still_suggests_respiratory():
+    result = suggest_specialty(
+        "asthma wheezing",
+        "Known asthma with wheeze and shortness of breath.",
+        {},
+        33,
+        "HIGH",
+        [],
+        vitals={"vital_spo2": 88, "vital_hr": 112, "vital_sbp": 118},
+    )
+
+    assert result["primary"] == "Respiratory"
+    assert "Emergency Medicine" in result["secondary"]
+
+
+def test_pure_chest_pain_stable_vitals_still_suggests_cardiovascular():
+    result = suggest_specialty(
+        "chest pain",
+        "Chest pain reported, stable and alert.",
+        {},
+        45,
+        "HIGH",
+        ["chest pain"],
+        vitals={"vital_spo2": 98, "vital_hr": 82, "vital_sbp": 126},
+    )
+
+    assert result["primary"] == "Cardiovascular"
+
+
+def test_low_spo2_without_chest_pain_still_suggests_respiratory():
+    result = suggest_specialty(
+        "shortness of breath",
+        "Shortness of breath with SpO2 88.",
+        {},
+        45,
+        "HIGH",
+        [],
+        vitals={"vital_spo2": 88, "vital_hr": 100, "vital_sbp": 118},
+    )
+
+    assert result["primary"] == "Respiratory"
+    assert "Emergency Medicine" in result["secondary"]
+
+
+def test_cardiac_specialty_change_does_not_change_severity_for_exact_case():
+    result = classify_note(
+        clinical_note="58 year old male, crushing chest pain spreading to the left arm for 30 minutes, sweating, feeling short of breath.",
+        age=58,
+        mode="ml",
+        symptoms="Chest pain",
+        vitals={
+            "vital_hr": 118,
+            "vital_spo2": 88,
+            "vital_sbp": 96,
+            "vital_rr": 26,
+            "vital_temp": 37.2,
+            "pain_score": 9,
+        },
+    )
+
+    assert result["severity"] == "HIGH"
+    assert result["suggested_specialty"]["primary"] == "Cardiovascular"
+
+
 def test_insulin_with_confusion_prioritizes_emergency_then_endocrine():
     result = suggest_specialty(
         "ran out of insulin, confused and drowsy",
