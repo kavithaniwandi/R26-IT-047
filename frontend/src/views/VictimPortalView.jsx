@@ -38,14 +38,19 @@ import {
   Trash2,
   Edit2,
   CheckSquare,
-  Globe
+  Globe,
+  LogIn
 } from 'lucide-react';
 import { api, setAuthToken, setStoredUser, removeAuthToken } from '../api';
 import { RealTimeMap } from '../components/RealTimeMap';
 import { playEmergencyBeep, playSuccessChime, playNotificationPing } from '../utils/audioAlert';
 
-export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmin }) {
+export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmin, onLogout, onNavigateSignIn }) {
   const [user, setUser] = useState(initialUser);
+
+  useEffect(() => {
+    setUser(initialUser);
+  }, [initialUser]);
   const [activeSOSList, setActiveSOSList] = useState([]);
   const [victimsList, setVictimsList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -65,21 +70,8 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
   // Modals
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authTab, setAuthTab] = useState('login'); // 'login' | 'signup'
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [latestBroadcastLog, setLatestBroadcastLog] = useState([]);
-
-  // Auth Form State
-  const [authForm, setAuthForm] = useState({
-    email: '',
-    password: '',
-    full_name: '',
-    phone: '+94 77 123 4567',
-    address: 'Ranala, Kaduwela, Colombo',
-  });
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState(null);
 
   // 4 Emergency Contacts State
   const defaultContacts = [
@@ -388,55 +380,19 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
     }
   };
 
-  // Auth Handler (Login & Signup)
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      if (authTab === 'login') {
-        const res = await api.login(authForm.email, authForm.password);
-        setAuthToken(res.access_token);
-        const me = await api.getMe();
-        setStoredUser(me);
-        setUser(me);
-        playSuccessChime();
-        setShowAuthModal(false);
-        if (onAddToast) onAddToast(`Welcome, ${me.full_name}!`, 'success', 'Logged In');
-      } else {
-        // Sign Up
-        await api.register({
-          full_name: authForm.full_name,
-          email: authForm.email,
-          password: authForm.password,
-          phone: authForm.phone,
-          address: authForm.address
-        });
-        // Auto login after sign up
-        const loginRes = await api.login(authForm.email, authForm.password);
-        setAuthToken(loginRes.access_token);
-        const me = await api.getMe();
-        setStoredUser(me);
-        setUser(me);
-        playSuccessChime();
-        setShowAuthModal(false);
-        if (onAddToast) onAddToast(`Victim account created for ${me.full_name}!`, 'success', 'Account Registered');
-        
-        // Show emergency contacts onboarding immediately
-        setShowOnboardingModal(true);
-      }
-    } catch (err) {
-      setAuthError(err.message || 'Authentication error. Please check your credentials.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleVictimSignOut = () => {
-    removeAuthToken();
-    setUser(null);
     setShowProfileModal(false);
-    if (onAddToast) onAddToast('Signed out of victim session.', 'info', 'Logged Out');
+    if (onLogout) {
+      onLogout();
+    } else {
+      removeAuthToken();
+      setUser(null);
+      if (onNavigateSignIn) {
+        onNavigateSignIn();
+      } else {
+        window.location.href = '/signin';
+      }
+    }
   };
 
   const helplineContacts = [
@@ -556,10 +512,17 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
           ) : (
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => { setAuthTab('login'); setShowAuthModal(true); }}
+              onClick={() => {
+                if (onNavigateSignIn) {
+                  onNavigateSignIn();
+                } else {
+                  window.location.href = '/signin';
+                }
+              }}
+              title="Sign in to your account"
             >
-              <UserCheck size={14} />
-              <span>Login / Sign Up</span>
+              <LogIn size={14} />
+              <span>Sign In</span>
             </button>
           )}
 
@@ -1471,130 +1434,12 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
               </button>
 
               <button
-                className="btn btn-danger btn-sm"
-                onClick={handleVictimSignOut}
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowProfileModal(false)}
               >
-                <LogOut size={14} />
-                <span>Sign Out</span>
+                <span>Close</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==========================================================================
-          MODAL 4: PUBLIC VICTIM LOGIN & SIGN UP
-          ========================================================================== */}
-      {showAuthModal && (
-        <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
-          <div className="modal-content auth-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="brand-icon">
-                  <Lock size={18} />
-                </div>
-                <div>
-                  <h2 className="modal-title">Victim Portal Access</h2>
-                  <p className="card-subtitle">Sign in or create an account for disaster relief services</p>
-                </div>
-              </div>
-              <button className="modal-close-btn" onClick={() => setShowAuthModal(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="auth-tab-switch">
-              <button
-                className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`}
-                onClick={() => setAuthTab('login')}
-              >
-                <span>Sign In</span>
-              </button>
-              <button
-                className={`auth-tab-btn ${authTab === 'signup' ? 'active' : ''}`}
-                onClick={() => setAuthTab('signup')}
-              >
-                <span>Create New Account</span>
-              </button>
-            </div>
-
-            {authError && (
-              <div className="auth-error-banner">
-                <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-                <span>{authError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleAuthSubmit}>
-              {authTab === 'signup' && (
-                <div className="form-group">
-                  <label className="form-label">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="custom-input"
-                    placeholder="e.g. Chamari Perera"
-                    value={authForm.full_name}
-                    onChange={(e) => setAuthForm({ ...authForm, full_name: e.target.value })}
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  className="custom-input"
-                  placeholder="e.g. victim@kaduwela.lk"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                />
-              </div>
-
-              {authTab === 'signup' && (
-                <div className="form-group">
-                  <label className="form-label">Mobile Phone Number</label>
-                  <input
-                    type="tel"
-                    required
-                    className="custom-input"
-                    placeholder="+94 77 123 4567"
-                    value={authForm.phone}
-                    onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  required
-                  className="custom-input"
-                  placeholder="Enter secure password (at least 8 chars, 1 number)..."
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAuthModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={authLoading}
-                >
-                  {authLoading ? 'Please wait...' : authTab === 'login' ? 'Sign In' : 'Create Victim Account'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

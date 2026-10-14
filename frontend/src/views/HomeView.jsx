@@ -25,24 +25,28 @@ import {
   AlertTriangle,
   Send,
   Lock,
-  Globe
+  Globe,
+  LogIn
 } from 'lucide-react';
 import { RealTimeMap } from '../components/RealTimeMap';
 import { api } from '../api';
 import { PORTAL_CONFIG } from '../portalConfig';
 import { playNotificationPing } from '../utils/audioAlert';
+import Footer from '../components/Footer';
 
-export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
+export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast, user, onLogout }) {
   const [stats, setStats] = useState(null);
   const [heatmapData, setHeatmapData] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const statsData = await api.getAdminStats();
-        setStats(statsData);
-      } catch (e) {
-        console.warn('Stats load in home', e);
+      if (user) {
+        try {
+          const statsData = await api.getAdminStats();
+          setStats(statsData);
+        } catch (e) {
+          console.warn('Stats load in home', e);
+        }
       }
       try {
         const mapData = await api.getHeatmap();
@@ -52,7 +56,7 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
 
   const portalCards = [
     {
@@ -240,13 +244,53 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
             <span>Emergency SOS</span>
           </button>
 
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={onOpenLoginModal}
-          >
-            <UserCheck size={14} style={{ color: 'var(--blue-600)' }} />
-            <span>Stakeholder Login</span>
-          </button>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: '600',
+                  padding: '7px 14px'
+                }}
+                onClick={() => onSelectPortal(user.role || 'admin')}
+              >
+                <UserCheck size={14} style={{ color: 'var(--blue-600)' }} />
+                <span>{user.full_name || user.email || 'Dashboard'}</span>
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ fontWeight: '600', padding: '7px 12px' }}
+                onClick={onLogout}
+                title="Sign out"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn btn-primary btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '700',
+                padding: '7px 18px',
+                backgroundColor: 'var(--color-primary, #2563eb)',
+                color: '#ffffff',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+                cursor: 'pointer'
+              }}
+              onClick={onOpenLoginModal}
+              title="Sign in to your Stakeholder Portal"
+            >
+              <LogIn size={15} />
+              <span>Signin</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -592,64 +636,8 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast }) {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{
-        borderTop: '1px solid var(--border-subtle)',
-        backgroundColor: '#ffffff',
-        padding: '32px 32px 28px'
-      }}>
-        <div style={{
-          maxWidth: '1380px',
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-              SRI LANKA NATIONAL DISASTER RELIEF SYSTEM
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-              Ministry of Health & Disaster Management Directorate &bull; Fast-Track Emergency Response Cloud
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem' }}>
-            <button
-              onClick={() => onSelectPortal('victim')}
-              style={{ background: 'transparent', border: 'none', color: 'var(--color-danger-text)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Public SOS
-            </button>
-            <button
-              onClick={() => onSelectPortal('authority')}
-              style={{ background: 'transparent', border: 'none', color: 'var(--blue-600)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              MOH Console
-            </button>
-            <button
-              onClick={() => onSelectPortal('donor')}
-              style={{ background: 'transparent', border: 'none', color: 'var(--color-success-text)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Donor Hub
-            </button>
-            <button
-              onClick={() => onSelectPortal('volunteer')}
-              style={{ background: 'transparent', border: 'none', color: 'var(--color-warning-text)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Volunteer Dispatch
-            </button>
-            <button
-              onClick={() => onSelectPortal('admin')}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Admin Command
-            </button>
-          </div>
-        </div>
-      </footer>
+      {/* Footer from signin page */}
+      <Footer />
     </div>
   );
 }

@@ -113,37 +113,42 @@ export const PORTAL_CONFIG = {
  * Detect current portal from port, URL path, query params, or environment variable.
  */
 export function detectCurrentPortal() {
-  // 1. Environment Variable
-  const envPortal = import.meta.env.VITE_PORTAL_TYPE;
-  if (envPortal && PORTAL_CONFIG[envPortal]) {
-    return envPortal;
-  }
-
-  // 2. An explicit portal query is used by the common login redirect.
+  // 1. Explicit query parameter has highest precedence (e.g. ?portal=admin, ?portal=victim)
   const params = new URLSearchParams(window.location.search);
   const portalParam = params.get('portal');
   if (portalParam && PORTAL_CONFIG[portalParam]) {
     return portalParam;
   }
 
-  // 3. Window pathname detection
+  // 2. Public Root URL on primary port 5173 is always the public 'home' landing page
   const pathname = window.location.pathname.toLowerCase();
-  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (cfg.path === '/' ? pathname === '/' : pathname.startsWith(cfg.path)) {
-      return key;
-    }
-  }
-
-  // 4. Window location port detection
   const currentPort = parseInt(window.location.port, 10);
+  if (pathname === '/' && (!currentPort || currentPort === 5173)) {
+    return 'home';
+  }
+
+  // 3. Window pathname detection for specific subpaths (e.g. /admin, /victim)
   for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
-    if (cfg.port === currentPort && key !== 'home') {
+    if (cfg.path !== '/' && pathname.startsWith(cfg.path)) {
       return key;
     }
   }
 
-  // Default to admin
-  return 'admin';
+  // 4. Dedicated port detection for other micro-portals (ports 5174-5180)
+  for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
+    if (cfg.port === currentPort && key !== 'home' && key !== 'admin') {
+      return key;
+    }
+  }
+
+  // 5. Environment variable fallback (if not admin on root)
+  const envPortal = import.meta.env.VITE_PORTAL_TYPE;
+  if (envPortal && PORTAL_CONFIG[envPortal] && envPortal !== 'admin') {
+    return envPortal;
+  }
+
+  // Default to home public portal
+  return 'home';
 }
 
 export function getPortalForRole(role) {
