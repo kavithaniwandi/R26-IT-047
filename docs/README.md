@@ -1,7 +1,7 @@
-SmartRelief - An Intelligent Disaster Healthcare and Relief Coordination System
+SmartRelief: An Intelligent Disaster Healthcare and Relief Coordination System
 Project ID: R26-IT-047
 An AI-assisted platform that supports disaster response for floods and landslides in Sri Lanka. It connects emergency reporting, hazard prediction, relief-need forecasting, medical camp planning, patient triage, and donation coordination in one system.
-> \\\*\\\*Status:\\\*\\\* Research prototype. All model outputs are \\\*\\\*advisory\\\*\\\* and must be reviewed by qualified humans (Medical Officers, authorities, coordinators). The system has not been clinically or behaviourally validated. See \\\[Limitations](#limitations-and-responsible-use).
+> **Status:** Research prototype. All model outputs are **advisory** and must be reviewed by qualified humans (Medical Officers, authorities, coordinators). The system has not been clinically or behaviourally validated. See [Limitations](#limitations-and-responsible-use).
 ---
 Table of Contents
 Overview
@@ -22,7 +22,7 @@ Implementation Verification Checklist
 Team
 ---
 Overview
-After a flood or landslide, responders face incomplete information, limited clinicians, and urgent supply needs. This module addresses that with:
+After a flood or landslide, responders face incomplete information, limited clinicians, and urgent supply needs. SmartRelief addresses that with:
 Emergency reporting with GPS and automatic priority scoring
 Hazard risk prediction for floods and landslides
 Medical camp site recommendation on an interactive map
@@ -41,57 +41,57 @@ Disaster Prediction System	Estimate flood and landslide risk	Predicted class/sco
 Integrated Disaster Relief Prediction System	Predict relief needs and coordinate donations	Donation requests, dashboard, donor notifications
 Patient Severity Triage	Rank patients by severity at medical camps	Severity level, priority score, routing, MO queue
 Appeal Quality Scoring	Rate donation appeal text	LOW / MEDIUM / HIGH label, 1-5 score, confidence
-> \\\*\\\*Quick distinction:\\\*\\\* Disaster prediction estimates geographic hazard risk; SOS alerting manages emergencies people report; camp recommendation combines risk and demand to support medical planning. These are connected logical components, not one model doing everything.
+> **Quick distinction:** Disaster prediction estimates geographic hazard risk; SOS alerting manages emergencies people report; camp recommendation combines risk and demand to support medical planning. These are connected logical components, not one model doing everything.
 System Architecture
 All components run as REST services (FastAPI) behind a React front end, sharing data through the backend and a relational database (SQLAlchemy), with an optional document store for logs.
 Overall architecture
 ```mermaid
 flowchart TB
-    subgraph USERS\\\["Users"]
-        V\\\["Disaster victims"]
-        MO\\\["Medical Officers"]
-        AU\\\["Authorities and relief coordinators"]
-        VO\\\["Volunteers and NGOs"]
-        DO\\\["Registered donors"]
+    subgraph USERS["Users"]
+        V["Disaster victims"]
+        MO["Medical Officers"]
+        AU["Authorities and relief coordinators"]
+        VO["Volunteers and NGOs"]
+        DO["Registered donors"]
     end
 
-    subgraph FE\\\["React frontend"]
-        SOSUI\\\["SOS portal: form and GPS"]
-        MAPUI\\\["GIS map: Leaflet / React-Leaflet"]
-        TRUI\\\["Triage intake and MO queue"]
-        DASH\\\["Relief dashboard and forecasting"]
-        APUI\\\["Appeal generator and analyzer"]
+    subgraph FE["React frontend"]
+        SOSUI["SOS portal: form and GPS"]
+        MAPUI["GIS map: Leaflet / React-Leaflet"]
+        TRUI["Triage intake and MO queue"]
+        DASH["Relief dashboard and forecasting"]
+        APUI["Appeal generator and analyzer"]
     end
 
-    subgraph BE\\\["FastAPI backend"]
-        GW\\\["API gateway: JWT, role checks, validation"]
-        SOSS\\\["SOSService"]
-        CAMPS\\\["CampService"]
-        PRED\\\["Disaster prediction service"]
-        RELIEF\\\["Relief service: needs, donors, allocation"]
-        TRIS\\\["Triage service"]
-        APPS\\\["Appeal scoring service"]
+    subgraph BE["FastAPI backend"]
+        GW["API gateway: JWT, role checks, validation"]
+        SOSS["SOSService"]
+        CAMPS["CampService"]
+        PRED["Disaster prediction service"]
+        RELIEF["Relief service: needs, donors, allocation"]
+        TRIS["Triage service"]
+        APPS["Appeal scoring service"]
     end
 
-    subgraph ML\\\["Model artifacts loaded at startup"]
-        MPRIO\\\["M\\\_PRIO: SOS priority, Random Forest"]
-        MCAMP\\\["M\\\_CAMP: camp suitability, Random Forest"]
-        MHAZ\\\["Flood and landslide models"]
-        YOLO\\\["YOLOv8n head detection"]
-        MDON\\\["Donation probability, Random Forest"]
-        MTRI\\\["Stacked triage ensemble and safety layers"]
-        MAPP\\\["Appeal quality classifier and regressor"]
+    subgraph ML["Model artifacts loaded at startup"]
+        MPRIO["M_PRIO: SOS priority, Random Forest"]
+        MCAMP["M_CAMP: camp suitability, Random Forest"]
+        MHAZ["Flood and landslide models"]
+        YOLO["YOLOv8n head detection"]
+        MDON["Donation probability, Random Forest"]
+        MTRI["Stacked triage ensemble and safety layers"]
+        MAPP["Appeal quality classifier and regressor"]
     end
 
-    subgraph DATA\\\["Data layer"]
-        DB\\\[("Relational database: SQLAlchemy")]
-        DOCS\\\[("Optional document store for logs")]
-        GEO\\\[("Geospatial layers: rainfall, SRTM, land cover, boundaries")]
+    subgraph DATA["Data layer"]
+        DB[("Relational database: SQLAlchemy")]
+        DOCS[("Optional document store for logs")]
+        GEO[("Geospatial layers: rainfall, SRTM, land cover, boundaries")]
     end
 
-    subgraph EXT\\\["External services"]
-        NOTIF\\\["Notifications: SMS, push, email"]
-        LLM\\\["Hosted LLM for appeal drafts"]
+    subgraph EXT["External services"]
+        NOTIF["Notifications: SMS, push, email"]
+        LLM["Hosted LLM for appeal drafts"]
     end
 
     V --> SOSUI
@@ -138,19 +138,19 @@ flowchart TB
 Data flow between components
 ```mermaid
 flowchart LR
-    HAZ\\\["Disaster prediction: flood and landslide risk"]
-    SOS\\\["SOS alerting: priority score and location"]
-    CAMP\\\["Camp recommendation: ranked candidate sites"]
-    REV\\\["Authority review and approval"]
-    SC\\\["Safety centre images"]
-    POP\\\["YOLOv8n population estimate"]
-    NEED\\\["Government-rate relief needs"]
-    REQ\\\["Structured donation requests"]
-    DON\\\["Donor probability and distance ranking"]
-    ALLOC\\\["Dynamic allocation and shortage monitoring"]
-    FCST\\\["Next-hour camp population forecast"]
-    TRI\\\["Patient severity triage at camps"]
-    APP\\\["Appeal quality scoring"]
+    HAZ["Disaster prediction: flood and landslide risk"]
+    SOS["SOS alerting: priority score and location"]
+    CAMP["Camp recommendation: ranked candidate sites"]
+    REV["Authority review and approval"]
+    SC["Safety centre images"]
+    POP["YOLOv8n population estimate"]
+    NEED["Government-rate relief needs"]
+    REQ["Structured donation requests"]
+    DON["Donor probability and distance ranking"]
+    ALLOC["Dynamic allocation and shortage monitoring"]
+    FCST["Next-hour camp population forecast"]
+    TRI["Patient severity triage at camps"]
+    APP["Appeal quality scoring"]
 
     HAZ --> CAMP
     SOS --> CAMP
@@ -172,7 +172,7 @@ sequenceDiagram
     participant U as Victim (SOS portal)
     participant API as FastAPI gateway
     participant S as SOSService
-    participant M as M\\\_PRIO model
+    participant M as M_PRIO model
     participant DB as Database
     participant N as Notification provider
 
@@ -189,16 +189,16 @@ sequenceDiagram
 Patient triage pipeline
 ```mermaid
 flowchart LR
-    IN\\\["Intake: symptoms, note, age, 6 vitals, red flags"]
-    NER\\\["Clinical NER and specialty routing"]
+    IN["Intake: symptoms, note, age, 6 vitals, red flags"]
+    NER["Clinical NER and specialty routing"]
     CRIT{"31 critical triggers matched?"}
     VIT{"At least 4 vitals present?"}
-    ML\\\["Stacked ensemble and threshold cascade"]
-    RULE\\\["Rule-based scorer, floored at MEDIUM"]
-    SAFE\\\["Raise-only safety layers"]
-    QUEUE\\\["Queue decision and MO assignment"]
-    REVIEW\\\["Medical Officer review and override"]
-    CR\\\["CRITICAL, priority 100, no override"]
+    ML["Stacked ensemble and threshold cascade"]
+    RULE["Rule-based scorer, floored at MEDIUM"]
+    SAFE["Raise-only safety layers"]
+    QUEUE["Queue decision and MO assignment"]
+    REVIEW["Medical Officer review and override"]
+    CR["CRITICAL, priority 100, no override"]
 
     IN --> NER
     IN --> CRIT
@@ -209,7 +209,7 @@ flowchart LR
     NER -. "specialty" .-> QUEUE
     QUEUE --> REVIEW
 ```
-> These diagrams use \\\[Mermaid](https://mermaid.js.org/), which GitHub renders automatically in `README.md`. The overall diagram shows the intended design from the architecture notes. Verify each box against the actual code using the \\\[checklist](#implementation-verification-checklist) before presenting it as implemented.
+> These diagrams use [Mermaid](https://mermaid.js.org/), which GitHub renders automatically in `README.md`. The overall diagram shows the intended design from the architecture notes. Verify each box against the actual code using the [checklist](#implementation-verification-checklist) before presenting it as implemented.
 Model binaries (e.g., `.joblib`) are loaded into memory at application startup so models are not retrained or reloaded per request.
 ---
 1. SOS Alerting System
@@ -228,7 +228,7 @@ Assess: run the priority model
 Persist: store request, priority, and status via SQLAlchemy
 Notify: alert delivery after a successful save
 Respond: return request ID and confirmation
-Priority model (`M\\\_PRIO`): Random Forest regressor. Candidate features: urgency, number of affected people, vulnerable people, and risk. The score is a ranking value, not a probability or medical outcome, and a documented triage policy interprets it.
+Priority model (`M_PRIO`): Random Forest regressor. Candidate features: urgency, number of affected people, vulnerable people, and risk. The score is a ranking value, not a probability or medical outcome, and a documented triage policy interprets it.
 Notifications may use SMS, push, email, or an in-app dashboard; failures, retries, and duplicates must not lose the saved SOS record.
 2. Medical Camp Recommendation Map
 A decision-support tool that helps authorities identify and review candidate temporary medical camp sites. Authorities make the final decision.
@@ -239,8 +239,8 @@ SOS markers (sensitive victim details protected)
 Suggested vs. existing/approved camps
 Roads and nearby hospitals/clinics
 `CampService` responsibilities: collect spatial inputs, estimate demand, generate candidates, evaluate constraints, rank candidates, return results to the map, and record decisions (if implemented).
-Suitability model (`M\\\_CAMP`): Random Forest regressor over criteria such as affected population, SOS demand, hazard risk, distance to affected communities, road accessibility, existing facilities, and site safety/capacity.
-> \\\*\\\*Safety rule:\\\*\\\* A high suitability score must never override a hard safety constraint. Ranking does not prove a site is safe; reliable hazard data and human review are required.
+Suitability model (`M_CAMP`): Random Forest regressor over criteria such as affected population, SOS demand, hazard risk, distance to affected communities, road accessibility, existing facilities, and site safety/capacity.
+> **Safety rule:** A high suitability score must never override a hard safety constraint. Ranking does not prove a site is safe; reliable hazard data and human review are required.
 3. Disaster Prediction System
 Estimates flood and landslide risk for supported areas from historical disaster records and environmental/geospatial features. A prediction is not a guarantee that a disaster will occur.
 Data and variables (confirm which are used in each trained model)
@@ -288,7 +288,7 @@ Continuously tracks donated quantities, remaining needs, and urgency. Requests f
 Decision support for disaster medical camps. The output is advisory, and a Medical Officer (MO) makes every decision.
 Workflow
 Intake: MO enters symptoms, clinical note, age, six vitals (heart rate, SpO2, systolic BP, respiratory rate, temperature, pain), and red-flag checkboxes. Values outside physiological ranges are rejected.
-Clinical NER and routing: scispaCy `en\\\_core\\\_sci\\\_sm` extracts entities (with a keyword fallback), matched against 17 specialties (10 condition groups). An age rule adds Pediatric (under 12) and Geriatric (65 and over). Entity extraction is used for routing only.
+Clinical NER and routing: scispaCy `en_core_sci_sm` extracts entities (with a keyword fallback), matched against 17 specialties (10 condition groups). An age rule adds Pediatric (under 12) and Geriatric (65 and over). Entity extraction is used for routing only.
 Critical rule check: 31 critical triggers (e.g., cardiac arrest, anaphylaxis, stroke, crush injury). A match sets CRITICAL (priority 100), bypasses ML, and disables override.
 Severity engine:
 If at least 4 vitals are present: stacked ML ensemble (after a complaint mapper rewrites typed text into coded complaints)
@@ -301,7 +301,7 @@ Model
 Base models (class-balanced): 3 logistic regressions (C = 0.3, 0.1, 0.05), LightGBM (400 trees), XGBoost (400 trees, depth 5)
 Meta-learner: class-balanced logistic regression on 5-fold profile-grouped out-of-fold probabilities
 Features: 1,457 linear / 193 tree features (age, vitals with missing indicators, threshold flags, red flags, TF-IDF of complaint text)
-Threshold cascade: `T\\\_HIGH = 0.39`, `T\\\_LOW = 0.40`, tuned for HIGH recall >= 0.90
+Threshold cascade: `T_HIGH = 0.39`, `T_LOW = 0.40`, tuned for HIGH recall >= 0.90
 Safety layers (raise-only): Layer 1 floors to HIGH on any red flag; Layer 2 floors to HIGH on 16 high-acuity complaint patterns
 Results (NHAMCS 2022, 7,578 ED visits, profile-disjoint splits)
 Split: 6,090 train / 748 validation / 740 test. Labels come from a clinician-guided policy, so the task is policy reproduction.
@@ -343,7 +343,7 @@ Sinhala	111	0.883	0.810-0.930	0.253
 Tamil	114	0.895	0.825-0.939	0.249
 All	1,126	0.804	0.780-0.826	0.333
 5-fold cross-validation accuracy: 0.784 +/- 0.008. Regressor R2: 0.755. Errors concentrate at the MEDIUM/HIGH boundary.
-> Sinhala and Tamil figures reflect how consistently augmented text follows the labelling scheme and \\\*\\\*should not be read as real-world quality prediction\\\*\\\*.
+> Sinhala and Tamil figures reflect how consistently augmented text follows the labelling scheme and **should not be read as real-world quality prediction**.
 ---
 How the Components Work Together
 Example: flood risk is elevated in an area of Kaduwela and several people submit SOS requests nearby.
@@ -380,7 +380,7 @@ cd <your-repo-folder>
 # Backend
 cd backend
 python -m venv venv
-source venv/bin/activate        # Windows: venv\\\\Scripts\\\\activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 
@@ -391,9 +391,9 @@ npm start
 ```
 Configuration (example, adjust to your project):
 ```env
-DATABASE\\\_URL=
-JWT\\\_SECRET=
-JWT\\\_ALGORITHM=
+DATABASE_URL=
+JWT_SECRET=
+JWT_ALGORITHM=
 # Notification provider keys, LLM provider keys, etc.
 ```
 > Trained model artifacts and the appeal corpus are not included in the repository. Place model files in the expected directory (e.g., `models/`) before starting the backend.
@@ -424,6 +424,6 @@ Name	Student ID
 E. M. K. N. Ekanayake	IT22104076
 D. K. S. D. Perera	IT22128522
 Fernando R. U.	IT22177414
-
+<!-- Add supervisors and institution here if you want them listed -->
 Licence
 <!-- Add your licence. Note: the MDCC-derived data is CC BY-NC 4.0 (non-commercial), and the appeal corpus is research-only. -->
