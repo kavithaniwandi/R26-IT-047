@@ -1,30 +1,62 @@
 import asyncio
+import hashlib
+import logging
+import random
 import re
+import sys
 import time
+import urllib.request
+import urllib.error
 
 from app.models.config import settings
 from app.models.quality_service import get_quality_score
 from app.services.credit_monitor import mark_exhausted, record_failure, record_success
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.basicConfig(format="%(levelname)s:%(name)s:%(message)s")
+
+# In-memory result cache. Key: sha256(temp|prompt). Value: (result_dict, unix_timestamp).
+_RESULT_CACHE: dict[str, tuple[dict, float]] = {}
+_RESULT_CACHE_TTL = 3600.0
+
+# Cached Gemini reachability check (for /health). TTL: 60 seconds.
+_GEMINI_HEALTH: dict = {}
+
+# Daily-quota exhausted: mark the key permanently exhausted, rotate immediately (no backoff).
 _PERMANENT_QUOTA_KEYWORDS = (
     "daily",
+    "per_day",
+    "day_limit",
     "quota_exceeded",
     "billing",
     "resource_exhausted",
     "exceeded your current quota",
 )
+# Per-minute / per-request rate limit: backoff and retry on the same key.
 _TEMPORARY_RATE_KEYWORDS = (
-    "429",
-    "rate",
+    "rate_limit_exceeded",
     "too many requests",
     "per_minute",
     "rpm",
+    "requests per minute",
 )
 _INVALID_MODEL_KEYWORDS = (
     "404",
     "not_found",
     "no longer available",
     "deprecated",
+)
+# 400/403: key-specific auth failure — mark this key exhausted, try the next key.
+_INVALID_KEY_KEYWORDS = (
+    "400",
+    "401",
+    "403",
+    "api key not valid",
+    "api_key_invalid",
+    "invalid api key",
+    "permission_denied",
+    "unauthenticated",
 )
 
 
@@ -142,6 +174,147 @@ VARIANT_STYLES = [
         ),
     },
 ]
+
+# ---------------------------------------------------------------------------
+# Result cache helpers
+# ---------------------------------------------------------------------------
+
+def _cache_key(prompt: str, temp: float) -> str:
+    return hashlib.sha256(f"{temp:.3f}|{prompt}".encode()).hexdigest()
+
+
+def _get_cached(prompt: str, temp: float) -> dict | None:
+    key = _cache_key(prompt, temp)
+    entry = _RESULT_CACHE.get(key)
+    if entry is None:
+        return None
+    result, ts = entry
+    if time.time() - ts > _RESULT_CACHE_TTL:
+        del _RESULT_CACHE[key]
+        return None
+    return result
+
+
+def _store_cache(prompt: str, temp: float, result: dict) -> None:
+    _RESULT_CACHE[_cache_key(prompt, temp)] = (result, time.time())
+
+
+# ---------------------------------------------------------------------------
+# Mock appeal templates (GENERATOR_MODE=mock — no API call)
+# ---------------------------------------------------------------------------
+
+_MOCK_APPEAL_TEMPLATES: dict[str, str] = {
+    "English": (
+        "Families in {location} urgently need {need}. "
+        "This {campaign_type} campaign aims to {goal}. "
+        "Your donation provides verified, direct support to displaced households. "
+        "Please donate today."
+    ),
+    "Sinhala": (
+        "{location} ප්‍රදේශයේ පවුල් {need} සඳහා ජීවිත අවශ්‍යතාවෙන් පෙළෙයි. "
+        "මෙම {campaign_type} ව්‍යාපාරය {goal} ඉලක්ක කරයි. "
+        "ඔබේ දායකත්වය සත්‍යාපිත ආධාර ලෙස කෙළින්ම ලැබෙනු ඇත. "
+        "අදම පරිත්‍යාග කරන්න."
+    ),
+    "Tamil": (
+        "{location} பகுதியில் உள்ள குடும்பங்களுக்கு {need} அவசரமாகத் தேவைப்படுகிறது. "
+        "இந்த {campaign_type} பிரச்சாரம் {goal} நோக்கமாகக் கொண்டுள்ளது. "
+        "உங்கள் நன்கொடை சரிபார்க்கப்பட்ட நேரடி உதவியாக வழங்கப்படும். "
+        "இன்றே நன்கொடை வழங்குங்கள்."
+    ),
+}
+
+_LANG_CODES = {"en": "English", "si": "Sinhala", "ta": "Tamil"}
+
+
+def _build_mock_appeal(form_data: dict) -> dict:
+    """Return a canned appeal for GENERATOR_MODE=mock. Makes no API call."""
+    language = _LANG_CODES.get(form_data.get("language") or "English",
+                                form_data.get("language") or "English")
+    campaign_type = (form_data.get("campaign_type") or "relief").replace("_", " ")
+    location      = form_data.get("location") or "the affected area"
+    need          = form_data.get("verified_need") or "urgent support"
+    goal          = form_data.get("campaign_goal") or "help those affected recover"
+    if need.strip().lower() == "cloths":
+        need = "clothes"
+    if language in ("English", "en") and goal:
+        goal = goal[:1].lower() + goal[1:]
+
+    template = _MOCK_APPEAL_TEMPLATES.get(language, _MOCK_APPEAL_TEMPLATES["English"])
+    appeal_text = template.format(
+        location=location, need=need, goal=goal, campaign_type=campaign_type,
+    ).strip()
+    return {
+        "model": "mock",
+        "temperature": 0.0,
+        "appeal_text": appeal_text,
+        "provider": "mock",
+        "generator_status": "live",
+        "generator_error": None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Gemini reachability check (used by /health, cached 60 s, no generation call)
+# ---------------------------------------------------------------------------
+
+def gemini_health_check() -> dict:
+    """
+    Lightweight check: verifies google.genai imports and hits the models-list
+    endpoint (NOT generateContent). Result is cached for 60 seconds.
+    Never logs or returns the API key.
+    """
+    now = time.time()
+    if _GEMINI_HEALTH and now - _GEMINI_HEALTH.get("ts", 0) < 60.0:
+        return {k: v for k, v in _GEMINI_HEALTH.items() if k != "ts"}
+
+    # 1. Import check
+    try:
+        from google import genai as _  # noqa: F401
+    except ImportError as exc:
+        result = {
+            "status": "unavailable",
+            "message": f"google-genai not importable in {sys.executable}: {exc}",
+        }
+        _GEMINI_HEALTH.update({**result, "ts": now})
+        return result
+
+    # 2. Key configured?
+    if not settings.GEMINI_API_KEY:
+        result = {"status": "unconfigured", "message": "GEMINI_API_KEY not set"}
+        _GEMINI_HEALTH.update({**result, "ts": now})
+        return result
+
+    # 3. Models-list probe (not generateContent — free metadata call)
+    http_status: int | None = None
+    try:
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models"
+            f"?key={settings.GEMINI_API_KEY}"
+        )
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            http_status = resp.status
+    except urllib.error.HTTPError as exc:
+        http_status = exc.code
+    except Exception:
+        # Deliberately vague — don't expose URL (contains key)
+        result = {"status": "error", "message": "Network error reaching Gemini API"}
+        _GEMINI_HEALTH.update({**result, "ts": now})
+        return result
+
+    if http_status == 200:
+        result = {"status": "reachable", "message": "models-list HTTP 200"}
+    elif http_status == 403:
+        result = {"status": "auth_error", "message": f"HTTP {http_status} — key rejected"}
+    elif http_status == 429:
+        result = {"status": "quota_exceeded", "message": f"HTTP {http_status} — rate limited"}
+    else:
+        result = {"status": "error", "message": f"HTTP {http_status}"}
+
+    _GEMINI_HEALTH.update({**result, "ts": now})
+    return result
+
 
 GENERATION_PROMPT = """\
 TASK: Write a donation appeal using ONLY the facts in INPUT DATA below.
@@ -375,6 +548,9 @@ def score_text(text: str, language: str = "English") -> dict:
     result = get_quality_score(text, language)
     return {
         "quality_label": result["status"],
+        "final_label": result["status"],
+        "predicted_class": result.get("predicted_class"),
+        "class_probs": result.get("class_probs", {}),
         "quality_score": result["score"],
         "confidence": result["confidence"],
         "confidence_normalised": result["confidence_normalised"],
@@ -382,18 +558,21 @@ def score_text(text: str, language: str = "English") -> dict:
     }
 
 
-async def call_gemini_with_key(prompt: str, temp: float, api_key: str | None) -> str:
+async def call_gemini_with_key(
+    prompt: str, temp: float, api_key: str | None, *, model: str | None = None,
+) -> str:
     def _generate() -> str:
         client = _get_gemini_client(api_key)
         if client is None:
             return ""
         from google.genai.types import GenerateContentConfig
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
+            model=model or settings.GEMINI_MODEL,
+            # Keep the factual rules while testing without a separate systemInstruction.
+            contents=f"{SYSTEM_INSTRUCTION}\n\n{prompt}",
             config=GenerateContentConfig(
                 temperature=temp,
-                system_instruction=SYSTEM_INSTRUCTION,
+                max_output_tokens=256,
             ),
         )
         return response.text.strip() if response.text else ""
@@ -445,6 +624,38 @@ async def call_gemini_with_key_fallback(
     max_retries: int = 2,
     key_offset: int = 0,
 ) -> dict:
+    # Fast-path: return cached result for identical inputs
+    cached = _get_cached(prompt, temp)
+    if cached:
+        logger.debug("Cache hit for generation request (temp=%.2f)", temp)
+        return cached
+
+    # Fail fast: if the library is missing, don't burn through all 11 keys
+    try:
+        from google import genai as _genai_check  # noqa: F401
+    except ImportError as exc:
+        logger.error(
+            "google-genai not installed in %s — start the server from backend/venv. Error: %s",
+            sys.executable, exc,
+        )
+        return {"generator_error": "google-genai unavailable", "generator_model": settings.GEMINI_MODEL}
+
+    # Mock mode: return canned appeal, no network call
+    if settings.GENERATOR_MODE == "mock":
+        result = {
+            "model": "mock",
+            "temperature": 0.0,
+            "appeal_text": (
+                "MOCK: Families in the affected area urgently need support. "
+                "This campaign aims to help those displaced. Please donate today."
+            ),
+            "provider": "mock",
+            "generator_status": "live",
+            "generator_error": None,
+        }
+        _store_cache(prompt, temp, result)
+        return result
+
     from app.services.credit_monitor import _key_state
 
     all_keys = list(enumerate(_gemini_api_keys(), start=1))
@@ -453,136 +664,174 @@ async def call_gemini_with_key_fallback(
         gemini_keys = all_keys[offset:] + all_keys[:offset]
     else:
         gemini_keys = []
-    gemini_all_failed = True
-    invalid_model_detected = False
-
+    models = list(dict.fromkeys([
+        settings.GEMINI_MODEL,
+        *(name.strip().removeprefix("models/")
+          for name in settings.GEMINI_FALLBACK_MODELS.split(",") if name.strip()),
+    ]))
+    failure = {"generator_error": "No usable Gemini keys configured", "generator_model": settings.GEMINI_MODEL}
+    keys_tried = 0
     for key_index, api_key in gemini_keys:
         label = f"gemini_key_{key_index}"
         if _key_state.get(label, {}).get("exhausted", False):
-            print(f"Skipping {label} - marked exhausted")
             continue
-        retry_temp = temp
-        for attempt in range(1, max_retries + 1):
-            try:
-                appeal_text = await call_gemini_with_key(prompt, retry_temp, api_key)
-                appeal_text = appeal_text.strip()
-                if not appeal_text:
-                    break
-                if _has_language_mixing(appeal_text, language):
-                    print(
-                        f"Language mixing detected (key={key_index}, attempt={attempt}, "
-                        f"expected={language}) - rejecting and retrying"
-                    )
-                    retry_temp = max(0.1, retry_temp - 0.2)
-                    continue
-                has_problem, reason = _has_hallucination(appeal_text)
-                if not has_problem:
-                    record_success(label)
-                    gemini_all_failed = False
-                    return {
-                        "model": settings.GEMINI_MODEL,
-                        "temperature": retry_temp,
-                        "appeal_text": appeal_text,
-                        "provider": label,
-                    }
-                print(
-                    f"Hallucination (key={key_index}, attempt={attempt}, "
-                    f"temp={retry_temp:.1f}): {reason}"
-                )
-                retry_temp = max(0.1, retry_temp - 0.2)
-            except Exception as exc:
-                print(f"GEMINI KEY {key_index} FULL ERROR: {type(exc).__name__}: {exc}")
-                error_str = str(exc).lower()
-                if any(kw in error_str for kw in _INVALID_MODEL_KEYWORDS):
-                    print("CRITICAL: Gemini model string is invalid - check GEMINI_MODEL in .env")
-                    invalid_model_detected = True
-                elif any(kw in error_str for kw in _PERMANENT_QUOTA_KEYWORDS):
-                    print(f"Gemini key {key_index} daily quota exhausted - marked permanently")
-                    mark_exhausted(label)
-                elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"Gemini key {key_index} rate limited - waiting 2s before next key")
-                    await asyncio.sleep(2)
-                    record_failure(label, "rate_limited_temporary")
-                else:
-                    print(f"Gemini key {key_index} failed: {exc}")
-                    record_failure(label, str(exc))
-                break
-        if invalid_model_detected:
+        if keys_tried >= settings.GEMINI_MAX_KEYS_PER_REQUEST:
             break
-
-    if gemini_all_failed and not invalid_model_detected:
-        for key_index, _api_key in gemini_keys:
-            label = f"gemini_key_{key_index}"
-            if not settings.HF_API_KEY:
-                mark_exhausted(label)
-                continue
-            if not getattr(settings, "HF_API_KEY", None):
-                mark_exhausted(label)
-                continue
-
-            if _key_state.get(label, {}).get("calls", 0) == 0:
-                print(f"{label} had no successful calls recorded in this run")
+        keys_tried += 1
+        rotate_key = False
+        for model_index, model in enumerate(models):
+            # Primary: initial call plus three transient retries (2s, 4s, 8s).
+            # Each fallback model gets exactly one call on the same key.
+            attempts = 4 if model_index == 0 else 1
+            retry_temp = temp
+            for attempt in range(1, attempts + 1):
+                try:
+                    if model_index == 0:
+                        text = await call_gemini_with_key(prompt, retry_temp, api_key)
+                    else:
+                        text = await call_gemini_with_key(prompt, retry_temp, api_key, model=model)
+                    logger.info(
+                        "Gemini attempt model=%s key=%d attempt=%d/%d http_status=200 next_delay=0.000s",
+                        model, key_index, attempt, attempts,
+                    )
+                    text = text.strip()
+                    if not text:
+                        cause = "Empty Gemini response"
+                    elif _has_language_mixing(text, language):
+                        cause = "Generated text failed language validation"
+                    elif _has_hallucination(text)[0]:
+                        cause = "Generated text failed factual validation"
+                    else:
+                        record_success(label)
+                        result = {
+                            "model": model, "generator_model": model,
+                            "temperature": retry_temp, "appeal_text": text,
+                            "provider": label, "generator_status": "live",
+                            "generator_error": None,
+                        }
+                        _store_cache(prompt, temp, result)
+                        return result
+                    failure = {"generator_error": cause, "generator_model": model}
+                    # Preserve the caller's limit for content-validation attempts.
+                    if attempt >= max_retries:
+                        break
+                    retry_temp = max(0.1, retry_temp - 0.2)
+                except Exception as exc:
+                    if isinstance(exc, (ImportError, ModuleNotFoundError)):
+                        logger.info(
+                            "Gemini attempt model=%s key=%d attempt=%d/%d http_status=none next_delay=0.000s",
+                            model, key_index, attempt, attempts,
+                        )
+                        return {"generator_error": type(exc).__name__, "generator_model": model}
+                    message = str(exc).lower()
+                    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+                    if code is None:
+                        match = re.search(r"\b(400|401|403|404|429|500|503|504)\b", message)
+                        code = int(match.group(1)) if match else None
+                    try:
+                        code = int(code) if code is not None else None
+                    except (TypeError, ValueError):
+                        code = None
+                    overloaded = code in (500, 503, 504)
+                    daily = code == 429 and any(word in message for word in (
+                        "daily", "per_day", "per day", "perday", "day_limit", "billing",
+                        "quota_exceeded", "exceeded your current quota",
+                    ))
+                    transient = overloaded or (code == 429 and not daily)
+                    cause = (f"{code} overloaded" if overloaded else
+                             "429 daily quota exhausted" if daily else
+                             "429 per-minute rate limit" if code == 429 else
+                             "404 model not found" if code == 404 else
+                             f"{code} key rejected" if code in (400, 401, 403) else
+                             type(exc).__name__)
+                    # Never log provider exception text: it can contain credentials.
+                    delay = 2.0 ** attempt + random.uniform(0, 1) if transient and attempt < attempts else 0.0
+                    logger.info(
+                        "Gemini attempt model=%s key=%d attempt=%d/%d http_status=%s next_delay=%.3fs",
+                        model, key_index, attempt, attempts, code or "none", delay,
+                    )
+                    failure = {
+                        "generator_error": cause + (f" after {attempt - 1} retries" if transient else ""),
+                        "generator_model": model,
+                    }
+                    if transient:
+                        if attempt < attempts:
+                            await asyncio.sleep(delay)
+                            continue
+                        break  # Try the next model, never another key for overload.
+                    if daily or code in (400, 401, 403):
+                        mark_exhausted(label)
+                        rotate_key = True
+                    elif code != 404:
+                        record_failure(label, cause)
+                        rotate_key = True
+                    break
+            if rotate_key:
+                break
+        if not rotate_key:
+            # Model-wide failures must not penalize or rotate API keys.
+            return failure
 
     if settings.HF_API_KEY:
         if language in ("Sinhala", "Tamil"):
-            print(
-                f"HF Llama skipped for {language} - model cannot reliably generate "
-                f"non-Latin scripts. Using template fallback."
+            logger.warning(
+                "HF Llama skipped for %s — cannot reliably generate non-Latin scripts; "
+                "using template fallback",
+                language,
             )
-            return {}
+            return failure
 
-        print("All Gemini keys exhausted - trying HuggingFace Llama fallback...")
+        logger.info("All Gemini keys exhausted — trying HuggingFace Llama fallback")
         _HF_LABEL = "huggingface-featherless"
 
         for hf_attempt, hf_temp in enumerate((0.3, 0.2, 0.1), start=1):
             try:
                 appeal_text = await asyncio.to_thread(
-                    _call_hf_llama_sync_with_temp,
-                    prompt,
-                    hf_temp,
+                    _call_hf_llama_sync_with_temp, prompt, hf_temp,
                 )
                 appeal_text = appeal_text.strip()
                 if not appeal_text:
                     continue
                 if not _language_matches(appeal_text, language):
-                    print(
-                        f"HF Llama wrong language detected "
-                        f"(expected={language}, attempt={hf_attempt}) - rejecting"
+                    logger.warning(
+                        "HF Llama wrong language (expected=%s, attempt=%d) — rejecting",
+                        language, hf_attempt,
                     )
                     continue
-
                 has_problem, reason = _has_hallucination(appeal_text)
                 if not has_problem:
-                    print(f"HF Llama succeeded on attempt {hf_attempt}")
+                    logger.info("HF Llama succeeded on attempt %d", hf_attempt)
                     record_success(_HF_LABEL)
-                    return {
+                    result = {
                         "model": "llama-3.2-3b-instruct",
                         "temperature": hf_temp,
                         "appeal_text": appeal_text,
                         "provider": _HF_LABEL,
+                        "generator_status": "live",
+                        "generator_error": None,
                     }
-
-                print(
-                    f"HF Llama hallucination detected "
-                    f"(attempt={hf_attempt}, temp={hf_temp}): {reason}"
+                    _store_cache(prompt, temp, result)
+                    return result
+                logger.warning(
+                    "HF Llama hallucination (attempt=%d, temp=%.1f): %s",
+                    hf_attempt, hf_temp, reason,
                 )
             except Exception as exc:
                 error_str = str(exc).lower()
                 if any(kw in error_str for kw in _PERMANENT_QUOTA_KEYWORDS):
-                    print(f"HF Llama quota exhausted: {exc}")
+                    logger.warning("HF Llama quota exhausted: %s", type(exc).__name__)
                     mark_exhausted(_HF_LABEL)
                 elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"HF Llama rate limited - waiting 2s before giving up on fallback")
-                    await asyncio.sleep(2)
+                    logger.warning("HF Llama rate limited: %s", type(exc).__name__)
                     record_failure(_HF_LABEL, "rate_limited_temporary")
                 else:
-                    print(f"HF Llama attempt {hf_attempt} failed: {exc}")
-                    record_failure(_HF_LABEL, str(exc))
+                    logger.error("HF Llama attempt %d failed: %s", hf_attempt, type(exc).__name__)
+                    record_failure(_HF_LABEL, type(exc).__name__)
                 break
 
-        print("HF Llama fallback exhausted or all attempts hallucinated.")
+        logger.warning("HF Llama fallback exhausted or all attempts hallucinated")
 
-    return {}
+    return failure
 
 
 def _build_fallback_appeal(form_data: dict) -> str:
@@ -605,11 +854,14 @@ def _build_fallback_appeal(form_data: dict) -> str:
     }
     location      = form_data.get("location") or "our community"
     need          = form_data.get("verified_need") or "urgent support"
-    goal          = form_data.get("campaign_goal") or "help those affected recover"
     campaign_type = (form_data.get("campaign_type") or "relief").replace("_", " ")
     language      = form_data.get("language") or "English"
+    goal          = form_data.get("campaign_goal") or "help those affected recover"
     if need.strip().lower() == "cloths":
         need = "clothes"
+    # Lowercase first character so "Support families" → "support families" mid-sentence
+    if language in ("en", "English") and goal:
+        goal = goal[:1].lower() + goal[1:]
 
     template = fallback_templates.get(language, fallback_templates["English"])
     return template.format(
@@ -620,19 +872,27 @@ def _build_fallback_appeal(form_data: dict) -> str:
     )
 
 
-def _build_fallback_variant(form_data: dict) -> dict:
+def _build_fallback_variant(
+    form_data: dict, generator_error: str | None = None, generator_model: str | None = None,
+) -> dict:
     appeal_text = _build_fallback_appeal(form_data)
     scoring = score_text(appeal_text, language=form_data.get("language", "English"))
     return {
         "model": "fallback_template",
+        "generator_model": generator_model,
         "temperature": 0.0,
         "style": "fallback",
         "appeal_text": appeal_text,
         "quality_label": scoring["quality_label"],
+        "final_label": scoring["quality_label"],
+        "predicted_class": scoring.get("predicted_class"),
+        "class_probs": scoring.get("class_probs", {}),
         "quality_score": scoring["quality_score"],
         "confidence": scoring["confidence"],
         "confidence_normalised": scoring["confidence_normalised"],
         "confidence_display": scoring["confidence_display"],
+        "generator_status": "fallback",
+        "generator_error": generator_error or "No generation provider returned usable text",
     }
 
 
@@ -658,98 +918,15 @@ def _ensure_required_generation_fields(form_data: dict) -> None:
 
 
 def generate_donation_appeal(form_data: dict) -> str:
+    """Synchronous entry point sharing the same retries as variant generation."""
     _ensure_required_generation_fields(form_data)
-    language = form_data.get("language", "English")
-    from app.services.credit_monitor import _key_state
-    invalid_model_detected = False
-
-    try:
-        prompt = _build_generation_prompt(form_data)
-        for key_index, api_key in enumerate(_gemini_api_keys(), start=1):
-            label = f"gemini_key_{key_index}"
-            if _key_state.get(label, {}).get("exhausted", False):
-                print(f"Skipping {label} - marked exhausted")
-                continue
-            client = _get_gemini_client(api_key)
-            if client is None:
-                continue
-            from google.genai.types import GenerateContentConfig
-            try:
-                response = client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
-                    contents=prompt,
-                    config=GenerateContentConfig(
-                        temperature=0.3,
-                        system_instruction=SYSTEM_INSTRUCTION,
-                    ),
-                )
-                appeal_text = response.text.strip()
-                if appeal_text:
-                    has_problem, reason = _has_hallucination(appeal_text)
-                    if not has_problem:
-                        record_success(label)
-                        print(f"Recording success for {label}")
-                        return appeal_text
-                    print(f"Generated appeal rejected ({reason}) - using fallback.")
-            except Exception as e:
-                error_str = str(e).lower()
-                if any(kw in error_str for kw in _INVALID_MODEL_KEYWORDS):
-                    print("CRITICAL: Gemini model string is invalid - check GEMINI_MODEL in .env")
-                    invalid_model_detected = True
-                elif any(kw in error_str for kw in _PERMANENT_QUOTA_KEYWORDS):
-                    print(f"Gemini key {key_index} daily quota exhausted - marked permanently")
-                    mark_exhausted(label)
-                elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                    print(f"Gemini key {key_index} rate limited - waiting 2s before next key")
-                    record_failure(label, "rate_limited_temporary")
-                    time.sleep(2)
-                else:
-                    record_failure(label, str(e))
-                print(f"Gemini key {key_index} generation error: {e}")
-                if invalid_model_detected:
-                    break
-
-        if invalid_model_detected:
-            return _build_fallback_appeal(form_data)
-
-        if settings.HF_API_KEY and language == "English":
-            for hf_temp in (0.3, 0.2, 0.1):
-                try:
-                    appeal_text = _call_hf_llama_sync_with_temp(prompt, hf_temp).strip()
-                    if not appeal_text:
-                        continue
-                    if not _language_matches(appeal_text, language):
-                        print(
-                            f"HF single generation wrong language detected "
-                            f"(expected={language}, temp={hf_temp}) - rejecting"
-                        )
-                        continue
-                    has_problem, reason = _has_hallucination(appeal_text)
-                    if not has_problem:
-                        record_success("huggingface-featherless")
-                        return appeal_text
-                    print(
-                        f"HF single generation rejected ({reason}) "
-                        f"(temp={hf_temp}) - retrying."
-                    )
-                except Exception as e:
-                    error_str = str(e).lower()
-                    if any(kw in error_str for kw in _PERMANENT_QUOTA_KEYWORDS):
-                        mark_exhausted("huggingface-featherless")
-                    elif any(kw in error_str for kw in _TEMPORARY_RATE_KEYWORDS):
-                        record_failure("huggingface-featherless", "rate_limited_temporary")
-                    else:
-                        record_failure("huggingface-featherless", str(e))
-                    print(f"HF single generation failed: {e}")
-                    break
-        elif settings.HF_API_KEY and language in ("Sinhala", "Tamil"):
-            print(
-                f"HF Llama skipped for {language} - model cannot reliably generate "
-                f"non-Latin scripts. Using template fallback."
-            )
-    except Exception as e:
-        print(f"Gemini generation error: {e}")
-    return _build_fallback_appeal(form_data)
+    if settings.GENERATOR_MODE == "mock":
+        return _build_mock_appeal(form_data)["appeal_text"]
+    result = asyncio.run(call_gemini_with_key_fallback(
+        _build_generation_prompt(form_data), 0.3,
+        language=form_data.get("language", "English"),
+    ))
+    return result.get("appeal_text") or _build_fallback_appeal(form_data)
 
 
 async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[dict]:
@@ -773,8 +950,8 @@ async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[
     seen_texts: set[str] = set()
 
     for index, result in enumerate(results):
-        if isinstance(result, Exception) or not result:
-            print(f"Style variant {index + 1} failed: {result}")
+        if isinstance(result, Exception) or not result or not result.get("appeal_text"):
+            logger.warning("Style variant %d failed: %s", index + 1, result)
             continue
 
         appeal_text = result.get("appeal_text", "").strip()
@@ -802,10 +979,16 @@ async def generate_appeal_variants(campaign_data: dict, top_n: int = 3) -> list[
             "style": styles[index]["style_name"],
             "appeal_text": appeal_text,
             "quality_label": scoring["quality_label"],
+            "final_label": scoring["quality_label"],
+            "predicted_class": scoring.get("predicted_class"),
+            "class_probs": scoring.get("class_probs", {}),
             "quality_score": scoring["quality_score"],
             "confidence": scoring["confidence"],
             "confidence_normalised": scoring["confidence_normalised"],
             "confidence_display": scoring["confidence_display"],
+            "generator_model": result.get("generator_model", result["model"]),
+            "generator_status": result.get("generator_status", "live"),
+            "generator_error": result.get("generator_error"),
         })
 
     candidates.sort(key=lambda item: item["quality_score"], reverse=True)
@@ -828,7 +1011,10 @@ async def generate_first_appeal_variant(campaign_data: dict) -> list[dict]:
     )
 
     if not result or not result.get("appeal_text", "").strip():
-        return [_build_fallback_variant(campaign_data)]
+        return [_build_fallback_variant(
+            campaign_data, (result or {}).get("generator_error"),
+            (result or {}).get("generator_model"),
+        )]
 
     appeal_text = result["appeal_text"].strip()
     scoring = await asyncio.to_thread(score_text, appeal_text, language=language)
@@ -840,10 +1026,16 @@ async def generate_first_appeal_variant(campaign_data: dict) -> list[dict]:
             "style": first_style["style_name"],
             "appeal_text": appeal_text,
             "quality_label": scoring["quality_label"],
+            "final_label": scoring["quality_label"],
+            "predicted_class": scoring.get("predicted_class"),
+            "class_probs": scoring.get("class_probs", {}),
             "quality_score": scoring["quality_score"],
             "confidence": scoring["confidence"],
             "confidence_normalised": scoring["confidence_normalised"],
             "confidence_display": scoring["confidence_display"],
+            "generator_model": result.get("generator_model", result["model"]),
+            "generator_status": result.get("generator_status", "live"),
+            "generator_error": result.get("generator_error"),
         }
     ]
 
@@ -872,8 +1064,8 @@ async def generate_remaining_appeal_variants(
     seen_texts: set[str] = set()
 
     for index, result in enumerate(results):
-        if isinstance(result, Exception) or not result:
-            print(f"Remaining variant {index + 1} failed: {result}")
+        if isinstance(result, Exception) or not result or not result.get("appeal_text"):
+            logger.warning("Remaining variant %d failed: %s", index + 1, result)
             continue
 
         appeal_text = result.get("appeal_text", "").strip()
@@ -901,6 +1093,9 @@ async def generate_remaining_appeal_variants(
             "style": remaining_styles[index]["style_name"],
             "appeal_text": appeal_text,
             "quality_label": scoring["quality_label"],
+            "final_label": scoring["quality_label"],
+            "predicted_class": scoring.get("predicted_class"),
+            "class_probs": scoring.get("class_probs", {}),
             "quality_score": scoring["quality_score"],
             "confidence": scoring["confidence"],
             "confidence_normalised": scoring["confidence_normalised"],
@@ -1115,7 +1310,7 @@ async def improve_appeal_text(appeal_text: str, language: str = "English") -> di
             timeout=15.0,
         )
     except asyncio.TimeoutError:
-        print("Improvement generation timed out - using fallback")
+        logger.warning("Improvement generation timed out — using fallback")
 
     if not improved_text:
         improved_text = _fallback_improved_appeal(appeal_text, language)

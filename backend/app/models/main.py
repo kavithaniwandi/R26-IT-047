@@ -6,9 +6,15 @@ FastAPI application entry point registering all system routers and local ML endp
 from __future__ import annotations
 
 import asyncio
+import importlib
+import logging
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
+
+_startup_log = logging.getLogger("app.startup")
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,19 +62,37 @@ from app.models.schemas import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # ------------------------------------------------------------------ #
+    # Venv / import guard — logs ERROR immediately if the wrong venv is   #
+    # active so the missing-module root cause is obvious on startup.       #
+    # ------------------------------------------------------------------ #
+    _required = {
+        "google.genai":    "google-genai  (Gemini generation)",
+        "huggingface_hub": "huggingface_hub (HF fallback)",
+    }
+    for _mod, _desc in _required.items():
+        try:
+            importlib.import_module(_mod)
+        except ImportError as _exc:
+            _startup_log.error(
+                "MISSING IMPORT '%s' (%s) in Python %s. "
+                "Run the server from backend/venv, not .venv-sev. Detail: %s",
+                _mod, _desc, sys.executable, _exc,
+            )
+
     init_db()
     try:
         from app.models.quality_service import warm_up
 
         warm_up()
     except Exception as exc:
-        print(f"Quality model warmup failed: {exc}")
+        _startup_log.error("Quality model warmup failed: %s", exc)
     try:
         from app.services.mongo_service import connect_mongo
 
         await connect_mongo()
     except Exception as exc:
-        print(f"MongoDB connection failed: {exc}")
+        _startup_log.error("MongoDB connection failed: %s", exc)
     try:
         yield
     finally:
@@ -155,11 +179,17 @@ def api_landing() -> dict[str, object]:
 
 
 @app.get("/health", tags=["Health"], summary="Liveness probe")
-def health() -> dict[str, str]:
+def health() -> dict:
+    from app.models.gemini_service import gemini_health_check
+    gemini = gemini_health_check()
     return {
         "status": "ok",
         "version": settings.APP_VERSION,
         "env": settings.APP_ENV,
+        "gemini": {
+            "status": gemini["status"],
+            "message": gemini["message"],
+        },
     }
 
 
@@ -173,6 +203,9 @@ async def evaluate_quality(request: QualityScoreRequest) -> QualityScoreResponse
         return QualityScoreResponse(
             score=result["score"],
             status=result["status"],
+            final_label=result["status"],
+            predicted_class=result.get("predicted_class"),
+            class_probs=result.get("class_probs", {}),
             method=result["method"],
             confidence=result["confidence"],
             confidence_normalised=result["confidence_normalised"],
@@ -205,6 +238,9 @@ async def analyse_appeal(payload: dict) -> dict:
         result = {
             "score": quality["score"],
             "label": quality["status"],
+            "final_label": quality["status"],
+            "predicted_class": quality.get("predicted_class"),
+            "class_probs": quality.get("class_probs", {}),
             "confidence": quality["confidence"],
             "low_confidence": quality["low_confidence"],
             "method": quality["method"],
@@ -255,21 +291,23 @@ async def generate_appeal(request: GenerateAppealRequest) -> GenerateAppealRespo
         from app.models.gemini_service import generate_donation_appeal
 
         campaign_data = request.model_dump()
-        appeal_text = generate_donation_appeal(campaign_data)
-        from app.services.mongo_service import log_appeal_generation
-
-        await log_appeal_generation(
-            campaign_data,
-            [
-                {
-                    "appeal_text": appeal_text,
-                    "quality_score": None,
-                    "quality_label": None,
-                    "provider": None,
-                    "style": "single",
-                }
-            ],
-        )
+        appeal_text = await asyncio.to_thread(generate_donation_appeal, campaign_data)
+        try:
+            from app.services.mongo_service import log_appeal_generation
+            await log_appeal_generation(
+                campaign_data,
+                [
+                    {
+                        "appeal_text": appeal_text,
+                        "quality_score": None,
+                        "quality_label": None,
+                        "provider": None,
+                        "style": "single",
+                    }
+                ],
+            )
+        except Exception as log_exc:
+            logger.warning("MongoDB logging failed (non-fatal): %s", type(log_exc).__name__)
         return GenerateAppealResponse(appeal_text=appeal_text)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -307,9 +345,11 @@ async def generate_appeal_variants_endpoint(
 
         campaign_data = request.model_dump()
         variants = await generate_first_appeal_variant(campaign_data)
-        from app.services.mongo_service import log_appeal_generation
-
-        await log_appeal_generation(campaign_data, variants)
+        try:
+            from app.services.mongo_service import log_appeal_generation
+            await log_appeal_generation(campaign_data, variants)
+        except Exception as log_exc:
+            logger.warning("MongoDB logging failed (non-fatal): %s", type(log_exc).__name__)
         return GenerateAppealVariantsResponse(variants=variants)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

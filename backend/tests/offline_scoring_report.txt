@@ -1,0 +1,96 @@
+
+================================================================================
+  DIAGNOSTIC — language: English
+  Text: 'Families in Nawalapitiya urgently need water bottles and tents for 20 people. This flood relief campaign aims to Support'
+================================================================================
+  Class probabilities:  high=0.2733  medium=0.4443  low=0.2824
+  Raw regressor score:  3.8993
+  Final (isotonic):     4.00
+  Predicted class:      medium
+  Confidence:           0.4443  (LOW)
+
+========================================================================================================================
+  LANGUAGE: English   (live: 10, template: 11)
+
+  -- LIVE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  live         2.75  2.7877    0.0307   0.1326   0.8367      low  0.837     Families in Kaduwela urgently need dry rations and clea
+    2  live         3.86  3.5121    0.1875   0.6108   0.2017   medium  0.611     A landslide in Kegalle has left hundreds of households
+    3  live         3.00  3.0292    0.0801   0.6900   0.2299   medium  0.690     Drought conditions in Hambantota have destroyed crops a
+    4  live         1.99  1.7736    0.0000   0.0186   0.9814      low  0.981     Help the victims of the Colombo flooding. Donate now. T
+    5  live         1.12  1.5284    0.0000   0.0374   0.9626      low  0.963     Flood relief campaign for Sri Lanka. Please help. Thank
+    6  live         3.93  3.7346    0.3121   0.6064   0.0814   medium  0.606     The recent flooding in Gampaha district has displaced 2
+    7  live         3.04  3.1891    0.1275   0.6490   0.2234   medium  0.649     Cyclone Mora has caused severe flooding across the Putt
+    8  live         3.00  2.9545    0.0314   0.5331   0.4355   medium  0.533     Urgent appeal: children and elderly in Batticaloa are w
+    9  live         1.12  1.5159    0.0000   0.0000   1.0000      low  1.000     We are helping.
+   10  live         3.57  3.4624    0.2313   0.6467   0.1220   medium  0.647     The devastating floods in Matara have destroyed homes,
+------------------------------------------------------------------------------------------------------------------------
+  Live summary (English): n=10  mean=2.738  min=1.12  max=3.93  low_confidence=0/10
+
+  -- TEMPLATE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  template     2.98  2.8277    0.0307   0.1328   0.8365      low  0.837     Families in Kaduwela urgently need dry rations and clea
+    2  template     2.15  2.2970    0.0135   0.1337   0.8528      low  0.853     Families in Gampaha urgently need medicine and food. Th
+    3  template     2.04  2.2049    0.0054   0.1154   0.8792      low  0.879     Families in Puttalam urgently need shelter and clothing
+    4  template     2.15  2.2754    0.0054   0.1205   0.8741      low  0.874     Families in Matara urgently need clean water and dry ra
+    5  template     2.15  2.2492    0.0054   0.1205   0.8741      low  0.874     Families in Colombo urgently need food and medicine. Th
+    6  template     3.00  2.9675    0.0439   0.1300   0.8261      low  0.826     Families in Jaffna urgently need drinking water and foo
+    7  template     2.25  2.3065    0.0054   0.1233   0.8712      low  0.871     Families in Batticaloa urgently need emergency rations
+    8  template     2.15  2.2854    0.0054   0.1212   0.8734      low  0.873     Families in Trincomalee urgently need clean water and s
+    9  template     2.15  2.2603    0.0054   0.1205   0.8741      low  0.874     Families in Anuradhapura urgently need food and shelter
+   10  template     2.98  2.8758    0.0439   0.1300   0.8261      low  0.826     Families in Kurunegala urgently need medicine and clean
+   11  template     3.86  3.5316    0.1969   0.5673   0.2358   medium  0.567     Families in Nawalapitiya urgently need water bottles an
+------------------------------------------------------------------------------------------------------------------------
+  Template summary (English): n=11  mean=2.533  min=2.04  max=3.86  low_confidence=0/11
+
+========================================================================================================================
+  LANGUAGE: Sinhala   (live: 5, template: 5)
+
+  -- LIVE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  live         4.00  3.9537    0.4203   0.4677   0.1120   medium  0.468  *  ගාල්ල දිස්ත්‍රික්කයේ ගංවතුර ආපදාවෙන් ගෙවල් හා ජීවනෝපාය
+    2  live         1.00  1.3303    0.0000   0.0000   1.0000      low  1.000     ආධාර ඕනේ. දීමනා දෙන්න.
+    3  live         3.57  3.4421    0.2578   0.6874   0.0548   medium  0.687     කෑගල්ල දිස්ත්‍රික්කයේ නාය යාමෙන් නිවාස 150 ක් හානි වූ අ
+    4  live         4.00  3.8434    0.3230   0.5353   0.1417   medium  0.535     ශ්‍රී ලංකාවේ ගංවතුර වාර්තාකාලීන ලෙස ව්‍යාප්ත වෙමින් ජනත
+    5  live         3.00  3.0285    0.0938   0.4561   0.4501   medium  0.456  *  ත්‍රිකුණාමළය ප්‍රදේශයේ ධීවර ප්‍රජාවට ගංවතුරින් ජාල සහ න
+------------------------------------------------------------------------------------------------------------------------
+  Live summary (Sinhala): n=5  mean=3.114  min=1.00  max=4.00  low_confidence=2/5
+
+  -- TEMPLATE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  template     4.03  4.2043    0.6256   0.2977   0.0767     high  0.626     කඩුවෙල ප්‍රදේශයේ පවුල් වියළි රේෂන් සහ පිරිසිදු ජලය සඳහා
+    2  template     3.93  3.6869    0.2866   0.6064   0.1070   medium  0.606     ගාල්ල ප්‍රදේශයේ පවුල් ආහාර සහ ඖෂධ සඳහා ජීවිත අවශ්‍යතාවෙ
+    3  template     3.00  3.1008    0.1147   0.6736   0.2117   medium  0.674     කෑගල්ල ප්‍රදේශයේ පවුල් නිවාස සහ ඇඳුම් සඳහා අවශ්‍යතාවෙන්
+    4  template     4.00  3.9395    0.4060   0.5078   0.0862   medium  0.508     හම්බන්තොට ප්‍රදේශයේ පවුල් පිරිසිදු ජලය සහ ආහාර සඳහා ජීව
+    5  template     3.00  3.0146    0.1175   0.6948   0.1878   medium  0.695     ත්‍රිකුණාමළය ප්‍රදේශයේ පවුල් ආහාර සහ ඖෂධ සඳහා ජීවිත අවශ
+------------------------------------------------------------------------------------------------------------------------
+  Template summary (Sinhala): n=5  mean=3.592  min=3.00  max=4.03  low_confidence=0/5
+
+========================================================================================================================
+  LANGUAGE: Tamil   (live: 5, template: 5)
+
+  -- LIVE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  live         4.00  4.0722    0.5153   0.4718   0.0130     high  0.515     கிழக்கு மாகாணத்தில் வெள்ளப்பெருக்கால் பாதிக்கப்பட்ட குட
+    2  live         1.00  1.2883    0.0000   0.0000   1.0000      low  1.000     உதவி தேவை. நன்கொடை கொடுங்கள்.
+    3  live         4.00  3.9313    0.3745   0.6126   0.0128   medium  0.613     யாழ்ப்பாணம் மாவட்டத்தில் வறட்சியால் 500 குடும்பங்கள் கு
+    4  live         3.00  3.0236    0.1475   0.7141   0.1384   medium  0.714     திருகோணமலை மாவட்டத்தில் மழை நீரால் பாதிக்கப்பட்டோருக்கு
+    5  live         4.07  4.2619    0.6890   0.2640   0.0470     high  0.689     வடக்கு மாகாணத்தில் புயல் பாதிப்பில் வீடழிந்த 200 குடும்
+------------------------------------------------------------------------------------------------------------------------
+  Live summary (Tamil): n=5  mean=3.214  min=1.00  max=4.07  low_confidence=0/5
+
+  -- TEMPLATE --
+    #  Type      FinalSc  RawReg  ProbHigh  ProbMed  ProbLow  PredCls   Conf LC  Preview
+------------------------------------------------------------------------------------------------------------------------
+    1  template     4.07  4.2377    0.5475   0.3835   0.0690     high  0.547     கடுவெல பகுதியில் உள்ள குடும்பங்களுக்கு உலர் உணவும் குடி
+    2  template     3.86  3.5319    0.2467   0.6712   0.0821   medium  0.671     யாழ்ப்பாணம் பகுதியில் உள்ள குடும்பங்களுக்கு குடிநீர் அவ
+    3  template     3.21  3.2262    0.1961   0.7042   0.0997   medium  0.704     திருகோணமலை பகுதியில் உள்ள குடும்பங்களுக்கு உணவும் மருந்
+    4  template     3.86  3.5536    0.2656   0.6179   0.1165   medium  0.618     கிழக்கு மாகாணம் பகுதியில் உள்ள குடும்பங்களுக்கு அவசர உண
+    5  template     3.93  3.6748    0.2908   0.6213   0.0879   medium  0.621     வடக்கு மாகாணம் பகுதியில் உள்ள குடும்பங்களுக்கு தங்குமிட
+------------------------------------------------------------------------------------------------------------------------
+  Template summary (Tamil): n=5  mean=3.786  min=3.21  max=4.07  low_confidence=0/5

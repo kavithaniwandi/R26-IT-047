@@ -4,6 +4,19 @@ import pytest
 
 from app.models import gemini_service as gs
 from app.models.config import settings
+import app.services.credit_monitor as cm
+from app.services.credit_monitor import _key_state
+
+
+@pytest.fixture(autouse=True)
+def isolate_credit_monitor(tmp_path, monkeypatch):
+    """Redirect state file to tmp dir and clear _key_state around each test."""
+    monkeypatch.setattr(cm, "STATE_FILE", tmp_path / "credit_monitor_state.json")
+    _key_state.clear()
+    gs._RESULT_CACHE.clear()
+    monkeypatch.setattr(settings, "GEMINI_FALLBACK_MODELS", "")
+    yield
+    _key_state.clear()
 
 
 CAMPAIGN = {

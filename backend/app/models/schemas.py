@@ -35,6 +35,9 @@ class QualityScoreRequest(BaseModel):
 class QualityScoreResponse(BaseModel):
     score: float = Field(..., ge=1.0, le=5.0)
     status: Literal["low", "medium", "high"]
+    final_label: Literal["low", "medium", "high"]
+    predicted_class: str | None = None
+    class_probs: dict[str, float] = Field(default_factory=dict)
     method: str
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
@@ -63,10 +66,16 @@ class AppealVariant(BaseModel):
     style: str | None = None
     appeal_text: str
     quality_label: str
+    final_label: str
     quality_score: float
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
     confidence_display: str
+    predicted_class: str | None = None
+    class_probs: dict[str, float] = Field(default_factory=dict)
+    generator_model: str | None = None
+    generator_status: str = "live"
+    generator_error: str | None = None
 
 
 class GenerateAppealVariantsResponse(BaseModel):

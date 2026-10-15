@@ -148,7 +148,9 @@ function Donation_Appeal() {
   const activeQuality = activeVariant
     ? {
         score: Number(activeVariant.quality_score),
-        status: activeVariant.quality_label,
+        status: activeVariant.final_label || activeVariant.quality_label,
+        predictedClass: activeVariant.predicted_class || null,
+        classProbs: activeVariant.class_probs || {},
         method: activeVariant.quality_method || activeVariant.method || "ml_model",
         confidence: Number(activeVariant.confidence || 0),
         confidenceNormalised: Number(
@@ -256,12 +258,15 @@ function Donation_Appeal() {
             ? {
                 ...item,
                 quality_label: quality.status,
+                final_label: quality.final_label ?? quality.status,
                 quality_score: quality.score,
                 confidence: quality.confidence,
                 confidence_normalised: quality.confidence_normalised,
                 confidence_display: quality.confidence_display,
                 low_confidence: quality.low_confidence ?? false,
                 quality_method: quality.method,
+                predicted_class: quality.predicted_class ?? null,
+                class_probs: quality.class_probs ?? {},
               }
             : item
         )
@@ -439,7 +444,7 @@ function Donation_Appeal() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="channel">Channel ffff</label>
+              <label htmlFor="channel">Channel</label>
               <select
                 id="channel"
                 name="channel"
@@ -534,20 +539,37 @@ function Donation_Appeal() {
                   </div>
 
                   <div className="variant-card">
+                    {activeVariant?.generator_status === "fallback" && (
+                      <div className="fallback-banner" role="alert">
+                        <span className="fallback-banner-icon">⚠</span>
+                        <div>
+                          <strong>Generation unavailable — template used</strong>
+                          <p>
+                            {activeVariant.generator_error
+                              ? activeVariant.generator_error
+                              : "All generation providers failed. Edit this placeholder before publishing."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <div className="variant-card-header">
-                      <span className={`quality-badge ${activeQuality?.status || ""}`}>
-                        ● {activeQuality?.status}
+                      <span className={`quality-badge ${activeVariant?.generator_status === "fallback" ? "fallback" : (activeQuality?.status || "")}`}>
+                        {activeVariant?.generator_status === "fallback" ? "⚠ template" : `● ${activeQuality?.status}`}
                       </span>
                       <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
-                        {activeVariantIndex === 0 && (
+                        {activeVariantIndex === 0 && activeVariant?.generator_status !== "fallback" && (
                           <span className="best-match-badge">★ Best Match</span>
                         )}
-                        <span className="score-chip">
-                          {activeQuality?.score.toFixed(2)}
-                        </span>
-                        <span className="score-chip">
-                          {getConfidence()}
-                        </span>
+                        {activeVariant?.generator_status !== "fallback" && (
+                          <>
+                            <span className="score-chip">
+                              {activeQuality?.score.toFixed(2)}
+                            </span>
+                            <span className="score-chip">
+                              {getConfidence()}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <p>{activeVariant.appeal_text}</p>
@@ -604,7 +626,14 @@ function Donation_Appeal() {
                 </div>
               )}
 
-              {activeQuality && (
+              {activeVariant?.generator_status === "fallback" && (
+                <div className="fallback-score-note" role="note">
+                  Quality score is not shown for template appeals. Generate again
+                  once Gemini is reachable to see a real score.
+                </div>
+              )}
+
+              {activeQuality && activeVariant?.generator_status !== "fallback" && (
                 <div className="quality-box">
                   {activeQuality.lowConfidence && (
                     <div className="low-confidence-banner" role="alert">
@@ -650,7 +679,7 @@ function Donation_Appeal() {
                   </div>
 
                   <div className="quality-row">
-                    <span>Confidence</span>
+                    <span>Classifier</span>
                     <div className="confidence-row">
                       <div className="confidence-bar">
                         <div
@@ -659,10 +688,21 @@ function Donation_Appeal() {
                         />
                       </div>
                       <strong className={activeQuality.lowConfidence ? "confidence-low" : ""}>
-                        {getConfidence()}
+                        {activeQuality.predictedClass
+                          ? `${activeQuality.predictedClass} (${Math.round(confidenceRatio * 100)}%)`
+                          : getConfidence()}
                       </strong>
                     </div>
                   </div>
+                  {activeQuality.predictedClass &&
+                    activeQuality.predictedClass !== activeQuality.status && (
+                    <div className="quality-row">
+                      <span>Final label</span>
+                      <span className="classifier-override-note">
+                        Score-based final label: <strong>{activeQuality.status}</strong>; classifier predicts {activeQuality.predictedClass}.
+                      </span>
+                    </div>
+                  )}
 
                   {activeQuality.lowConfidence && (
                     <div className="quality-row">

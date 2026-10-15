@@ -234,6 +234,7 @@ def _rule_based_score(text: str, language: str) -> dict:
 
     return {
         "quality_label": label,
+        "predicted_class": label,
         "quality_score": score,
         "confidence": 0.0,
         "low_confidence": True,
@@ -282,6 +283,7 @@ def score_appeal(text: str, language: str = "English") -> dict:
             [csr_matrix(hand_scaled), clf_tfidf_en, clf_tfidf_si, clf_tfidf_ta]
         )
         proba = artifacts["clf"].predict_proba(x_clf)[0]
+        predicted_class = str(artifacts["le"].classes_[int(np.argmax(proba))])
 
         x_reg = np.hstack([proba.reshape(1, -1), hand_scaled, lsa_en, lsa_si, lsa_ta])
         raw_score = float(np.clip(artifacts["reg"].predict(x_reg)[0], 1.0, 5.0))
@@ -299,6 +301,7 @@ def score_appeal(text: str, language: str = "English") -> dict:
 
         return {
             "quality_label": label,
+            "predicted_class": predicted_class,
             "quality_score": round(score, 2),
             "confidence": confidence,
             "low_confidence": low_confidence,
@@ -323,6 +326,8 @@ def get_quality_score(appeal_text: str, language: str = "English") -> dict:
         response = {
             "score": result["quality_score"],
             "status": result["quality_label"],
+            "predicted_class": result.get("predicted_class", result["quality_label"]),
+            "class_probs": result.get("probabilities", {}),
             "method": result.get("method", "ml_model"),
             "confidence": confidence,
             "confidence_normalised": confidence,

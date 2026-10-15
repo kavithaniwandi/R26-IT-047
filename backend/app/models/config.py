@@ -7,7 +7,6 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env2", extra="ignore")
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
     MODEL_DIR: Path = Path("ml_models")
@@ -24,7 +23,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY9: str | None = None
     GEMINI_API_KEY10: str | None = None
     GEMINI_API_KEY11: str | None = None
-    GEMINI_MODEL: str = "gemini-3.6-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_FALLBACK_MODELS: str = "gemini-2.5-flash,gemini-2.5-flash-lite"
+    GENERATOR_MODE: str = "live"
+    GEMINI_MAX_KEYS_PER_REQUEST: int = 3
     HF_API_KEY: str | None = None
     MONGODB_URI: str | None = None
     MONGODB_DB_NAME: str = "Research047"
