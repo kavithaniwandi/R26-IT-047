@@ -30,7 +30,6 @@ npm run dev:all
 | **Admin Command Center** | [http://localhost:5173](http://localhost:5173) | `npm run dev:admin` | `admin` |
 | **Victim SOS Portal** | [http://localhost:5174](http://localhost:5174) | `npm run dev:victim` | `victim` |
 | **Medical Authority Console** | [http://localhost:5175](http://localhost:5175) | `npm run dev:authority` | `authority` |
-| **Relief Donor Marketplace** | [http://localhost:5176](http://localhost:5176) | `npm run dev:donor` | `donor` |
 | **Field Volunteer Dispatch** | [http://localhost:5177](http://localhost:5177) | `npm run dev:volunteer` | `volunteer` |
 | **Volunteer Field Dashboard** | [http://localhost:5178](http://localhost:5178) | `npm run dev:volunteer-dashboard` | `volunteer` |
 | **Disaster Officer Hub** | [http://localhost:5179](http://localhost:5179) | `npm run dev:disaster-officer` | `disaster_officer` |

@@ -28,7 +28,7 @@ function Footer() {
               <li><a href="/signin">Stakeholder Authentication</a></li>
               <li><a href="/sos-public">Victim Emergency SOS Beacon</a></li>
               <li><a href="/map">Geospatial Hazard Heatmap</a></li>
-              <li><a href="/donations">Relief Donor Marketplace</a></li>
+              <li><a href="/donations">Relief Donations</a></li>
               <li><a href="/donation-appeal">Medical Donation Appeals</a></li>
             </ul>
           </div>

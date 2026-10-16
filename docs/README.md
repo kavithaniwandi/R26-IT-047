@@ -46,13 +46,12 @@ System Architecture
 All components run as REST services (FastAPI) behind a React front end, sharing data through the backend and a relational database (SQLAlchemy), with an optional document store for logs.
 Overall architecture
 ```mermaid
-flowchart TB
-    subgraph USERS["Users"]
-        V["Disaster victims"]
-        MO["Medical Officers"]
-        AU["Authorities and relief coordinators"]
-        VO["Volunteers and NGOs"]
-        DO["Registered donors"]
+graph TD
+    subgraph Client_Layer ["1. Client Layer — Dedicated Portal Servers (React + Vite)"]
+        UI_Admin["Admin Command Center<br/>Port :5173"]
+        UI_Victim["Victim SOS Portal<br/>Port :5174"]
+        UI_Authority["Medical Authority Console<br/>Port :5175"]
+        UI_Volunteer["Volunteer Dispatch<br/>Port :5177"]
     end
 
     subgraph FE["React frontend"]
@@ -135,36 +134,58 @@ flowchart TB
     RELIEF --> NOTIF
     APPS --> LLM
 ```
-Data flow between components
-```mermaid
-flowchart LR
-    HAZ["Disaster prediction: flood and landslide risk"]
-    SOS["SOS alerting: priority score and location"]
-    CAMP["Camp recommendation: ranked candidate sites"]
-    REV["Authority review and approval"]
-    SC["Safety centre images"]
-    POP["YOLOv8n population estimate"]
-    NEED["Government-rate relief needs"]
-    REQ["Structured donation requests"]
-    DON["Donor probability and distance ranking"]
-    ALLOC["Dynamic allocation and shortage monitoring"]
-    FCST["Next-hour camp population forecast"]
-    TRI["Patient severity triage at camps"]
-    APP["Appeal quality scoring"]
 
-    HAZ --> CAMP
-    SOS --> CAMP
-    HAZ -. "preparedness" .-> SOS
-    CAMP --> REV
+---
 
-    SC --> POP --> NEED --> REQ
-    REQ --> DON --> ALLOC
-    REQ --> APP
-    ALLOC --> REQ
-    POP --> FCST
-    HAZ -. "rainfall and water level" .-> FCST
+## Key Architectural Tenets
 
-    REV -. "camps in operation" .-> TRI
+**1. Role-Based Access Control by Construction**
+Authentication and authorization are fully decoupled from domain business logic. Every protected endpoint enforces permissions via stateless JWT claims evaluated by the declarative `Depends(require_role([...]))` guard. Fail-closed semantics guarantee that missing or malformed tokens default to immediate HTTP 401/403 rejection.
+
+**2. Five Isolated Stakeholder Portals**
+The React frontend runs as multiple Vite development servers, each bound to a dedicated TCP port and initializing with the UI context for its assigned stakeholder role. Portal detection is automatic through environment, port, path, and query-parameter configuration. A single `npm run dev:all` command starts all configured servers concurrently.
+
+**3. Explainable Multi-Model AI Pipeline**
+Four task-specific Random Forest models operate sequentially:
+- **Landslide Model** — 3-tier severity classification from 257 verified Sri Lankan incidents (F₁ = 0.9476)
+- **Flood Model** — river basin risk from hydrology, land-use, and infrastructure exposure (F₁ = 0.8694)
+- **Camp Model** — optimal medical camp placement regressor (R² = 0.9072)
+- **Priority Model** — time-decayed triage urgency scorer (R² = 0.8241)
+
+**4. Stateless Scalability**
+No session table lookups on protected routes. JWT tokens embed `user_id` and `role` claims directly, enabling high-throughput, horizontally scalable API operation without distributed session state.
+
+**5. Relational Integrity**
+Eight normalized entities enforce strict referential integrity with support for partial donor pledges and multi-victim geographic clusters.
+
+---
+
+## Technology Stack Summary
+
+| Layer | Component | Technology | Rationale |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | React SPA | React 19 + Vite 8 | Fast HMR, tree-shaking, ES modules |
+| **UI Icons** | Icon system | Lucide React | Professional SVG vector icons; zero emoji dependency |
+| **Mapping** | GIS layer | Leaflet + React-Leaflet | Lightweight, tile-agnostic, offline-capable |
+| **Charts** | Analytics | Chart.js + react-chartjs-2 | Declarative charting with rich animation |
+| **API Framework** | REST Backend | FastAPI (Python 3.10+) | Async, native OpenAPI, clean DI for RBAC |
+| **Data Persistence** | ORM + DB | SQLAlchemy 2.0 + MySQL 8.0 (Docker) / SQLite (Local) | Strict FK constraints; auto-detecting connection pool engine |
+| **Security & Auth** | JWT + Crypto | PyJWT + passlib (bcrypt) | Adaptive bcrypt hashing, stateless claims tokens |
+| **Machine Learning** | Training & Inference | scikit-learn + joblib + pandas | Zero-inference overhead; RF suited to tabular disaster data |
+| **Testing** | Automated QA | pytest + httpx + TestClient | In-memory SQLite isolation; 27/27 tests passing |
+
+---
+
+## Quick Execution Guide
+
+### Prerequisites
+
+```powershell
+# Python 3.10+ and Node.js 18+ are required.
+# Verify installed versions:
+python --version
+node --version
+npm --version
 ```
 SOS request flow
 ```mermaid
@@ -389,6 +410,37 @@ cd ../frontend
 npm install
 npm start
 ```
+
+### Step 7 — Launch the stakeholder portals (Terminal 2)
+
+**Launch all configured portals simultaneously:**
+```powershell
+cd "D:\My research\SDM Project refine\frontend"
+npm run dev:all
+```
+
+> `npm run dev:all` executes `start_portals.js`, which spawns five independent Vite processes with color-coded terminal output and coordinated `SIGINT` shutdown.
+
+**Or launch an individual portal:**
+```powershell
+npm run dev:admin      # Admin Command Center    → http://localhost:5173
+npm run dev:victim     # Victim SOS Portal       → http://localhost:5174
+npm run dev:authority  # Medical Authority        → http://localhost:5175
+npm run dev:volunteer  # Volunteer Dispatch       → http://localhost:5177
+```
+
+---
+
+## Portal Access Matrix
+
+| Portal | URL | Default Login | Role |
+| :--- | :--- | :--- | :--- |
+| Admin Command Center | http://localhost:5173 | admin@disaster.relief.lk | admin |
+| Victim SOS Portal | http://localhost:5174 | victim@kaduwela.lk | victim |
+| Medical Authority Console | http://localhost:5175 | authority@moh.gov.lk | authority |
+| Field Volunteer Dispatch | http://localhost:5177 | volunteer@relief.lk | volunteer |
+
+> Default passwords follow the pattern `<Role>@2026!` (e.g., `Admin@2026!`). These credentials are seeded during database initialization and are intended for development and demonstration environments only.
 Configuration (example, adjust to your project):
 ```env
 DATABASE_URL=

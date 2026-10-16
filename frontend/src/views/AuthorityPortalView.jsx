@@ -503,7 +503,7 @@ export function AuthorityPortalView({ currentUser, onAddToast }) {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Publish to Donor Marketplace
+                  Publish Supply Requirement
                 </button>
               </div>
             </form>
