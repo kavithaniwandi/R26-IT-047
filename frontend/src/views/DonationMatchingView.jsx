@@ -14,8 +14,54 @@ const card = {
   borderRadius: '16px', boxShadow: '0 2px 5px rgba(15, 23, 42, 0.06)',
 };
 
+const severityRank = { Low: 0, Moderate: 1, Medium: 1, High: 2, Critical: 3 };
+
+const normalizeGnDivision = (value) => (value || '')
+  .trim()
+  .replace(/^\d+\s+(?:[A-Z]\s+)?/i, '')
+  .toLowerCase();
+
+function consolidateByGn(requests) {
+  const groups = new Map();
+  requests.forEach((request) => {
+    const key = [request.dsArea, normalizeGnDivision(request.gnDivision), request.disasterType].join('::');
+    if (!groups.has(key)) {
+      groups.set(key, {
+        ...request,
+        id: key,
+        requestIds: [],
+        reliefCamp: `${request.gnDivision} GN Consolidated Request`,
+        reliefCamps: [],
+        people_count: 0,
+        items: [],
+        targetedDonorCount: 0,
+      });
+    }
+    const group = groups.get(key);
+    group.requestIds.push(request.id);
+    if (request.reliefCamp && !group.reliefCamps.includes(request.reliefCamp)) group.reliefCamps.push(request.reliefCamp);
+    group.people_count += Number(request.people_count || 0);
+    group.targetedDonorCount = Math.max(group.targetedDonorCount, Number(request.targetedDonorCount || 0));
+    if ((severityRank[request.severity] || 0) > (severityRank[group.severity] || 0)) group.severity = request.severity;
+    (request.items || []).forEach((item) => {
+      const itemKey = `${item.requiredCategory || ''}::${item.itemName}::${item.unit}`;
+      const existing = group.items.find((candidate) => candidate._key === itemKey);
+      if (existing) {
+        existing.neededQuantity += Number(item.neededQuantity || 0);
+        existing.pledgedQuantity += Number(item.pledgedQuantity || 0);
+        existing.donatedQuantity += Number(item.donatedQuantity || 0);
+        existing.remainingQuantity += Number(item.remainingQuantity || 0);
+      } else {
+        group.items.push({ ...item, _key: itemKey });
+      }
+    });
+  });
+  return [...groups.values()];
+}
+
 export function DonationMatchingView({ onAddToast }) {
   const [requests, setRequests] = useState([]);
+  const [divisionCatalog, setDivisionCatalog] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [matches, setMatches] = useState([]);
   const [selectedDonors, setSelectedDonors] = useState(new Set());
@@ -27,18 +73,25 @@ export function DonationMatchingView({ onAddToast }) {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [modelInfo, setModelInfo] = useState(null);
+  const [eligibility, setEligibility] = useState({ eligible: 0, ineligible: 0 });
 
   const loadRequests = async (keepSelection = true) => {
     setLoadingRequests(true);
     setError('');
     try {
-      const data = await api.getDisasterRequests();
+      const [data, divisions] = await Promise.all([
+        api.getDisasterRequests(),
+        api.getDivisions().catch(() => []),
+      ]);
       const open = (data || []).filter((request) =>
         request.status !== 'fulfilled' && (request.items || []).some((item) => Number(item.remainingQuantity) > 0)
       );
-      setRequests(open);
-      setSelectedId((current) => keepSelection && open.some((item) => item.id === current)
-        ? current : (open[0]?.id || ''));
+      const consolidated = consolidateByGn(open);
+      setRequests(consolidated);
+      setDivisionCatalog(Array.isArray(divisions) ? divisions : []);
+      setSelectedId((current) => keepSelection && consolidated.some((item) => item.id === current)
+        ? current : (consolidated[0]?.id || ''));
     } catch (err) {
       setError(err.message || 'Unable to load donation requests.');
     } finally {
@@ -54,28 +107,45 @@ export function DonationMatchingView({ onAddToast }) {
       setSelectedDonors(new Set());
       return;
     }
+    const selected = requests.find((request) => request.id === selectedId);
+    if (!selected) return undefined;
     let active = true;
     setLoadingMatches(true);
     setError('');
-    api.getDonationDonorMatches(selectedId)
-      .then((data) => {
+    api.getConsolidatedDonationDonorMatches(selected.requestIds)
+      .then((result) => {
         if (!active) return;
-        const ranked = data || [];
+        const ranked = result?.matches || [];
         setMatches(ranked);
+        setModelInfo(result?.model || null);
+        setEligibility({ eligible: result?.eligibleDonorCount || 0, ineligible: result?.ineligibleDonorCount || 0 });
         setSelectedDonors(new Set(ranked.filter((donor) => donor.alreadyTargeted).map((donor) => donor.donorId)));
       })
       .catch((err) => active && setError(err.message || 'Unable to rank donors.'))
       .finally(() => active && setLoadingMatches(false));
     return () => { active = false; };
-  }, [selectedId]);
+  }, [selectedId, requests]);
 
-  const dsAreas = useMemo(() => [...new Set(requests.map((item) => item.dsArea).filter(Boolean))].sort(), [requests]);
-  const gnDivisions = useMemo(() => [...new Set(requests.filter((item) => !dsFilter || item.dsArea === dsFilter)
-    .map((item) => item.gnDivision).filter(Boolean))].sort(), [requests, dsFilter]);
+  const dsAreas = useMemo(() => [...new Set([
+    ...divisionCatalog.map((division) => division.dsArea),
+    ...requests.map((request) => request.dsArea),
+  ].filter(Boolean))].sort(), [divisionCatalog, requests]);
+  const gnDivisions = useMemo(() => {
+    const catalogValues = divisionCatalog
+      .filter((division) => !dsFilter || division.dsArea === dsFilter)
+      .flatMap((division) => division.gnDivisions || [])
+      .filter(Boolean);
+    const catalogNames = new Set(catalogValues.map(normalizeGnDivision));
+    const requestOnlyValues = requests
+      .filter((request) => !dsFilter || request.dsArea === dsFilter)
+      .map((request) => request.gnDivision)
+      .filter((value) => value && !catalogNames.has(normalizeGnDivision(value)));
+    return [...new Set([...catalogValues, ...requestOnlyValues])].sort();
+  }, [divisionCatalog, requests, dsFilter]);
   const visibleRequests = requests.filter((request) => {
     const query = requestSearch.trim().toLowerCase();
     return (!dsFilter || request.dsArea === dsFilter)
-      && (!gnFilter || request.gnDivision === gnFilter)
+      && (!gnFilter || normalizeGnDivision(request.gnDivision) === normalizeGnDivision(gnFilter))
       && (!query || [request.reliefCamp, request.gnDivision, request.dsArea, request.disasterType]
         .some((value) => (value || '').toLowerCase().includes(query)));
   });
@@ -111,12 +181,14 @@ export function DonationMatchingView({ onAddToast }) {
     setSending(true);
     setError('');
     try {
-      const result = await api.sendDonationOutreach(selectedId, donorIds);
-      onAddToast?.(result.message, 'success', 'Requests Published');
+      const results = await Promise.all(
+        selectedRequest.requestIds.map((requestId) => api.sendDonationOutreach(requestId, donorIds))
+      );
+      onAddToast?.(`Personalized request published for ${results.length} GN-linked camp request(s).`, 'success', 'Requests Published');
       await loadRequests();
-      const refreshed = await api.getDonationDonorMatches(selectedId);
-      setMatches(refreshed || []);
-      setSelectedDonors(new Set((refreshed || []).filter((donor) => donor.alreadyTargeted).map((donor) => donor.donorId)));
+      const refreshed = await api.getConsolidatedDonationDonorMatches(selectedRequest.requestIds);
+      setMatches(refreshed?.matches || []);
+      setSelectedDonors(new Set((refreshed?.matches || []).filter((donor) => donor.alreadyTargeted).map((donor) => donor.donorId)));
     } catch (err) {
       setError(err.message || 'Unable to publish donor requests.');
       onAddToast?.(err.message, 'error', 'Outreach Failed');
@@ -131,12 +203,12 @@ export function DonationMatchingView({ onAddToast }) {
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{ width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', background: '#4f46e5', color: 'white' }}><Target size={29} /></div>
           <div>
-            <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.45rem' }}>Personalized Donor Matching</h1>
-            <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: '.88rem' }}>Match camp requests with suitable donors by GN/DS proximity, donation history, item relevance, and urgency.</p>
+            <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.45rem' }}>Admin Donor Insights</h1>
+            <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: '.88rem' }}>Rank eligible registered donors for consolidated GN Division requests using the trained compatibility model.</p>
           </div>
         </div>
         <div style={{ padding: '9px 13px', borderRadius: 10, background: '#fff7ed', color: '#9a3412', fontSize: '.78rem', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <MapPin size={15} /> Proximity uses registered addresses, not GPS coordinates
+          <Sparkles size={15} /> {modelInfo ? `${modelInfo.selectedModel} · R² ${modelInfo.metrics.r2.toFixed(4)} · MAE ${modelInfo.metrics.mae.toFixed(4)} · RMSE ${modelInfo.metrics.rmse.toFixed(4)}` : 'Loading verified model metadata'}
         </div>
       </section>
 
@@ -146,28 +218,37 @@ export function DonationMatchingView({ onAddToast }) {
         <div style={{ ...card, overflow: 'hidden' }}>
           <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div><h2 style={{ margin: 0, fontSize: '1.05rem' }}>Camp Requests ({visibleRequests.length})</h2><p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.78rem' }}>Select a request under its GN division</p></div>
+              <div><h2 style={{ margin: 0, fontSize: '1.05rem' }}>Consolidated GN Requests ({visibleRequests.length})</h2><p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.78rem' }}>Camp demands are combined by GN division and disaster type</p></div>
               <button onClick={() => loadRequests()} aria-label="Refresh requests" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-card)', borderRadius: 9, padding: 8, color: 'var(--text-secondary)', cursor: 'pointer' }}><RefreshCw size={16} /></button>
             </div>
             <div style={{ display: 'grid', gap: 9, marginTop: 14 }}>
-              <label style={{ position: 'relative' }}><Search size={15} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} /><input value={requestSearch} onChange={(e) => setRequestSearch(e.target.value)} placeholder="Search camp or area..." style={{ width: '100%', boxSizing: 'border-box', padding: '9px 10px 9px 32px', border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }} /></label>
+              <label style={{ position: 'relative' }}><Search size={15} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} /><input value={requestSearch} onChange={(e) => setRequestSearch(e.target.value)} placeholder="Search GN division or area..." style={{ width: '100%', boxSizing: 'border-box', padding: '9px 10px 9px 32px', border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }} /></label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-                <select value={dsFilter} onChange={(e) => { setDsFilter(e.target.value); setGnFilter(''); }} style={{ padding: 9, border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }}><option value="">All DS areas</option>{dsAreas.map((area) => <option key={area}>{area}</option>)}</select>
-                <select value={gnFilter} onChange={(e) => setGnFilter(e.target.value)} style={{ padding: 9, border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }}><option value="">All GN divisions</option>{gnDivisions.map((area) => <option key={area}>{area}</option>)}</select>
+                <select value={dsFilter} onChange={(e) => {
+                  const nextDs = e.target.value;
+                  setDsFilter(nextDs);
+                  setGnFilter('');
+                  setSelectedId(requests.find((request) => !nextDs || request.dsArea === nextDs)?.id || '');
+                }} style={{ padding: 9, border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }}><option value="">All DS areas</option>{dsAreas.map((area) => <option key={area}>{area}</option>)}</select>
+                <select value={gnFilter} onChange={(e) => {
+                  const nextGn = e.target.value;
+                  setGnFilter(nextGn);
+                  setSelectedId(requests.find((request) => (!dsFilter || request.dsArea === dsFilter) && (!nextGn || normalizeGnDivision(request.gnDivision) === normalizeGnDivision(nextGn)))?.id || '');
+                }} style={{ padding: 9, border: '1px solid var(--border-default)', borderRadius: 9, background: 'var(--bg-secondary)' }}><option value="">All GN divisions</option>{gnDivisions.map((area) => <option key={area}>{area}</option>)}</select>
               </div>
             </div>
           </div>
           <div style={{ maxHeight: 650, overflowY: 'auto', padding: 12, display: 'grid', gap: 9 }}>
-            {loadingRequests ? <p style={{ padding: 25, textAlign: 'center', color: 'var(--text-muted)' }}>Loading camp requests...</p> : visibleRequests.map((request) => {
+            {loadingRequests ? <p style={{ padding: 25, textAlign: 'center', color: 'var(--text-muted)' }}>Loading consolidated GN requests...</p> : visibleRequests.map((request) => {
               const remaining = (request.items || []).reduce((sum, item) => sum + Number(item.remainingQuantity || 0), 0);
               const active = request.id === selectedId;
               return <button key={request.id} onClick={() => setSelectedId(request.id)} style={{ textAlign: 'left', padding: 14, borderRadius: 12, cursor: 'pointer', border: `1px solid ${active ? '#6366f1' : 'var(--border-subtle)'}`, background: active ? '#eef2ff' : 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{request.reliefCamp}</strong><span style={{ color: severityColor[request.severity] || '#ca8a04', fontSize: '.68rem', fontWeight: 800 }}>{request.severity?.toUpperCase()}</span></div>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 7, color: 'var(--text-muted)', fontSize: '.76rem' }}><MapPin size={13} />{request.gnDivision}, {request.dsArea}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: '.73rem', color: 'var(--text-secondary)' }}><span>{request.items?.length || 0} item type(s) · {remaining.toLocaleString()} outstanding</span><span>{request.targetedDonorCount || 0} targeted</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: '.73rem', color: 'var(--text-secondary)' }}><span>{request.items?.length || 0} item type(s) · {remaining.toLocaleString()} outstanding</span><span>{request.requestIds.length} camp request(s)</span></div>
               </button>;
             })}
-            {!loadingRequests && visibleRequests.length === 0 && <p style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>No open requests match these filters.</p>}
+            {!loadingRequests && visibleRequests.length === 0 && <p style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>No open consolidated donation requests for {gnFilter || dsFilter || 'these filters'}.</p>}
           </div>
         </div>
 
@@ -176,10 +257,10 @@ export function DonationMatchingView({ onAddToast }) {
             {selectedRequest ? <>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 15, flexWrap: 'wrap' }}>
                 <div><h2 style={{ margin: 0, fontSize: '1.05rem' }}>{selectedRequest.reliefCamp}</h2><p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: '.8rem' }}>{selectedRequest.gnDivision} GN · {selectedRequest.dsArea} DS · {selectedRequest.disasterType}</p></div>
-                <span style={{ alignSelf: 'start', padding: '6px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9', fontSize: '.72rem', fontWeight: 800 }}><Sparkles size={13} style={{ verticalAlign: -2, marginRight: 5 }} />RANKED MATCHES</span>
+                <span style={{ alignSelf: 'start', padding: '6px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9', fontSize: '.72rem', fontWeight: 800 }}><Sparkles size={13} style={{ verticalAlign: -2, marginRight: 5 }} />MODEL-RANKED COMPATIBILITY</span>
               </div>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 13 }}>{selectedRequest.items?.filter((item) => Number(item.remainingQuantity) > 0).map((item) => <span key={item.itemId || item.itemName} style={{ padding: '5px 8px', borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', fontSize: '.72rem' }}>{item.itemName}: <strong>{item.remainingQuantity} {item.unit}</strong></span>)}</div>
-            </> : <h2 style={{ margin: 0 }}>Select a camp request</h2>}
+            </> : <h2 style={{ margin: 0 }}>Select a consolidated GN request</h2>}
           </div>
 
           {selectedRequest && <>
@@ -193,13 +274,13 @@ export function DonationMatchingView({ onAddToast }) {
                 return <label key={donor.donorId} style={{ padding: 14, borderRadius: 12, border: `1px solid ${checked ? '#818cf8' : 'var(--border-subtle)'}`, background: checked ? '#f5f3ff' : 'var(--bg-secondary)', cursor: 'pointer', display: 'grid', gridTemplateColumns: '22px 1fr auto', gap: 10 }}>
                   <input type="checkbox" checked={checked} disabled={donor.alreadyTargeted} onChange={() => toggleDonor(donor.donorId)} style={{ marginTop: 3 }} />
                   <div><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><strong>{donor.name}</strong>{donor.alreadyTargeted && <span style={{ color: '#047857', background: '#d1fae5', borderRadius: 10, padding: '2px 7px', fontSize: '.65rem', fontWeight: 800 }}><Check size={11} style={{ verticalAlign: -2 }} /> TARGETED</span>}</div><div style={{ color: 'var(--text-muted)', fontSize: '.74rem', marginTop: 3 }}>{donor.email || 'No email'} · {donor.source}</div><div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8, fontSize: '.7rem', color: 'var(--text-secondary)' }}><span><MapPin size={12} style={{ verticalAlign: -2 }} /> {donor.proximityTier}</span><span><History size={12} style={{ verticalAlign: -2 }} /> {donor.historyCount} past pledge(s)</span><span><Gift size={12} style={{ verticalAlign: -2 }} /> {donor.relevantDonationCount} item match(es)</span></div><p style={{ margin: '7px 0 0', color: 'var(--text-muted)', fontSize: '.68rem' }}>{donor.reasons.join(' · ')}</p></div>
-                  <div style={{ minWidth: 58, height: 52, borderRadius: 10, display: 'grid', placeItems: 'center', background: donor.score >= 70 ? '#dcfce7' : donor.score >= 45 ? '#fef3c7' : '#f1f5f9', color: donor.score >= 70 ? '#15803d' : donor.score >= 45 ? '#a16207' : '#475569', fontWeight: 900 }}><span>{donor.score}<small style={{ fontSize: '.6rem' }}>%</small></span></div>
+                  <div style={{ minWidth: 92, minHeight: 52, borderRadius: 10, display: 'grid', placeItems: 'center', textAlign: 'center', background: donor.compatibilityScore >= 70 ? '#dcfce7' : donor.compatibilityScore >= 45 ? '#fef3c7' : '#f1f5f9', color: donor.compatibilityScore >= 70 ? '#15803d' : donor.compatibilityScore >= 45 ? '#a16207' : '#475569', fontWeight: 900 }}><span>{donor.compatibilityScore}<small style={{ fontSize: '.6rem' }}>%</small><small style={{ display: 'block', fontSize: '.55rem', marginTop: 2 }}>COMPATIBILITY</small></span></div>
                 </label>;
               })}
-              {!loadingMatches && visibleMatches.length === 0 && <p style={{ padding: 35, textAlign: 'center', color: 'var(--text-muted)' }}><Users size={22} /><br />No registered donors match this search.</p>}
+              {!loadingMatches && visibleMatches.length === 0 && <p style={{ padding: 35, textAlign: 'center', color: 'var(--text-muted)' }}><Users size={22} /><br />No eligible registered donors match this request.<br /><small>Complete donor type, preferred category, capacity level, and registered location in Admin user management.</small></p>}
             </div>
             <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ color: 'var(--text-muted)', fontSize: '.78rem' }}><strong style={{ color: 'var(--text-primary)' }}>{selectedDonors.size}</strong> selected · <strong style={{ color: '#4f46e5' }}>{newlySelectedCount}</strong> new recipient(s)<br /><span style={{ fontSize: '.68rem' }}><Clock3 size={11} style={{ verticalAlign: -2 }} /> Published requests appear under “For You” in each selected donor's portal.</span></div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '.78rem' }}><strong style={{ color: 'var(--text-primary)' }}>{selectedDonors.size}</strong> selected · <strong style={{ color: '#4f46e5' }}>{newlySelectedCount}</strong> new recipient(s) · {eligibility.eligible} eligible / {eligibility.ineligible} incomplete profile(s)<br /><span style={{ fontSize: '.68rem' }}><Clock3 size={11} style={{ verticalAlign: -2 }} /> Scores represent synthetic-data compatibility, not the probability a donor will respond.</span></div>
               <button disabled={sending || newlySelectedCount === 0} onClick={sendOutreach} style={{ padding: '11px 17px', border: 0, borderRadius: 10, background: sending || newlySelectedCount === 0 ? '#94a3b8' : '#4f46e5', color: 'white', fontWeight: 800, cursor: sending ? 'wait' : 'pointer' }}><Send size={16} style={{ verticalAlign: -3, marginRight: 7 }} />{sending ? 'Publishing...' : 'Send Personalized Requests'}</button>
             </div>
           </>}
