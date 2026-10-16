@@ -4,8 +4,8 @@ app/routers/disaster_officer.py
 Disaster Officer endpoints powered directly by MongoDB Atlas collections.
 """
 from __future__ import annotations
-from typing import List, Optional
-from datetime import datetime, timezone
+from typing import List, Literal, Optional
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,6 +18,7 @@ from app.models.disaster_donation_request import (
     BatchPledgeCreate,
     DisasterDonationRequestCreate,
 )
+from app.services.pledge_expiry import expire_stale_pledges
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/disaster-donation-requests", tags=["Disaster Officer (MongoDB)"])
@@ -40,18 +41,23 @@ class RequestItemOut(BaseModel):
 
 class DonationEntryOut(BaseModel):
     donationId: str
+    pledgeBatchId: Optional[str] = None
     donorId: str
     donorName: str
     donorPhone: Optional[str] = None
     itemId: Optional[str] = None
     itemName: str
     quantity: float
+    unit: Optional[str] = None
     dsArea: str
     reliefCamp: Optional[str] = None
     status: str = "pledged"
     donatedAt: datetime
+    expiresAt: Optional[datetime] = None
     acceptedAt: Optional[datetime] = None
     acceptedByOfficerId: Optional[str] = None
+    cancelledAt: Optional[datetime] = None
+    cancellationReason: Optional[str] = None
 
 
 class DisasterRequestGroupOut(BaseModel):
@@ -78,11 +84,13 @@ class OfficerPledgeItemOut(BaseModel):
     donorPhone: Optional[str] = None
     itemName: str
     quantity: float
+    unit: Optional[str] = None
     reliefCamp: str
     dsArea: str
     gnDivision: str
     status: str
     donatedAt: datetime
+    expiresAt: Optional[datetime] = None
 
 
 class DonorMatchOut(BaseModel):
@@ -121,7 +129,7 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         needed = float(item.get("neededQuantity", 0))
         pledged = float(item.get("pledgedQuantity", 0))
         donated = float(item.get("donatedQuantity", 0))
-        rem = max(0.0, needed - donated)
+        rem = max(0.0, needed - donated - pledged)
         items_out.append(
             RequestItemOut(
                 itemId=item.get("itemId") or str(item.get("_id", "")),
@@ -141,18 +149,23 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         donations_out.append(
             DonationEntryOut(
                 donationId=don_id,
+                pledgeBatchId=don.get("pledgeBatchId"),
                 donorId=str(don.get("donorId", "")),
                 donorName=don.get("donorName", "Verified Donor"),
                 donorPhone=don.get("donorPhone"),
                 itemId=don.get("itemId"),
                 itemName=don.get("itemName", "Relief Supply"),
                 quantity=float(don.get("quantity", 0)),
+                unit=don.get("unit"),
                 dsArea=don.get("dsArea") or doc.get("dsArea", "Western Sector"),
                 reliefCamp=doc.get("reliefCamp", "Relief Camp"),
                 status=don.get("status", "pledged"),
                 donatedAt=don.get("donatedAt") or datetime.now(timezone.utc),
+                expiresAt=don.get("expiresAt"),
                 acceptedAt=don.get("acceptedAt"),
                 acceptedByOfficerId=don.get("acceptedByOfficerId"),
+                cancelledAt=don.get("cancelledAt"),
+                cancellationReason=don.get("cancellationReason"),
             )
         )
 
@@ -210,13 +223,16 @@ def _proximity(address: Optional[str], gn_division: str, ds_area: str) -> tuple[
 async def get_all_disaster_requests(
     dsArea: Optional[str] = None,
     status_filter: Optional[str] = None,
+    scope: Literal["personalized", "all"] = "personalized",
     _current_user: TokenPayload = Depends(
         require_role(["admin", "volunteer", "donor", "authority", "disaster_officer"])
     ),
     db: Session = Depends(get_db),
 ):
+    await expire_stale_pledges()
     query = {}
-    if _current_user.role == "donor":
+    donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
+    if _current_user.role == "donor" and scope == "personalized":
         query["targetedDonorIds"] = {"$in": _sql_donor_alias_ids(db, _current_user.sub)}
     if dsArea:
         query["dsArea"] = dsArea
@@ -224,6 +240,17 @@ async def get_all_disaster_requests(
         query["status"] = status_filter
     cursor = disaster_requests_collection.find(query).sort("createdAt", -1)
     docs = await cursor.to_list(length=200)
+    if _current_user.role == "donor":
+        docs = [
+            {
+                **document,
+                "donations": [
+                    donation for donation in document.get("donations", [])
+                    if str(donation.get("donorId")) in donor_aliases
+                ],
+            }
+            for document in docs
+        ]
     return [format_mongo_doc(d) for d in docs]
 
 
@@ -361,7 +388,7 @@ async def send_personalized_donor_outreach(
     return DonorOutreachResult(
         requestId=req_id, targetedDonorCount=len(updated.get("targetedDonorIds", [])),
         sentAt=now,
-        message=f"Targeted outreach recorded for {len(donor_ids)} donor(s)",
+        message=f"Personalized request published to {len(donor_ids)} donor portal(s)",
     )
 
 
@@ -371,6 +398,7 @@ async def get_officer_pending_pledges(
         require_role(["admin", "authority", "disaster_officer"])
     ),
 ):
+    await expire_stale_pledges()
     cursor = disaster_requests_collection.find({"donations.status": "pledged"})
     docs = await cursor.to_list(length=200)
 
@@ -392,11 +420,13 @@ async def get_officer_pending_pledges(
                         donorPhone=don.get("donorPhone") or "+94 77 123 4567",
                         itemName=don.get("itemName", "Relief Item"),
                         quantity=float(don.get("quantity", 0)),
+                        unit=don.get("unit", "units"),
                         reliefCamp=relief_camp,
                         dsArea=ds_area,
                         gnDivision=gn_division,
                         status=don.get("status", "pledged"),
                         donatedAt=don.get("donatedAt") or datetime.now(timezone.utc),
+                        expiresAt=don.get("expiresAt"),
                     )
                 )
     return pledges_out
@@ -410,6 +440,7 @@ async def get_disaster_request(
     ),
     db: Session = Depends(get_db),
 ):
+    await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
     document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
@@ -417,9 +448,13 @@ async def get_disaster_request(
         raise HTTPException(status_code=404, detail="Disaster request not found")
     if _current_user.role == "donor":
         identity_ids = set(_sql_donor_alias_ids(db, _current_user.sub))
-        targeted_ids = {str(value) for value in document.get("targetedDonorIds", [])}
-        if not identity_ids.intersection(targeted_ids):
-            raise HTTPException(status_code=403, detail="This request is not assigned to your donor profile")
+        document = {
+            **document,
+            "donations": [
+                donation for donation in document.get("donations", [])
+                if str(donation.get("donorId")) in identity_ids
+            ],
+        }
     return format_mongo_doc(document)
 
 
@@ -431,6 +466,7 @@ async def accept_donation_at_ds_office(
         require_role(["admin", "authority", "disaster_officer"])
     ),
 ):
+    await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
 
@@ -449,6 +485,8 @@ async def accept_donation_at_ds_office(
         if current_don_id == donation_id:
             if don.get("status") == "received":
                 raise HTTPException(status_code=400, detail="This donation has already been received")
+            if don.get("status") == "cancelled":
+                raise HTTPException(status_code=400, detail="This pledge expired and can no longer be received")
             don["status"] = "received"
             don["acceptedAt"] = now
             don["acceptedByOfficerId"] = str(token_payload.sub)
@@ -519,6 +557,7 @@ async def add_pledge_to_request(
     token_payload: TokenPayload = Depends(require_role(["admin", "donor"])),
     db: Session = Depends(get_db),
 ):
+    await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
@@ -526,13 +565,9 @@ async def add_pledge_to_request(
     if not doc:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if token_payload.role == "donor":
-        identity_ids = set(_sql_donor_alias_ids(db, token_payload.sub))
-        targeted_ids = {str(value) for value in doc.get("targetedDonorIds", [])}
-        if not identity_ids.intersection(targeted_ids):
-            raise HTTPException(status_code=403, detail="This request is not assigned to your donor profile")
-
     now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=12)
+    pledge_batch_id = f"PLG-{str(ObjectId())[-8:].upper()}"
     new_donations = []
     items = doc.get("items", [])
 
@@ -580,6 +615,7 @@ async def add_pledge_to_request(
 
         donation_entry = {
             "donationId": str(ObjectId()),
+            "pledgeBatchId": pledge_batch_id,
             "donorId": token_payload.sub,
             "donorName": donor_name,
             "donorPhone": donor_phone,
@@ -587,10 +623,12 @@ async def add_pledge_to_request(
             "itemId": target_item.get("itemId"),
             "itemName": p.itemName,
             "quantity": float(p.quantity),
+            "unit": target_item.get("unit", "units"),
             "dsArea": doc.get("dsArea", "Western Sector"),
             "reliefCamp": doc.get("reliefCamp"),
             "status": "pledged",
             "donatedAt": now,
+            "expiresAt": expires_at,
         }
         new_donations.append(donation_entry)
 
