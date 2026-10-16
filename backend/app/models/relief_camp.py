@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 class HourlyLogEntry(BaseModel):
@@ -7,6 +7,7 @@ class HourlyLogEntry(BaseModel):
     population: int
     predictedPopulation: int
     rainfall: Optional[float] = 0.0
+    source: Optional[str] = "unknown"
 
 class ReliefCampCreate(BaseModel):
     dsArea: str = Field(..., min_length=2, json_schema_extra={"example": "Kaduwela"})
@@ -24,6 +25,7 @@ class ReliefCampUpdate(BaseModel):
     maxCapacityPersons: Optional[int] = Field(default=None, gt=0)
     name: Optional[str] = None
     assignedVolunteerIds: Optional[List[str]] = None
+    observationSource: Optional[Literal["manual", "image_analysis"]] = None
 
 class AssignVolunteersPayload(BaseModel):
     volunteerIds: List[str]
@@ -47,13 +49,18 @@ class PopulationPredictionRequest(BaseModel):
     popHistory: Optional[List[int]] = Field(default_factory=list)
     rainHistory: Optional[List[float]] = Field(default_factory=list)
     riverLevel: Optional[float] = 5.0
+    temperatureC: Optional[float] = None
+    humidityPercent: Optional[float] = None
+    weatherCode: Optional[int] = None
     hourOfDay: Optional[int] = 12
     severity: Optional[str] = "High"
 
 class PopulationPredictionResponse(BaseModel):
     predictedPopulation: int
+    forecastFor: datetime
     delta: int
     maxCapacity: int
     occupancyPercent: float
     projectedHourly: List[dict]
     note: str
+    factors: dict = Field(default_factory=dict)

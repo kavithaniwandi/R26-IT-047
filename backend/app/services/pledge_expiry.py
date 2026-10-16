@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from app.database import disaster_requests_collection
+from app.models.disaster_donation_request import whole_required_quantity
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -54,7 +55,7 @@ async def expire_stale_pledges() -> int:
                 item["pledgedQuantity"] = max(0.0, float(item.get("pledgedQuantity", 0)) - released)
                 item["remainingQuantity"] = max(
                     0.0,
-                    float(item.get("neededQuantity", 0))
+                    float(whole_required_quantity(item.get("neededQuantity", 0)))
                     - float(item.get("donatedQuantity", 0))
                     - float(item.get("pledgedQuantity", 0)),
                 )
