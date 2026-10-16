@@ -525,7 +525,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Publish to Donor Marketplace
+                  Publish Disaster Request
                 </button>
               </div>
             </form>

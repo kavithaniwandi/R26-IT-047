@@ -82,17 +82,6 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast, user, o
       features: ['Camp Spatial Approvals', 'Epidemic Outbreak Risk', 'Hospital Bed & Supply Requisitions', 'Clinical Triage Queue']
     },
     {
-      id: 'donor',
-      title: 'Relief Donor & Supply Marketplace',
-      subtitle: 'Port :5176',
-      badge: 'Red Cross & Pledges',
-      desc: 'Demand-driven medical supply fulfillment, priority shortage matching, certified donation shipments, and verifiable tracking codes.',
-      icon: HeartHandshake,
-      color: 'emerald',
-      actionText: 'Open Donor Marketplace',
-      features: ['Live Shortage Matchmaking', 'Verified Pledges Tracking', 'Certified Medical Goods', 'Transparent Fulfillment']
-    },
-    {
       id: 'volunteer',
       title: 'Field Volunteer & Responder Dispatch',
       subtitle: 'Port :5177',
@@ -130,7 +119,7 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast, user, o
       title: 'Disaster Donation Requests Manager',
       subtitle: 'Port :5180',
       badge: 'Volunteer Appeals',
-      desc: 'Publish location-specific MongoDB relief requests without mixing them into the existing SQL donor marketplace.',
+      desc: 'Publish location-specific MongoDB relief requests for targeted donor matching and field coordination.',
       icon: FileText,
       color: 'emerald',
       actionText: 'Open Request Manager',

@@ -735,7 +735,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 {/* Footer Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Selected requests are published privately in each donor's marketplace.
+                    Selected donors are recorded for targeted officer follow-up.
                   </span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button

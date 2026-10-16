@@ -361,7 +361,7 @@ async def send_personalized_donor_outreach(
     return DonorOutreachResult(
         requestId=req_id, targetedDonorCount=len(updated.get("targetedDonorIds", [])),
         sentAt=now,
-        message=f"Personalized in-app request published to {len(donor_ids)} donor(s)",
+        message=f"Targeted outreach recorded for {len(donor_ids)} donor(s)",
     )
 
 

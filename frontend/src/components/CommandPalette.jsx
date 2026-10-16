@@ -87,15 +87,6 @@ export function CommandPalette({
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-donor',
-      title: 'Relief Donor Marketplace',
-      subtitle: `Port :${PORTAL_CONFIG.donor.port} · Demand-driven supplies & pledges`,
-      icon: HeartHandshake,
-      color: 'emerald',
-      action: () => { onSelectPortal('donor'); onClose(); }
-    },
-    {
-      category: 'Dedicated Portals',
       id: 'portal-volunteer',
       title: 'Field Volunteer Dispatch',
       subtitle: `Port :${PORTAL_CONFIG.volunteer.port} · On-ground rescue missions`,

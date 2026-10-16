@@ -31,11 +31,10 @@
 
 ```mermaid
 graph TD
-    subgraph Client_Layer ["1. Client Layer — 5 Dedicated Portal Servers (React + Vite)"]
+    subgraph Client_Layer ["1. Client Layer — Dedicated Portal Servers (React + Vite)"]
         UI_Admin["Admin Command Center<br/>Port :5173"]
         UI_Victim["Victim SOS Portal<br/>Port :5174"]
         UI_Authority["Medical Authority Console<br/>Port :5175"]
-        UI_Donor["Donor Marketplace<br/>Port :5176"]
         UI_Volunteer["Volunteer Dispatch<br/>Port :5177"]
     end
 
@@ -86,7 +85,7 @@ graph TD
 Authentication and authorization are fully decoupled from domain business logic. Every protected endpoint enforces permissions via stateless JWT claims evaluated by the declarative `Depends(require_role([...]))` guard. Fail-closed semantics guarantee that missing or malformed tokens default to immediate HTTP 401/403 rejection.
 
 **2. Five Isolated Stakeholder Portals**
-The React frontend runs as five simultaneously active Vite development servers, each bound to a dedicated TCP port and initializing with the default credentials and UI context for its assigned stakeholder role. Portal detection is automatic — the application inspects `VITE_PORTAL_TYPE`, then window port, then URL path, then query parameter. A single `npm run dev:all` command starts all five servers concurrently.
+The React frontend runs as multiple Vite development servers, each bound to a dedicated TCP port and initializing with the UI context for its assigned stakeholder role. Portal detection is automatic through environment, port, path, and query-parameter configuration. A single `npm run dev:all` command starts all configured servers concurrently.
 
 **3. Explainable Multi-Model AI Pipeline**
 Four task-specific Random Forest models operate sequentially:
@@ -225,7 +224,7 @@ npm install
 
 ### Step 7 — Launch the stakeholder portals (Terminal 2)
 
-**Launch all five portals simultaneously:**
+**Launch all configured portals simultaneously:**
 ```powershell
 cd "D:\My research\SDM Project refine\frontend"
 npm run dev:all
@@ -238,7 +237,6 @@ npm run dev:all
 npm run dev:admin      # Admin Command Center    → http://localhost:5173
 npm run dev:victim     # Victim SOS Portal       → http://localhost:5174
 npm run dev:authority  # Medical Authority        → http://localhost:5175
-npm run dev:donor      # Donor Marketplace        → http://localhost:5176
 npm run dev:volunteer  # Volunteer Dispatch       → http://localhost:5177
 ```
 
@@ -251,7 +249,6 @@ npm run dev:volunteer  # Volunteer Dispatch       → http://localhost:5177
 | Admin Command Center | http://localhost:5173 | admin@disaster.relief.lk | admin |
 | Victim SOS Portal | http://localhost:5174 | victim@kaduwela.lk | victim |
 | Medical Authority Console | http://localhost:5175 | authority@moh.gov.lk | authority |
-| Relief Donor Marketplace | http://localhost:5176 | donor@redcross.lk | donor |
 | Field Volunteer Dispatch | http://localhost:5177 | volunteer@relief.lk | volunteer |
 
 > Default passwords follow the pattern `<Role>@2026!` (e.g., `Admin@2026!`). These credentials are seeded during database initialization and are intended for development and demonstration environments only.
