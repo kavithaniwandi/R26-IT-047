@@ -116,7 +116,11 @@ export function Sidebar({
                   className={`portal-btn ${isCurrent ? 'active' : ''}`}
                   onClick={() => {
                     setPortal(targetPortal);
-                    if (p.targetTab) setTab(p.targetTab);
+                    if (p.targetTab) {
+                      setTab(p.targetTab);
+                    } else if (targetPortal === 'admin') {
+                      setTab('overview');
+                    }
                   }}
                   title={`${p.label} (Port :${p.port})`}
                 >
