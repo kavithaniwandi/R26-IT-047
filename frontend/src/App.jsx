@@ -431,6 +431,10 @@ function DashboardApp() {
                     <CampsView currentUser={user} onAddToast={addToast} />
                   )}
 
+                  {currentTab === 'relief-camps' && (
+                    <ReliefCampsManagementView currentUser={user} onAddToast={addToast} />
+                  )}
+
                   {currentTab === 'donations' && (
                     <DonationsView currentUser={user} onAddToast={addToast} />
                   )}
@@ -480,27 +484,6 @@ function DashboardApp() {
                 <DonationMatchingView currentUser={user} onAddToast={addToast} />
               )}
 
-              {/* 9. Admin Portal Views */}
-              {currentPortal === 'admin' && (
-                <>
-                  {currentTab === 'overview' && (
-                    <OverviewView
-                      stats={stats}
-                      onNavigate={setCurrentTab}
-                      onResolveSOS={handleResolveSOS}
-                      onAddToast={addToast}
-                    />
-                  )}
-                  {currentTab === 'sos' && <SOSView onAddToast={addToast} />}
-                  {currentTab === 'heatmap' && <HeatmapView onAddToast={addToast} />}
-                  {currentTab === 'camps' && <CampsView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'relief-camps' && <ReliefCampsManagementView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'donations' && <DonationsView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'users' && <UsersView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'notifications' && <NotificationsView onAddToast={addToast} />}
-                  {currentTab === 'analytics' && <AnalyticsDashboardView stats={stats} onAddToast={addToast} />}
-                </>
-              )}
             </div>
           </>
         )}
