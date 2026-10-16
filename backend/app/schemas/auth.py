@@ -64,6 +64,11 @@ class UserOut(BaseModel):
     email: EmailStr
     phone: str | None
     address: str | None
+    donor_type: str | None = None
+    preferred_donation_category: str | None = None
+    capacity_level: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     role: str
     is_active: bool
     created_at: datetime
