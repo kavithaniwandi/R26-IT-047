@@ -33,6 +33,7 @@ The technology stack is:
 | Admin Command Center | System administrators | 5173 | `npm run dev:admin` | `admin` |
 | Victim SOS Portal | Disaster-affected public | 5174 | `npm run dev:victim` | `victim` |
 | Medical Authority Console | Ministry of Health (MOH) | 5175 | `npm run dev:authority` | `authority` |
+| Donor Donation Portal | Registered donors | 5176 | `npm run dev:donor` | `donor` |
 | Field Volunteer Dispatch | On-ground responders | 5177 | `npm run dev:volunteer` | `volunteer` |
 
 Each port corresponds to a distinct entry point that is resolved at runtime by `detectCurrentPortal()` (see [Section 3](#3-portal-detection-logic)).
@@ -173,6 +174,7 @@ All eleven views reside in `src/views/`. Views are pure presentational component
 | Notifications | `NotificationsView.jsx` | `admin` | System notification centre | Chronological notification feed with category filters; mark-as-read bulk action; notification composition form |
 | Victim Portal | `VictimPortalView.jsx` | `victim` | SOS submission and status tracking | Guided SOS submission form with location auto-detect; live status tracker for submitted alerts; nearest camp finder |
 | Authority Portal | `AuthorityPortalView.jsx` | `authority` | MOH oversight console | Aggregate medical supply metrics; camp approval workflow; authority-scoped heatmap and camp views |
+| Donor Portal | `DonorDonationView.jsx` | `donor` | Donation request and pledge workspace | Personalized-first requests, all open requests, multi-item quantities, 12-hour pledge deadlines, and completed donation history |
 | Volunteer Portal | `VolunteerPortalView.jsx` | `volunteer` | Field dispatch and assignments | Assigned task queue with priority indicators; camp check-in/check-out actions; map view of assigned zones |
 
 ---
@@ -256,6 +258,7 @@ To start a single portal in development mode, use the corresponding npm script:
 npm run dev:admin      # http://localhost:5173
 npm run dev:victim     # http://localhost:5174
 npm run dev:authority  # http://localhost:5175
+npm run dev:donor      # http://localhost:5176
 npm run dev:volunteer  # http://localhost:5177
 ```
 
@@ -285,12 +288,14 @@ sequenceDiagram
     participant V1 as "Vite :5173 (Admin)"
     participant V2 as "Vite :5174 (Victim)"
     participant V3 as "Vite :5175 (Authority)"
+    participant V4 as "Vite :5176 (Donor)"
     participant V5 as "Vite :5177 (Volunteer)"
 
     Dev->>Script: npm run dev:all
     Script->>V1: spawn (VITE_PORTAL_TYPE=admin)
     Script->>V2: spawn (VITE_PORTAL_TYPE=victim)
     Script->>V3: spawn (VITE_PORTAL_TYPE=authority)
+    Script->>V4: spawn (VITE_PORTAL_TYPE=donor)
     Script->>V5: spawn (VITE_PORTAL_TYPE=volunteer)
     V1-->>Script: stdout - [ADMIN] prefixed log
     V2-->>Script: stdout - [VICTIM] prefixed log
@@ -311,6 +316,7 @@ sequenceDiagram
 | Admin Command Center | http://localhost:5173 |
 | Victim SOS Portal | http://localhost:5174 |
 | Medical Authority Console | http://localhost:5175 |
+| Donor Donation Portal | http://localhost:5176 |
 | Field Volunteer Dispatch | http://localhost:5177 |
 
 ### 7.6 Environment variable override

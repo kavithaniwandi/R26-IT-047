@@ -8,6 +8,7 @@ import {
   CheckCircle2, 
   ShieldAlert, 
   Activity, 
+  HeartHandshake,
   Truck, 
   Sparkles,
   ArrowRight,
@@ -46,6 +47,17 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }) {
       icon: Activity,
       color: 'blue',
       port: 5175
+    },
+    {
+      label: 'Relief Donor',
+      email: 'donor@redcross.lk',
+      pw: 'Donor@2026!',
+      role: 'donor',
+      badge: 'Donation Requests',
+      desc: 'Review personalized requests, pledge supplies, and track completed donations.',
+      icon: HeartHandshake,
+      color: 'emerald',
+      port: 5176
     },
     {
       label: 'Field Volunteer Dispatch',

@@ -51,6 +51,7 @@ from app.models.schemas import (
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
+    expiry_task = None
     try:
         from app.models.quality_service import warm_up
 
@@ -59,13 +60,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"Quality model warmup failed: {exc}")
     try:
         from app.services.mongo_service import connect_mongo
+        from app.services.pledge_expiry import pledge_expiry_worker
 
         await connect_mongo()
+        expiry_task = asyncio.create_task(pledge_expiry_worker())
     except Exception as exc:
         print(f"MongoDB connection failed: {exc}")
     try:
         yield
     finally:
+        if expiry_task:
+            expiry_task.cancel()
+            try:
+                await expiry_task
+            except asyncio.CancelledError:
+                pass
         from app.services.mongo_service import close_mongo
 
         await close_mongo()

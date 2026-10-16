@@ -42,6 +42,7 @@ export function Sidebar({
     { id: 'volunteer_dash', label: 'Volunteer Dashboard', icon: LayoutDashboard, color: 'amber', port: PORTAL_CONFIG.volunteer_dash.port },
     { id: 'disaster_officer', label: 'Disaster Officer', icon: Shield, color: 'blue', port: PORTAL_CONFIG.disaster_officer.port },
     { id: 'donor_matching', label: 'Donor Matching', icon: Target, color: 'violet', port: PORTAL_CONFIG.donor_matching.port },
+    { id: 'donor', label: 'Donor Donations', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'disaster_donation', label: 'Disaster Donation', icon: Gift, color: 'emerald', port: PORTAL_CONFIG.disaster_donation.port },
     {
       id: 'relief-camps',

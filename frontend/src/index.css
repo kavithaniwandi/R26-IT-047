@@ -157,6 +157,22 @@ body {
   grid-template-columns: minmax(330px, 0.9fr) minmax(500px, 1.35fr);
 }
 
+.donor-request-item-grid {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.5fr) minmax(110px, .65fr) minmax(120px, .75fr) minmax(210px, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 850px) {
+  .donor-request-item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donor-request-item-head {
+    display: none;
+  }
+}
+
 @media (max-width: 1100px) {
   .donor-matching-grid {
     grid-template-columns: 1fr;

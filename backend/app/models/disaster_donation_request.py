@@ -19,17 +19,22 @@ class RequestItem(BaseModel):
 
 class DonationEntry(BaseModel):
     donationId: str
+    pledgeBatchId: Optional[str] = None
     donorId: str
     donorName: str
     donorPhone: Optional[str] = None
     itemId: Optional[str] = None
     itemName: str
     quantity: float = Field(..., gt=0)
+    unit: Optional[str] = None
     dsArea: str
-    status: Literal["pledged", "received"] = "pledged"
+    status: Literal["pledged", "received", "cancelled"] = "pledged"
     donatedAt: datetime
+    expiresAt: Optional[datetime] = None
     acceptedByOfficerId: Optional[str] = None
     acceptedAt: Optional[datetime] = None
+    cancelledAt: Optional[datetime] = None
+    cancellationReason: Optional[str] = None
 
 
 class DisasterDonationRequestCreate(BaseModel):

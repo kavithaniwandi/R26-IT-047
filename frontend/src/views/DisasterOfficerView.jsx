@@ -468,15 +468,16 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                   <th>Donor Info</th>
                   <th>Item Pledged</th>
                   <th>Quantity</th>
-                  <th>Destination Relief Camp</th>
+                  <th>Drop-off Office</th>
                   <th>DS / GN Division</th>
+                  <th>Deadline</th>
                   <th style={{ textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {pledges.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                       No pending donor pledges in queue.
                     </td>
                   </tr>
@@ -488,11 +489,14 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.donorPhone || 'No Phone Registered'}</div>
                       </td>
                       <td style={{ fontWeight: '700', color: 'var(--accent-blue)' }}>{p.itemName}</td>
-                      <td style={{ fontWeight: '800' }}>{p.quantity}</td>
-                      <td>{p.reliefCamp}</td>
+                      <td style={{ fontWeight: '800' }}>{p.quantity} {p.unit || 'units'}</td>
+                      <td>{p.dsArea} Divisional Secretariat Office</td>
                       <td>
                         <div>{p.dsArea}</div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.gnDivision}</span>
+                      </td>
+                      <td style={{ color: 'var(--accent-amber)', fontWeight: '700', fontSize: '0.75rem' }}>
+                        {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : 'Legacy pledge'}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button
@@ -735,7 +739,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 {/* Footer Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Selected donors are recorded for targeted officer follow-up.
+                    Selected requests appear under “For You” in each donor's portal.
                   </span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button

@@ -20,6 +20,7 @@ import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';
 import { ReliefCampsManagementView } from './views/ReliefCampsManagementView';
 import { DonationMatchingView } from './views/DonationMatchingView';
+import { DonorDonationView } from './views/DonorDonationView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -193,6 +194,11 @@ function DashboardApp() {
         return {
           title: 'Medical Authority Command Console',
           sub: `Dedicated Port :${PORTAL_CONFIG.authority.port} - Ministry of Health (MOH): Triage, Camp Approval & ML Analytics`
+        };
+      case 'donor':
+        return {
+          title: 'Donor Donation & Pledge Portal',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Personalized Requests, 12-Hour Pledges & Donation History`
         };
       case 'volunteer':
         return {
@@ -471,6 +477,11 @@ function DashboardApp() {
               {/* 8. Personalized Donor Matching Portal */}
               {currentPortal === 'donor_matching' && (
                 <DonationMatchingView currentUser={user} onAddToast={addToast} />
+              )}
+
+              {/* 9. Donor Donation Portal */}
+              {currentPortal === 'donor' && (
+                <DonorDonationView currentUser={user} onAddToast={addToast} />
               )}
 
             </div>
