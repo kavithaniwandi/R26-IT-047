@@ -50,6 +50,18 @@ export const PORTAL_CONFIG = {
     color: 'blue',
     badge: 'Port :5175',
   },
+  donor: {
+    id: 'donor',
+    name: 'Donor Donation Portal',
+    subtitle: 'Personalized Requests, Pledges & Donation History',
+    port: 5176,
+    path: '/donor',
+    defaultRole: 'donor',
+    defaultEmail: 'donor@redcross.lk',
+    defaultPassword: 'Donor@2026!',
+    color: 'emerald',
+    badge: 'Port :5176',
+  },
   volunteer: {
     id: 'volunteer',
     name: 'Field Volunteer Dispatch',
@@ -156,7 +168,7 @@ export function getPortalForRole(role) {
     admin: 'admin',
     victim: 'victim',
     authority: 'authority',
-    donor: 'home',
+    donor: 'donor',
     volunteer: 'volunteer',
     disaster_officer: 'disaster_officer',
   }[role] || 'home';

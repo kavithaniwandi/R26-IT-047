@@ -115,6 +115,17 @@ export function HomeView({ onSelectPortal, onOpenLoginModal, onAddToast, user, o
       features: ['Dedicated Officer RBAC', 'Pledge Verification', 'Deficit Monitoring', 'Donor Outreach']
     },
     {
+      id: 'donor',
+      title: 'Donor Donation Portal',
+      subtitle: 'Port :5176',
+      badge: 'Donor Workspace',
+      desc: 'Review personalized or public requests, pledge multiple requested items, and track 12-hour delivery deadlines and completed donations.',
+      icon: HeartHandshake,
+      color: 'emerald',
+      actionText: 'Open Donor Portal',
+      features: ['Personalized Requests', 'All Open Requests', '12-Hour Pledges', 'Donation History']
+    },
+    {
       id: 'disaster_donation',
       title: 'Disaster Donation Requests Manager',
       subtitle: 'Port :5180',

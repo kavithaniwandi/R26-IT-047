@@ -11,6 +11,7 @@ const portals = [
   { id: 'admin',     port: 5173 },
   { id: 'victim',    port: 5174 },
   { id: 'authority', port: 5175 },
+  { id: 'donor',     port: 5176 },
   { id: 'volunteer', port: 5177 },
   { id: 'volunteer_dash', port: 5178 },
   { id: 'disaster_officer', port: 5179 },
@@ -22,6 +23,7 @@ const colors = {
   admin:     '\x1b[31m',   // red
   victim:    '\x1b[35m',   // magenta
   authority: '\x1b[34m',   // blue
+  donor:     '\x1b[32m',   // green
   volunteer: '\x1b[33m',   // yellow
   volunteer_dash: '\x1b[33m',
   disaster_officer: '\x1b[36m',

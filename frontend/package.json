@@ -8,6 +8,7 @@
     "dev:admin": "cross-env VITE_PORTAL_TYPE=admin vite --port 5173 --host",
     "dev:victim": "cross-env VITE_PORTAL_TYPE=victim vite --port 5174 --host",
     "dev:authority": "cross-env VITE_PORTAL_TYPE=authority vite --port 5175 --host",
+    "dev:donor": "cross-env VITE_PORTAL_TYPE=donor vite --port 5176 --host",
     "dev:volunteer": "cross-env VITE_PORTAL_TYPE=volunteer vite --port 5177 --host",
     "dev:volunteer-dashboard": "cross-env VITE_PORTAL_TYPE=volunteer_dash vite --port 5178 --host",
     "dev:disaster-officer": "cross-env VITE_PORTAL_TYPE=disaster_officer vite --port 5179 --host",

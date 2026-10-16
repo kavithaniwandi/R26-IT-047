@@ -121,6 +121,15 @@ export function CommandPalette({
       color: 'emerald',
       action: () => { onSelectPortal('disaster_donation'); onClose(); }
     },
+    {
+      category: 'Dedicated Portals',
+      id: 'portal-donor-donations',
+      title: 'Donor Donation Portal',
+      subtitle: `Port :${PORTAL_CONFIG.donor.port} · Personalized requests and pledge tracking`,
+      icon: HeartHandshake,
+      color: 'emerald',
+      action: () => { onSelectPortal('donor'); onClose(); }
+    },
 
     // Admin Console Views
     {
