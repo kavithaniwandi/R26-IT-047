@@ -64,14 +64,27 @@ function DashboardApp() {
   const user = authenticatedUser;
   const [selectedPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
 
+  const selectPortal = useCallback((portalId) => {
+    setCurrentPortal(portalId);
+
+    const portalPath = PORTAL_CONFIG[portalId]?.path;
+    if (portalPath && (location.pathname !== portalPath || location.search)) {
+      navigate(portalPath);
+    }
+  }, [location.pathname, location.search, navigate]);
+
   useEffect(() => {
     setCurrentPortal(detectCurrentPortal());
   }, [location.search, location.pathname]);
 
   const selectedPortalRole = PORTAL_CONFIG[selectedPortal]?.defaultRole;
-  const canAccessSelectedPortal = authenticatedUser?.role === 'admin'
-    || !selectedPortalRole
-    || selectedPortalRole === authenticatedUser?.role;
+  const isVolunteerDispatchHidden = authenticatedUser?.role === 'volunteer'
+    && selectedPortal === 'volunteer';
+  const canAccessSelectedPortal = !isVolunteerDispatchHidden && (
+    authenticatedUser?.role === 'admin'
+      || !selectedPortalRole
+      || selectedPortalRole === authenticatedUser?.role
+  );
   const currentPortal = authenticatedUser && !canAccessSelectedPortal
     ? getPortalForRole(authenticatedUser.role)
     : selectedPortal;
@@ -288,7 +301,7 @@ function DashboardApp() {
           <VictimPortalView
             user={user}
             onAddToast={addToast}
-            onReturnToAdmin={() => setCurrentPortal('admin')}
+            onReturnToAdmin={() => selectPortal('admin')}
             onLogout={handleLogout}
             onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
           />
@@ -300,7 +313,7 @@ function DashboardApp() {
             <Sidebar
               currentPortal={currentPortal}
               setPortal={(p) => {
-                setCurrentPortal(p);
+                selectPortal(p);
                 playNotificationPing();
               }}
               currentTab={currentTab}
@@ -323,7 +336,7 @@ function DashboardApp() {
                   if (!user) {
                     navigate('/signin', { state: { portal: p } });
                   } else {
-                    setCurrentPortal(p);
+                    selectPortal(p);
                     playNotificationPing();
                   }
                 }}
@@ -386,7 +399,7 @@ function DashboardApp() {
                     <VictimPortalView
                       user={user}
                       onAddToast={addToast}
-                      onReturnToAdmin={() => setCurrentPortal('admin')}
+                      onReturnToAdmin={() => selectPortal('admin')}
                       onLogout={handleLogout}
                       onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
                     />
@@ -457,7 +470,7 @@ function DashboardApp() {
                 <VolunteerDashboardView
                   currentUser={user}
                   onNavigate={(tab) => {
-                    setCurrentPortal('admin');
+                    selectPortal('admin');
                     setCurrentTab(tab);
                   }}
                   onAddToast={addToast}
@@ -495,7 +508,7 @@ function DashboardApp() {
       <CommandPalette
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
-        onSelectPortal={setCurrentPortal}
+        onSelectPortal={selectPortal}
         onSelectTab={setCurrentTab}
         onOpenLoginModal={handleSwitchAccount}
         onToggleSound={handleToggleSound}
