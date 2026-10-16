@@ -25,7 +25,7 @@ MODEL_CONFIG = {
     "color": (255, 0, 0),
 }
 _inference_lock = Lock()
-PERSON_CONFIDENCE_THRESHOLD = 0.2
+PERSON_CONFIDENCE_THRESHOLD = 0.35
 
 
 @lru_cache(maxsize=1)

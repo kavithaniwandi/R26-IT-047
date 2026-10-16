@@ -19,7 +19,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { API_BASE_URL, getAuthToken } from '../api';
+import { api, API_BASE_URL, getAuthToken } from '../api';
 
 const DISASTER_TYPES = ['Flood', 'Landslide', 'Tsunami', 'Drought', 'Fire', 'Other'];
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
@@ -131,23 +131,15 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!camp) return;
     setSavingManual(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentPopulation: Number(manualCount) }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        currentPopulation: Number(manualCount),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        setManualCount(updated.currentPopulation);
-        setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
-        if (onAddToast) onAddToast(`Manual population updated to ${updated.currentPopulation} people.`, 'success', 'Population Saved');
-      }
+      setCamp(updated);
+      setManualCount(updated.currentPopulation);
+      setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
+      if (onAddToast) onAddToast(`Manual population updated to ${updated.currentPopulation} people.`, 'success', 'Population Saved');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to update population', 'error', 'Update Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to update population', 'error', 'Update Failed');
     } finally {
       setSavingManual(false);
     }
@@ -228,24 +220,15 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentPopulation: totalVerifiedCrowd }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        currentPopulation: totalVerifiedCrowd,
       });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        setManualCount(updated.currentPopulation);
-        setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
-        if (onAddToast) onAddToast(`Verified AI crowd count of ${totalVerifiedCrowd} applied!`, 'success', 'AI Count Applied');
-      }
+      setCamp(updated);
+      setManualCount(updated.currentPopulation);
+      setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
+      if (onAddToast) onAddToast(`Verified AI crowd count of ${totalVerifiedCrowd} applied!`, 'success', 'AI Count Applied');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to apply detected crowd count', 'error', 'Action Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to apply detected crowd count', 'error', 'Action Failed');
     }
   };
 
@@ -311,22 +294,13 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!predictionResult || !camp) return;
     setApplyingPrediction(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ predictedPopulation: predictionResult.predictedPopulation }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        predictedPopulation: predictionResult.predictedPopulation,
       });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        if (onAddToast) onAddToast(`Predicted population updated to ${updated.predictedPopulation} people.`, 'success', 'Prediction Applied');
-      }
+      setCamp(updated);
+      if (onAddToast) onAddToast(`Predicted population updated to ${updated.predictedPopulation} people.`, 'success', 'Prediction Applied');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to save predicted population', 'error', 'Update Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to save predicted population', 'error', 'Update Failed');
     } finally {
       setApplyingPrediction(false);
     }
