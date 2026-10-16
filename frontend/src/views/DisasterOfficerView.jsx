@@ -603,7 +603,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
         </div>
       )}
 
-      {/* MODAL 1: AI DONOR OUTREACH & LIKELIHOOD TARGETING */}
+      {/* MODAL 1: MODEL-BASED DONOR COMPATIBILITY & OUTREACH */}
       {selectedRequestForOutreach && (
         <div className="modal-overlay" onClick={() => setSelectedRequestForOutreach(null)}>
           <div className="modal-content" style={{ maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
@@ -611,7 +611,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '4px' }}>
                   <Sparkles size={14} />
-                  <span>AI Donor Response Targeting Engine</span>
+                  <span>Donor Compatibility Recommendation Model</span>
                 </div>
                 <h3 className="modal-title">Personalized Outreach: {selectedRequestForOutreach.reliefCamp}</h3>
                 <p className="card-subtitle">{selectedRequestForOutreach.gnDivision} &bull; {selectedRequestForOutreach.dsArea} ({selectedRequestForOutreach.severity} {selectedRequestForOutreach.disasterType})</p>
@@ -630,7 +630,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                   Calculating Donor Suitability...
                 </h4>
                 <p style={{ fontSize: '0.84rem', maxWidth: '420px', margin: '0 auto' }}>
-                  Comparing registered address proximity, donation history, item relevance, and request urgency for {selectedRequestForOutreach.dsArea}...
+                  Applying the trained donor-request pipeline to registered donor attributes and this request for {selectedRequestForOutreach.dsArea}...
                 </p>
               </div>
             ) : (
@@ -684,7 +684,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                         <th>Donor</th>
                         <th>Proximity</th>
                         <th>History</th>
-                        <th>Match Score</th>
+                        <th>Compatibility Score</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -739,7 +739,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 {/* Footer Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Selected requests appear under “For You” in each donor's portal.
+                    Compatibility scores use synthetic compatibility data; they are not response probabilities.
                   </span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button

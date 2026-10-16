@@ -27,6 +27,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
   const [appealForm, setAppealForm] = useState({
     item_id: '',
     item_name: '',
+    required_category: 'Medical',
     quantity_required: 100,
     unit: 'units',
     disaster_type: 'Flood',
@@ -105,6 +106,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
         items: [{
           itemId: appealForm.item_id || undefined,
           itemName: appealForm.item_name,
+          requiredCategory: appealForm.required_category,
           unit: appealForm.unit,
           neededQuantity: appealForm.quantity_required,
         }],
@@ -485,6 +487,14 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                 ) : (
                   <input type="text" required placeholder="e.g. Human Insulin 100 IU/ml Vials" className="form-input" value={appealForm.item_name} onChange={(e) => setAppealForm({ ...appealForm, item_name: e.target.value })} />
                 )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Model Donation Category</label>
+                <select className="form-select" value={appealForm.required_category} onChange={(e) => setAppealForm({ ...appealForm, required_category: e.target.value })}>
+                  {['Blankets', 'Dry Rations', 'Medical', 'Tarpaulins', 'Water'].map((category) => <option key={category}>{category}</option>)}
+                </select>
+                <small style={{ color: 'var(--text-muted)' }}>Used by the trained donor-request compatibility pipeline.</small>
               </div>
 
               <div className="form-group">
