@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class RequestItem(BaseModel):
     itemId: Optional[str] = None
     itemName: str = Field(..., min_length=2)
+    requiredCategory: Optional[Literal["Blankets", "Dry Rations", "Medical", "Tarpaulins", "Water"]] = None
     unit: str = Field(..., min_length=1)
     neededQuantity: float = Field(..., gt=0)
     pledgedQuantity: float = Field(default=0.0, ge=0)
@@ -44,6 +45,8 @@ class DisasterDonationRequestCreate(BaseModel):
     gnDivision: str = Field(..., min_length=2)
     reliefCamp: str = Field(..., min_length=2)
     people_count: int = Field(default=1, ge=0)
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     items: List[RequestItem] = Field(..., min_length=1)
 
 

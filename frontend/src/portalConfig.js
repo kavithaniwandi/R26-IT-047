@@ -169,7 +169,7 @@ export function getPortalForRole(role) {
     victim: 'victim',
     authority: 'authority',
     donor: 'donor',
-    volunteer: 'volunteer',
+    volunteer: 'volunteer_dash',
     disaster_officer: 'disaster_officer',
   }[role] || 'home';
 }

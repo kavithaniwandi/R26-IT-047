@@ -60,15 +60,15 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }) {
       port: 5176
     },
     {
-      label: 'Field Volunteer Dispatch',
+      label: 'Field Volunteer',
       email: 'volunteer@relief.lk',
       pw: 'Volunteer@2026!',
       role: 'volunteer',
-      badge: 'Rescue Missions',
-      desc: 'On-ground disaster response, turn-by-turn routing, victim status verification.',
+      badge: 'Volunteer Dashboard',
+      desc: 'Manage assigned camps, field tasks, shelter populations, and relief supplies.',
       icon: Truck,
       color: 'amber',
-      port: 5177
+      port: 5178
     },
     {
       label: 'District Disaster Officer',

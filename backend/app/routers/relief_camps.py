@@ -47,6 +47,15 @@ def volunteer_identity_ids(current_user: TokenPayload, db: Session) -> List[str]
     ]
 
 
+def can_manage_camp(current_user: TokenPayload, camp: dict, db: Session) -> bool:
+    """Allow volunteers to manage camps assigned to any of their legacy account IDs."""
+    if current_user.role != "volunteer":
+        return True
+    assigned_ids = {str(value) for value in camp.get("assignedVolunteerIds", [])}
+    permitted_ids = set(volunteer_identity_ids(current_user, db))
+    return not assigned_ids.isdisjoint(permitted_ids)
+
+
 def format_camp(doc) -> ReliefCampResponse:
     history = [
         HourlyLogEntry(
@@ -185,6 +194,7 @@ async def update_camp_population(
     current_user: TokenPayload = Depends(
         require_role(["admin", "disaster_officer", "volunteer"])
     ),
+    db: Session = Depends(get_db),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")
@@ -193,7 +203,7 @@ async def update_camp_population(
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
 
-    if current_user.role == "volunteer" and current_user.sub not in camp.get("assignedVolunteerIds", []):
+    if not can_manage_camp(current_user, camp, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not assigned to this relief camp",
@@ -317,9 +327,7 @@ async def get_relief_camp_by_id(
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
 
-    assigned_ids = set(map(str, camp.get("assignedVolunteerIds", [])))
-    permitted_ids = set(volunteer_identity_ids(current_user, db))
-    if current_user.role == "volunteer" and assigned_ids.isdisjoint(permitted_ids):
+    if not can_manage_camp(current_user, camp, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not assigned to this relief camp"
