@@ -292,6 +292,7 @@ If you only need to work on a specific portal, you can run its dedicated script:
 npm run dev:admin      # Port 5173 - Admin Command Center
 npm run dev:victim     # Port 5174 - Victim SOS Portal
 npm run dev:authority  # Port 5175 - Medical Authority Console
+npm run dev:donor      # Port 5176 - Donor Donation Portal
 npm run dev:volunteer  # Port 5177 - Field Volunteer Dispatch
 ```
 
@@ -306,6 +307,7 @@ The local database is seeded with initial test accounts for each stakeholder rol
 | **Admin Command Center** | [http://localhost:5173](http://localhost:5173) | `admin@disaster.relief.lk` | `Admin@2026!` | `admin` |
 | **Victim SOS Portal** | [http://localhost:5174](http://localhost:5174) | `victim@kaduwela.lk` | `Victim@2026!` | `victim` |
 | **Medical Authority Console** | [http://localhost:5175](http://localhost:5175) | `authority@moh.gov.lk` | `Authority@2026!` | `authority` |
+| **Donor Donation Portal** | [http://localhost:5176](http://localhost:5176) | `donor@redcross.lk` | `Donor@2026!` | `donor` |
 | **Field Volunteer Dispatch** | [http://localhost:5177](http://localhost:5177) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
 
 ---

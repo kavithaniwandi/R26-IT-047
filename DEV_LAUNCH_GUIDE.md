@@ -104,6 +104,7 @@ All portals run concurrently on independent local ports:
 | **Admin Command Center** | [http://localhost:5173](http://localhost:5173) | `admin@disaster.relief.lk` | `Admin@2026!` | `admin` |
 | **Victim SOS Portal** | [http://localhost:5174](http://localhost:5174) | `victim@kaduwela.lk` | `Victim@2026!` | `victim` |
 | **Medical Authority Console** | [http://localhost:5175](http://localhost:5175) | `authority@moh.gov.lk` | `Authority@2026!` | `authority` |
+| **Donor Donation Portal** | [http://localhost:5176](http://localhost:5176) | `donor@redcross.lk` | `Donor@2026!` | `donor` |
 | **Field Volunteer Dispatch** | [http://localhost:5177](http://localhost:5177) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
 | **Volunteer Field Dashboard** | [http://localhost:5178](http://localhost:5178) | `volunteer@relief.lk` | `Volunteer@2026!` | `volunteer` |
 | **Disaster Officer Hub** | [http://localhost:5179](http://localhost:5179) | `officer@disaster.relief.lk` | `Officer@2026!` | `disaster_officer` |
@@ -119,6 +120,7 @@ All portals run concurrently on independent local ports:
 | **Run Single Portal (e.g. Admin)** | `npm run dev:admin` | `frontend/` |
 | **Run Single Portal (Victim)** | `npm run dev:victim` | `frontend/` |
 | **Run Single Portal (Authority)** | `npm run dev:authority` | `frontend/` |
+| **Run Single Portal (Donor)** | `npm run dev:donor` | `frontend/` |
 | **Run Single Portal (Volunteer)** | `npm run dev:volunteer` | `frontend/` |
 | **Run Pytest Suite** | `python -m pytest tests/ -v` | `backend/` |
 | **Retrain ML Models** | `python ml_pipeline.py` | Root / |

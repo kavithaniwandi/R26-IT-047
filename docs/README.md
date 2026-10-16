@@ -35,6 +35,7 @@ graph TD
         UI_Admin["Admin Command Center<br/>Port :5173"]
         UI_Victim["Victim SOS Portal<br/>Port :5174"]
         UI_Authority["Medical Authority Console<br/>Port :5175"]
+        UI_Donor["Donor Donation Portal<br/>Port :5176"]
         UI_Volunteer["Volunteer Dispatch<br/>Port :5177"]
     end
 
@@ -237,6 +238,7 @@ npm run dev:all
 npm run dev:admin      # Admin Command Center    → http://localhost:5173
 npm run dev:victim     # Victim SOS Portal       → http://localhost:5174
 npm run dev:authority  # Medical Authority        → http://localhost:5175
+npm run dev:donor      # Donor Donation Portal    → http://localhost:5176
 npm run dev:volunteer  # Volunteer Dispatch       → http://localhost:5177
 ```
 
@@ -249,6 +251,7 @@ npm run dev:volunteer  # Volunteer Dispatch       → http://localhost:5177
 | Admin Command Center | http://localhost:5173 | admin@disaster.relief.lk | admin |
 | Victim SOS Portal | http://localhost:5174 | victim@kaduwela.lk | victim |
 | Medical Authority Console | http://localhost:5175 | authority@moh.gov.lk | authority |
+| Donor Donation Portal | http://localhost:5176 | donor@redcross.lk | donor |
 | Field Volunteer Dispatch | http://localhost:5177 | volunteer@relief.lk | volunteer |
 
 > Default passwords follow the pattern `<Role>@2026!` (e.g., `Admin@2026!`). These credentials are seeded during database initialization and are intended for development and demonstration environments only.

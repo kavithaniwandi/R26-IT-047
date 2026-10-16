@@ -13,7 +13,8 @@ graph TB
         C1["Admin Command Center<br/>(Port :5173 · Full system control)"]
         C2["Victim SOS Portal<br/>(Port :5174 · GPS alerting, status tracking)"]
         C3["Medical Authority Console<br/>(Port :5175 · Heatmaps, camp approval)"]
-        C4["Volunteer Field Dispatch<br/>(Port :5177 · Mission coordination)"]
+        C4["Donor Donation Portal<br/>(Port :5176 · Personalized requests and pledges)"]
+        C5["Volunteer Field Dispatch<br/>(Port :5177 · Mission coordination)"]
     end
 
     subgraph L2 ["Layer 2: Auth & Gateway Tier"]
@@ -74,6 +75,7 @@ The frontend is a single React 19 SPA (Vite 8 build toolchain) distributed as **
 | Admin Command Center | `:5173` | System administrators | `admin` |
 | Victim SOS Portal | `:5174` | Disaster-affected members of the public | `victim` |
 | Medical Authority Console | `:5175` | Ministry of Health (MOH) officials | `authority` |
+| Donor Donation Portal | `:5176` | Registered relief donors | `donor` |
 | Field Volunteer Dispatch | `:5177` | On-ground responders and rescue teams | `volunteer` |
 
 - **Protocol:** HTTPS (or HTTP in development) with JSON payloads over REST conventions.
