@@ -19,6 +19,11 @@ from app.models.disaster_donation_request import (
     DisasterDonationRequestCreate,
 )
 from app.services.pledge_expiry import expire_stale_pledges
+from app.services.donor_matching import (
+    DonorModelUnavailable,
+    model_information,
+    predict_compatibility,
+)
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/disaster-donation-requests", tags=["Disaster Officer (MongoDB)"])
@@ -31,6 +36,7 @@ router = APIRouter(prefix="/disaster-donation-requests", tags=["Disaster Officer
 class RequestItemOut(BaseModel):
     itemId: Optional[str] = None
     itemName: str
+    requiredCategory: Optional[str] = None
     unit: str
     neededQuantity: float
     pledgedQuantity: float = 0.0
@@ -68,6 +74,8 @@ class DisasterRequestGroupOut(BaseModel):
     gnDivision: str
     reliefCamp: str
     people_count: int
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     status: str = "remaining"
     createdBy: Optional[str] = None
     createdAt: Optional[datetime] = None
@@ -100,7 +108,18 @@ class DonorMatchOut(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     source: str
-    score: int
+    score: float
+    compatibilityScore: float
+    priorityScore: float
+    modelName: str = "Linear Regression"
+    donorType: str
+    preferredCategory: str
+    capacityLevel: str
+    distanceKm: float
+    distanceSource: str
+    categoryMatchScore: float
+    capacityMatchScore: float
+    proximityScore: float
     proximityTier: str
     historyCount: int
     receivedDonationCount: int
@@ -111,6 +130,17 @@ class DonorMatchOut(BaseModel):
 
 class DonorOutreachCreate(BaseModel):
     donorIds: List[str]
+
+
+class ConsolidatedDonorMatchesCreate(BaseModel):
+    requestIds: List[str]
+
+
+class ConsolidatedDonorMatchesOut(BaseModel):
+    matches: List[DonorMatchOut]
+    eligibleDonorCount: int
+    ineligibleDonorCount: int
+    model: dict
 
 
 class DonorOutreachResult(BaseModel):
@@ -134,6 +164,7 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
             RequestItemOut(
                 itemId=item.get("itemId") or str(item.get("_id", "")),
                 itemName=item.get("itemName", "Relief Item"),
+                requiredCategory=item.get("requiredCategory") or item.get("category"),
                 unit=item.get("unit", "units"),
                 neededQuantity=needed,
                 pledgedQuantity=pledged,
@@ -177,6 +208,8 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         gnDivision=doc.get("gnDivision", "Ranala"),
         reliefCamp=doc.get("reliefCamp", "Community Shelter"),
         people_count=int(doc.get("people_count", 1)),
+        latitude=doc.get("latitude") or doc.get("lat"),
+        longitude=doc.get("longitude") or doc.get("lng"),
         status=doc.get("status", "remaining"),
         createdBy=str(doc.get("createdBy")) if doc.get("createdBy") is not None else None,
         createdAt=doc.get("createdAt"),
@@ -202,19 +235,6 @@ def _sql_donor_alias_ids(db: Session, donor_id: str) -> List[str]:
         str(user_id)
         for (user_id,) in db.query(User.id).filter(User.email == donor.email).all()
     ] or [donor_id]
-
-
-def _proximity(address: Optional[str], gn_division: str, ds_area: str) -> tuple[str, int, str]:
-    address_key = _normalise(address)
-    gn_key = _normalise(gn_division)
-    ds_key = _normalise(ds_area)
-    if gn_key and gn_key in address_key:
-        return "Same GN division", 45, f"Address matches {gn_division} GN division"
-    if ds_key and ds_key in address_key:
-        return "Same DS area", 30, f"Address matches {ds_area} DS area"
-    if address_key:
-        return "Broader area", 12, "Registered outside the request's GN/DS area"
-    return "Location unavailable", 5, "No donor address is available for proximity matching"
 
 
 # ── Route Endpoints ──────────────────────────────────────────────────────────
@@ -254,18 +274,7 @@ async def get_all_disaster_requests(
     return [format_mongo_doc(d) for d in docs]
 
 
-@router.get("/{req_id}/donor-matches", response_model=List[DonorMatchOut])
-async def get_ranked_donor_matches(
-    req_id: str,
-    _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
-    db: Session = Depends(get_db),
-):
-    if not ObjectId.is_valid(req_id):
-        raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
-    request_doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
-    if not request_doc:
-        raise HTTPException(status_code=404, detail="Disaster request not found")
-
+async def _registered_donors(db: Session) -> List[dict]:
     role = db.query(Role).filter(Role.name == RoleEnum.donor).first()
     sql_users = (
         db.query(User)
@@ -286,6 +295,10 @@ async def get_ranked_donor_matches(
         donors.append({
             "donorId": str(user.id), "name": user.full_name, "email": user.email,
             "phone": user.phone, "address": user.address, "source": "SQL account",
+            "donor_type": user.donor_type,
+            "preferred_donation_category": user.preferred_donation_category,
+            "capacity_level": user.capacity_level,
+            "latitude": user.latitude, "longitude": user.longitude,
         })
 
     mongo_users = await users_collection.find({"userType": "donor"}).to_list(length=500)
@@ -302,21 +315,35 @@ async def get_ranked_donor_matches(
             "donorId": str(user["_id"]), "name": name, "email": user.get("email"),
             "phone": user.get("phone"), "address": user.get("address"),
             "source": "MongoDB account",
+            "donor_type": user.get("donorType") or user.get("donor_type"),
+            "preferred_category": (
+                user.get("preferredCategory")
+                or user.get("preferredDonationCategory")
+                or user.get("preferred_donation_category")
+            ),
+            "capacity_level": user.get("capacityLevel") or user.get("capacity_level"),
+            "latitude": user.get("latitude") or user.get("lat"),
+            "longitude": user.get("longitude") or user.get("lng"),
         })
+    return donors
+
+
+async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tuple[List[DonorMatchOut], int]:
+    donors = await _registered_donors(db)
 
     history_docs = await disaster_requests_collection.find(
         {"donations.0": {"$exists": True}}, {"donations": 1}
     ).to_list(length=1000)
     target_items = {
-        _normalise(item.get("itemName")) for item in request_doc.get("items", [])
+        _normalise(item.get("itemName")) for request_doc in request_docs for item in request_doc.get("items", [])
         if item.get("itemName")
     }
-    targeted_ids = {str(value) for value in request_doc.get("targetedDonorIds", [])}
-    severity_points = {
-        "critical": 10, "high": 8, "moderate": 5, "medium": 5, "low": 2,
-    }.get(_normalise(request_doc.get("severity")), 5)
+    targeted_ids = {
+        str(value) for request_doc in request_docs for value in request_doc.get("targetedDonorIds", [])
+    }
 
     matches = []
+    ineligible_count = 0
     for donor in donors:
         donor_id = donor["donorId"]
         donor_email = _normalise(donor.get("email"))
@@ -333,29 +360,109 @@ async def get_ranked_donor_matches(
             1 for donation in donor_history
             if _normalise(donation.get("itemName")) in target_items
         )
-        proximity_tier, proximity_points, proximity_reason = _proximity(
-            donor.get("address"), request_doc.get("gnDivision", ""), request_doc.get("dsArea", "")
-        )
-        history_points = min(15, len(donor_history) * 3) + min(10, received_count * 2)
-        relevance_points = min(20, relevant_count * 5)
-        score = min(100, proximity_points + history_points + relevance_points + severity_points)
-        reasons = [proximity_reason]
+        _priority_score, prediction = predict_compatibility(donor, request_docs)
+        if not prediction.get("eligible"):
+            ineligible_count += 1
+            continue
+
+        distance_km = float(prediction["distanceKm"])
+        distance_source = prediction["distanceSource"]
+        proximity_tier = f"{distance_km:g} km ({distance_source})"
+        reasons = [
+            f"{prediction['preferredCategory']} preference; {prediction['capacityLevel']} capacity",
+            f"Distance input: {distance_km:g} km from {distance_source}",
+        ]
         if donor_history:
-            reasons.append(f"{len(donor_history)} previous pledge(s), {received_count} received")
+            reasons.append(f"History (not a model feature): {len(donor_history)} pledge(s), {received_count} received")
         else:
-            reasons.append("No previous donation history yet")
+            reasons.append("No historical response feature is used by this synthetic compatibility model")
         if relevant_count:
-            reasons.append(f"{relevant_count} previous donation(s) match requested items")
-        reasons.append(f"{request_doc.get('severity', 'Moderate')} request urgency")
+            reasons.append(f"{relevant_count} prior donation item match(es), shown for context only")
 
         matches.append(DonorMatchOut(
-            **donor, score=score, proximityTier=proximity_tier,
+            donorId=donor["donorId"], name=donor["name"], email=donor.get("email"),
+            phone=donor.get("phone"), address=donor.get("address"), source=donor["source"],
+            score=prediction["compatibilityScore"],
+            compatibilityScore=prediction["compatibilityScore"],
+            priorityScore=prediction["priorityScore"],
+            donorType=prediction["donorType"],
+            preferredCategory=prediction["preferredCategory"],
+            capacityLevel=prediction["capacityLevel"],
+            distanceKm=distance_km, distanceSource=distance_source,
+            categoryMatchScore=prediction["categoryMatchScore"],
+            capacityMatchScore=prediction["capacityMatchScore"],
+            proximityScore=prediction["proximityScore"],
+            proximityTier=proximity_tier,
             historyCount=len(donor_history), receivedDonationCount=received_count,
             relevantDonationCount=relevant_count, reasons=reasons,
             alreadyTargeted=donor_id in targeted_ids,
         ))
 
-    return sorted(matches, key=lambda match: (-match.score, match.name.casefold()))
+    return sorted(matches, key=lambda match: (-match.priorityScore, match.name.casefold())), ineligible_count
+
+
+@router.get("/donor-insights/model-info")
+async def get_donor_matching_model_info(
+    _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
+):
+    try:
+        load_info = model_information()
+        # Force artifact loading here so the health response reflects runtime compatibility.
+        from app.services.donor_matching import load_pipeline
+        load_pipeline()
+        return load_info
+    except DonorModelUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/donor-insights/donor-matches", response_model=ConsolidatedDonorMatchesOut)
+async def get_consolidated_donor_matches(
+    payload: ConsolidatedDonorMatchesCreate,
+    _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
+    db: Session = Depends(get_db),
+):
+    ids = list(dict.fromkeys(payload.requestIds))
+    if not ids or any(not ObjectId.is_valid(value) for value in ids):
+        raise HTTPException(status_code=400, detail="Select valid GN-level request records")
+    documents = await disaster_requests_collection.find(
+        {"_id": {"$in": [ObjectId(value) for value in ids]}}
+    ).to_list(length=200)
+    if len(documents) != len(ids):
+        raise HTTPException(status_code=404, detail="One or more donation request records were not found")
+    group_keys = {
+        (_normalise(doc.get("dsArea")), _normalise(doc.get("gnDivision")), _normalise(doc.get("disasterType")))
+        for doc in documents
+    }
+    if len(group_keys) != 1:
+        raise HTTPException(status_code=400, detail="Requests must belong to one GN division and disaster type")
+    try:
+        matches, ineligible_count = await _rank_registered_donors(db, documents)
+        return ConsolidatedDonorMatchesOut(
+            matches=matches,
+            eligibleDonorCount=len(matches),
+            ineligibleDonorCount=ineligible_count,
+            model=model_information(),
+        )
+    except DonorModelUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/{req_id}/donor-matches", response_model=List[DonorMatchOut])
+async def get_ranked_donor_matches(
+    req_id: str,
+    _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
+    db: Session = Depends(get_db),
+):
+    if not ObjectId.is_valid(req_id):
+        raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
+    request_doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+    try:
+        matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
+        return matches
+    except DonorModelUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{req_id}/outreach", response_model=DonorOutreachResult)
