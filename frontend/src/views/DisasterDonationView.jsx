@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 
+const formatQuantity = (value) => {
+  const quantity = Number(value);
+  if (!Number.isFinite(quantity)) return '0';
+  return Number(quantity.toFixed(6)).toLocaleString();
+};
+
 export default function DisasterDonation({ currentUser, onAddToast }) {
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'campaigns' | 'shipments'
   const [loading, setLoading] = useState(false);
@@ -184,7 +190,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
             textAlign: 'right'
           }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>SUPPLY DEFICIT</span>
-            <strong style={{ fontSize: '1.15rem', color: 'var(--accent-emerald)' }}>{totalUnmet} Units Required</strong>
+            <strong style={{ fontSize: '1.15rem', color: 'var(--accent-emerald)' }}>{formatQuantity(totalUnmet)} Units Required</strong>
           </div>
         </div>
       </div>
@@ -341,7 +347,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                     {/* Progress Bar */}
                     <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
-                        <span>Fulfilled: <strong>{item.quantity_fulfilled} / {item.quantity_required} {item.unit}</strong></span>
+                        <span>Fulfilled: <strong>{formatQuantity(item.quantity_fulfilled)} / {formatQuantity(item.quantity_required)} {item.unit}</strong></span>
                         <strong style={{ color: 'var(--accent-emerald)' }}>{pct}%</strong>
                       </div>
                       <div className="progress-bar-bg">
@@ -354,7 +360,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                         />
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--accent-rose)', marginTop: '6px', fontWeight: '700' }}>
-                        Remaining Unmet: {item.remaining_needed} {item.unit}
+                        Remaining Unmet: {formatQuantity(item.remaining_needed)} {item.unit}
                       </div>
                     </div>
                   </div>

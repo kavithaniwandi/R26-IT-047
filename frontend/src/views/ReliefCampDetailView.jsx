@@ -342,7 +342,11 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         itemId: i.itemId,
         itemName: i.item,
         unit: i.unit,
-        neededQuantity: (Number(i.quantityPerPerson) || 1) * chosenPopulationForRequest,
+        // Supplies are requested as whole units. Rounding up also prevents
+        // floating-point artifacts such as 0.1 * 34 = 3.4000000000000004.
+        neededQuantity: Math.ceil(
+          (Number(i.quantityPerPerson) || 1) * chosenPopulationForRequest
+        ),
       })),
     };
 
@@ -682,7 +686,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
               </button>
             </div>
             <form onSubmit={handleCreateRequestSubmit} className="relief-request-form">
-              <section className="relief-request-section">
+              <section className="relief-request-section relief-request-section--population">
                 <div className="relief-request-section__heading">
                   <div>
                     <h3>Population basis</h3>
@@ -713,7 +717,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                 </div>
               </section>
 
-              <section className="relief-request-section">
+              <section className="relief-request-section relief-request-section--details">
                 <div className="relief-request-section__heading">
                   <div>
                     <h3>Request details</h3>
@@ -721,22 +725,26 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                   </div>
                 </div>
                 <div className="relief-request-field-grid">
-                  <div className="relief-request-field">
-                  <label className="form-label">Disaster Type</label>
-                  <select className="form-input" value={reqDisasterType} onChange={(e) => setReqDisasterType(e.target.value)}>
-                    {DISASTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                  <div className="relief-request-field">
-                  <label className="form-label">Severity Level</label>
-                  <select className="form-input" value={reqSeverity} onChange={(e) => setReqSeverity(e.target.value)}>
-                    {SEVERITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <div className="relief-request-field relief-request-field--disaster">
+                    <label className="form-label">Disaster Type</label>
+                    <div className="relief-request-select-wrap">
+                      <select className="form-input" value={reqDisasterType} onChange={(e) => setReqDisasterType(e.target.value)}>
+                        {DISASTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={`relief-request-field relief-request-field--severity severity-${reqSeverity.toLowerCase()}`}>
+                    <label className="form-label">Severity Level</label>
+                    <div className="relief-request-select-wrap">
+                      <select className="form-input" value={reqSeverity} onChange={(e) => setReqSeverity(e.target.value)}>
+                        {SEVERITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </section>
 
-              <section className="relief-request-section relief-request-catalog">
+              <section className="relief-request-section relief-request-section--catalog relief-request-catalog">
                 <div className="relief-request-section__heading">
                   <div>
                     <h3>Required relief items</h3>

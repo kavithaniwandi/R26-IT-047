@@ -253,50 +253,6 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
         )}
       </div>
 
-      {/* Action Shortcuts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--accent-emerald-subtle)', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <HeartHandshake size={20} />
-          </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>Disaster Appeals Overview</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            View active disaster supply requests and match donor pledges.
-          </p>
-          <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('donations')}>
-            <span>All Requests</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--accent-rose-subtle)', color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldAlert size={20} />
-          </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>SOS Emergency Queue</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            Respond to active emergency distress beacons and dispatch rescue tasks.
-          </p>
-          <button className="btn btn-danger btn-sm" onClick={() => onNavigate && onNavigate('sos')}>
-            <span>View SOS Tasks</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--accent-blue-subtle)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Compass size={20} />
-          </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: '700', margin: 0 }}>Disaster Heatmap</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, flex: 1 }}>
-            Examine GIS active danger zones and affected Grama Niladhari divisions.
-          </p>
-          <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('heatmap')}>
-            <span>Open Map</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
