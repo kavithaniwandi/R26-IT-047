@@ -18,8 +18,32 @@ const formatQuantity = (value) => {
   return Number(quantity.toFixed(6)).toLocaleString();
 };
 
+const priorityBadgeClass = (priority) => {
+  switch ((priority || '').toLowerCase()) {
+    case 'low':
+      return 'badge-low';
+    case 'moderate':
+      return 'badge-high';
+    case 'critical':
+    case 'high':
+    default:
+      return 'badge-critical';
+  }
+};
+
+const donationRequestStage = (item) => {
+  const needed = Number(item.neededQuantity) || 0;
+  const pledged = Number(item.pledgedQuantity) || 0;
+  const donated = Number(item.donatedQuantity) || 0;
+
+  if (item.status === 'fulfilled' || (needed > 0 && donated >= needed)) return 'completed';
+  if (pledged > 0 || donated > 0) return 'pledged';
+  return 'pending';
+};
+
 export default function DisasterDonation({ currentUser, onAddToast }) {
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'campaigns' | 'shipments'
+  const [requestStageFilter, setRequestStageFilter] = useState('pending');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -56,7 +80,6 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
       const requests = await api.getDisasterRequests();
       const items = (requests || []).flatMap((request) =>
         (request.items || [])
-          .filter((item) => Number(item.remainingQuantity) > 0)
           .map((item) => ({
             id: `${request.id}-${item.itemId || item.itemName}`,
             request_id: request.id,
@@ -65,6 +88,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
             quantity_required: item.neededQuantity,
             quantity_fulfilled: item.donatedQuantity,
             remaining_needed: item.remainingQuantity,
+            request_stage: donationRequestStage(item),
             unit: item.unit,
             district: `${request.gnDivision}, ${request.dsArea}`,
             relief_camp: request.reliefCamp,
@@ -131,10 +155,18 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
   };
 
   const visibleItems = donationItems.filter((item) => {
+    const matchesStage = item.request_stage === requestStageFilter;
     const matchesType = !categoryFilter || item.category === categoryFilter;
     const query = searchQuery.trim().toLowerCase();
-    return matchesType && (!query || [item.item_name, item.district, item.relief_camp].some((value) => (value || '').toLowerCase().includes(query)));
+    return matchesStage && matchesType && (!query || [item.item_name, item.district, item.relief_camp].some((value) => (value || '').toLowerCase().includes(query)));
   });
+  const requestStageCounts = donationItems.reduce(
+    (counts, item) => ({
+      ...counts,
+      [item.request_stage]: counts[item.request_stage] + 1,
+    }),
+    { pending: 0, pledged: 0, completed: 0 }
+  );
   const totalUnmet = donationItems.reduce((acc, item) => acc + (item.remaining_needed || 0), 0);
   const selectedDivision = divisions.find((division) => division.dsArea === appealForm.ds_area);
   const matchingCamps = reliefCamps.filter((camp) =>
@@ -251,6 +283,26 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
       {/* Tab 1: Priority Supply Shortages */}
       {activeTab === 'inventory' && (
         <div>
+          <div className="donation-request-stage-tabs" role="tablist" aria-label="Filter donation requests by status">
+            {[
+              { value: 'pending', label: 'Pending' },
+              { value: 'pledged', label: 'Pledged' },
+              { value: 'completed', label: 'Completed' },
+            ].map((stage) => (
+              <button
+                key={stage.value}
+                type="button"
+                role="tab"
+                aria-selected={requestStageFilter === stage.value}
+                className={`donation-request-stage-tab donation-request-stage-tab--${stage.value} ${requestStageFilter === stage.value ? 'active' : ''}`}
+                onClick={() => setRequestStageFilter(stage.value)}
+              >
+                <span>{stage.label}</span>
+                <strong>{requestStageCounts[stage.value]}</strong>
+              </button>
+            ))}
+          </div>
+
           {/* Action Filter Bar */}
           <div className="card" style={{ marginBottom: '20px', padding: '14px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -302,9 +354,9 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                 gridColumn: '1 / -1'
               }}>
                 <Package size={40} style={{ color: 'var(--accent-emerald)', marginBottom: '12px', opacity: 0.8 }} />
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0 0 6px' }}>No Active Supply Demands</h3>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: '0 0 6px' }}>No {requestStageFilter} donation requests</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '440px', margin: '0 auto 16px' }}>
-                  There are currently no unmet relief item requirements in the registry.
+                  No requests match this status and the selected filters.
                 </p>
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowAppealModal(true)}>
                   <Plus size={14} />
@@ -339,7 +391,7 @@ export default function DisasterDonation({ currentUser, onAddToast }) {
                           <span>{item.relief_camp} &bull; {item.district}</span>
                         </div>
                       </div>
-                      <span className="badge badge-critical">
+                      <span className={`badge donation-priority-badge ${priorityBadgeClass(item.priority_score)}`}>
                         Priority: {item.priority_score || 'High'}
                       </span>
                     </div>
