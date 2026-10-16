@@ -25,6 +25,7 @@ MODEL_CONFIG = {
     "color": (255, 0, 0),
 }
 _inference_lock = Lock()
+PERSON_CONFIDENCE_THRESHOLD = 0.2
 
 
 @lru_cache(maxsize=1)
@@ -72,7 +73,13 @@ def _run_yolo8(image_bytes: bytes) -> dict:
     annotated = image_bgr.copy()
     with _inference_lock:
         model = _load_model()
-        inference_args = {"conf": 0.05, "iou": 0.65, "imgsz": 1280, "max_det": 1000, "verbose": False}
+        inference_args = {
+            "conf": PERSON_CONFIDENCE_THRESHOLD,
+            "iou": 0.65,
+            "imgsz": 1280,
+            "max_det": 1000,
+            "verbose": False,
+        }
         try:
             results = model(image_pil, classes=[0], **inference_args)
         except Exception:

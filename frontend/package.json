@@ -13,6 +13,7 @@
     "dev:volunteer-dashboard": "cross-env VITE_PORTAL_TYPE=volunteer_dash vite --port 5178 --host",
     "dev:disaster-officer": "cross-env VITE_PORTAL_TYPE=disaster_officer vite --port 5179 --host",
     "dev:disaster-donation": "cross-env VITE_PORTAL_TYPE=disaster_donation vite --port 5180 --host",
+    "dev:donor-matching": "cross-env VITE_PORTAL_TYPE=donor_matching vite --port 5181 --host",
     "dev:all": "node start_portals.js",
     "build": "vite build",
     "lint": "oxlint",

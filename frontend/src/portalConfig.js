@@ -107,6 +107,18 @@ export const PORTAL_CONFIG = {
     badge: 'Port :5180',
     color: 'emerald',
   },
+  donor_matching: {
+    id: 'donor_matching',
+    name: 'Personalized Donor Matching',
+    subtitle: 'GN-Based Donor Ranking & Targeted Relief Outreach',
+    port: 5181,
+    path: '/donor-matching',
+    defaultRole: 'disaster_officer',
+    defaultEmail: 'officer@disaster.relief.lk',
+    defaultPassword: 'Officer@2026!',
+    badge: 'Port :5181',
+    color: 'violet',
+  },
 };
 
 /**
@@ -134,7 +146,7 @@ export function detectCurrentPortal() {
     }
   }
 
-  // 4. Dedicated port detection for other micro-portals (ports 5174-5180)
+  // 4. Dedicated port detection for other micro-portals (ports 5174-5181)
   for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
     if (cfg.port === currentPort && key !== 'home' && key !== 'admin') {
       return key;

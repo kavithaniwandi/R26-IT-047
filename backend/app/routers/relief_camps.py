@@ -9,9 +9,11 @@ from bson import ObjectId
 from typing import List, Optional
 from datetime import datetime, timezone
 import math
+from sqlalchemy.orm import Session
 
 from app.core.security import require_role, TokenPayload
-from app.database import relief_camp_collection
+from app.database import get_db, relief_camp_collection
+from app.models.user import User
 from app.models.relief_camp import (
     ReliefCampCreate,
     ReliefCampUpdate,
@@ -23,6 +25,26 @@ from app.models.relief_camp import (
 )
 
 router = APIRouter(prefix="/relief-camps", tags=["Relief Camps"])
+
+
+def volunteer_identity_ids(current_user: TokenPayload, db: Session) -> List[str]:
+    """Return all legacy SQL IDs sharing the logged-in volunteer's email."""
+    if not current_user.sub.isdigit():
+        return [current_user.sub]
+
+    user = db.query(User).filter(User.id == int(current_user.sub)).first()
+    if not user:
+        return [current_user.sub]
+
+    # Scan the small user directory in Python instead of trusting the legacy
+    # unique email index, which may hide duplicate rows in older seeded DBs.
+    normalized_email = user.email.strip().lower()
+    duplicate_accounts = db.query(User).all()
+    return [
+        str(account.id)
+        for account in duplicate_accounts
+        if account.email and account.email.strip().lower() == normalized_email
+    ]
 
 
 def format_camp(doc) -> ReliefCampResponse:
@@ -107,10 +129,11 @@ async def get_all_camps(
     current_user: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer", "volunteer"])
     ),
+    db: Session = Depends(get_db),
 ):
     query = {}
     if current_user.role == "volunteer":
-        query["assignedVolunteerIds"] = current_user.sub
+        query["assignedVolunteerIds"] = {"$in": volunteer_identity_ids(current_user, db)}
 
     if dsArea:
         query["dsArea"] = dsArea
@@ -285,6 +308,7 @@ async def get_relief_camp_by_id(
     current_user: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer", "volunteer"])
     ),
+    db: Session = Depends(get_db),
 ):
     if not ObjectId.is_valid(camp_id):
         raise HTTPException(status_code=400, detail="Invalid Camp ID format")
@@ -293,7 +317,9 @@ async def get_relief_camp_by_id(
     if not camp:
         raise HTTPException(status_code=404, detail="Relief camp not found")
 
-    if current_user.role == "volunteer" and current_user.sub not in camp.get("assignedVolunteerIds", []):
+    assigned_ids = set(map(str, camp.get("assignedVolunteerIds", [])))
+    permitted_ids = set(volunteer_identity_ids(current_user, db))
+    if current_user.role == "volunteer" and assigned_ids.isdisjoint(permitted_ids):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not assigned to this relief camp"

@@ -327,6 +327,13 @@ export function DonorPortalView({ currentUser, onAddToast }) {
                 </div>
               );
             })}
+            {!loading && needs.length === 0 && (
+              <div className="card" style={{ gridColumn: '1 / -1', padding: '42px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <Sparkles size={28} style={{ color: 'var(--accent-emerald)', marginBottom: '10px' }} />
+                <h3 style={{ color: 'var(--text-primary)', margin: '0 0 6px' }}>No personalized requests right now</h3>
+                <p style={{ margin: 0 }}>New relief-camp requests will appear here when a disaster officer matches them to your donor profile.</p>
+              </div>
+            )}
           </div>
         </div>
       )}

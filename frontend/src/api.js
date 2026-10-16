@@ -156,11 +156,16 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return apiRequest(`/relief-camps${qs ? `?${qs}` : ''}`);
   },
+  createReliefCamp: (payload) => apiRequest('/relief-camps', { method: 'POST', body: JSON.stringify(payload) }),
+  createReliefCampsBulk: (payload) => apiRequest('/relief-camps/bulk', { method: 'POST', body: JSON.stringify(payload) }),
   getReliefCamp: (campId) => apiRequest(`/relief-camps/${campId}`),
+  assignReliefCampVolunteers: (campId, volunteerIds) => apiRequest(`/relief-camps/${campId}/assign-volunteers`, { method: 'PATCH', body: JSON.stringify({ volunteerIds }) }),
   updateReliefCampPopulation: (campId, payload) => apiRequest(`/relief-camps/${campId}/population`, { method: 'PATCH', body: JSON.stringify(payload) }),
   predictReliefCampPopulation: (payload) => apiRequest('/relief-camps/predict-population', { method: 'POST', body: JSON.stringify(payload) }),
   getDisasterRequests: () => apiRequest('/disaster-donation-requests'),
   createDisasterRequest: (payload) => apiRequest('/disaster-donation-requests', { method: 'POST', body: JSON.stringify(payload) }),
+  getDonationDonorMatches: (requestId) => apiRequest(`/disaster-donation-requests/${requestId}/donor-matches`),
+  sendDonationOutreach: (requestId, donorIds) => apiRequest(`/disaster-donation-requests/${requestId}/outreach`, { method: 'POST', body: JSON.stringify({ donorIds }) }),
   pledgeDisasterRequest: (requestId, pledges) => apiRequest(`/disaster-donation-requests/${requestId}/pledge`, { method: 'POST', body: JSON.stringify({ pledges }) }),
   getOfficerPledges: () => apiRequest('/disaster-donation-requests/officer/pledges'),
   acceptDisasterPledge: (requestId, donationId) => apiRequest(`/disaster-donation-requests/${requestId}/donations/${donationId}/accept`, { method: 'PATCH' }),

@@ -18,6 +18,8 @@ import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 import { SMSGatewayView } from './views/SMSGatewayView';
 import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';
+import { ReliefCampsManagementView } from './views/ReliefCampsManagementView';
+import { DonationMatchingView } from './views/DonationMatchingView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
@@ -218,6 +220,11 @@ function DashboardApp() {
           title: 'Disaster Relief Donation & Resource Matchmaking',
           sub: `Dedicated Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} - Shortage Appeals, Verified Pledges & Drop-Off Tracking`
         };
+      case 'donor_matching':
+        return {
+          title: 'Personalized Donor Matching & Outreach',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor_matching?.port || 5181} - GN Proximity, Donation History & Urgency Ranking`
+        };
       default:
         switch (currentTab) {
           case 'overview':
@@ -239,6 +246,11 @@ function DashboardApp() {
             return {
               title: 'Temporary Medical Camps Planning Hub',
               sub: 'Model 3 Spatial Suitability Scoring & Official Approvals'
+            };
+          case 'relief-camps':
+            return {
+              title: 'Disaster Relief Camp Registry',
+              sub: 'Shelter Capacity, Population Monitoring & Field Assignments'
             };
           case 'donations':
             return {
@@ -463,7 +475,12 @@ function DashboardApp() {
                 <DisasterDonation currentUser={user} onAddToast={addToast} />
               )}
 
-              {/* 8. Admin Portal Views */}
+              {/* 8. Personalized Donor Matching Portal */}
+              {currentPortal === 'donor_matching' && (
+                <DonationMatchingView currentUser={user} onAddToast={addToast} />
+              )}
+
+              {/* 9. Admin Portal Views */}
               {currentPortal === 'admin' && (
                 <>
                   {currentTab === 'overview' && (
@@ -477,6 +494,7 @@ function DashboardApp() {
                   {currentTab === 'sos' && <SOSView onAddToast={addToast} />}
                   {currentTab === 'heatmap' && <HeatmapView onAddToast={addToast} />}
                   {currentTab === 'camps' && <CampsView currentUser={user} onAddToast={addToast} />}
+                  {currentTab === 'relief-camps' && <ReliefCampsManagementView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'donations' && <DonationsView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'users' && <UsersView currentUser={user} onAddToast={addToast} />}
                   {currentTab === 'notifications' && <NotificationsView onAddToast={addToast} />}

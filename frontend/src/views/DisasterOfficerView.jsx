@@ -33,7 +33,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
   // Core Data Lists
   const [pledges, setPledges] = useState([]);
   const [disasterRequests, setDisasterRequests] = useState([]);
-  const [allDonors, setAllDonors] = useState([]);
 
   // AI Personalized Outreach Modal State
   const [selectedRequestForOutreach, setSelectedRequestForOutreach] = useState(null);
@@ -59,18 +58,12 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     setLoading(true);
     setError(null);
     try {
-      const [pledgeData, requestData, donorData] = await Promise.all([
+      const [pledgeData, requestData] = await Promise.all([
         api.getOfficerPledges(),
         api.getDisasterRequests(),
-        api.getComponentUsers({ userType: 'donor' }),
       ]);
       setPledges(pledgeData || []);
       setDisasterRequests(requestData || []);
-      setAllDonors((donorData || []).map((donor) => ({
-        ...donor,
-        id: donor.userId,
-        name: `${donor.firstName || ''} ${donor.lastName || ''}`.trim(),
-      })));
     } catch (err) {
       console.error('Error fetching officer data:', err);
       setError('Failed to connect to Disaster Officer telemetry.');
@@ -103,50 +96,32 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
   };
 
   // AI Donor Ranking & Outreach Analysis
-  const handleOpenOutreachModal = (req) => {
+  const handleOpenOutreachModal = async (req) => {
     setSelectedRequestForOutreach(req);
     setIsAiAnalyzing(true);
     setSelectedDonorIds(new Set());
     setDonorSearchQuery('');
-
-    setTimeout(() => {
-      const targetDs = (req.dsArea || '').toLowerCase();
-      const targetGn = (req.gnDivision || '').toLowerCase();
-
-      const scored = allDonors.map((donor, idx) => {
-        let score = 45 + ((idx * 17) % 45);
-        const nameStr = (donor.name || donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`).toLowerCase();
-        const emailStr = (donor.email || '').toLowerCase();
-        const addressStr = (donor.address || '').toLowerCase();
-        
-        const isAreaMatch = addressStr.includes(targetDs) || addressStr.includes(targetGn) || nameStr.includes(targetDs) || idx % 3 === 0;
-
-        if (isAreaMatch) score += 20;
-        score = Math.min(99, Math.max(35, score));
-
-        const tier = score >= 75 ? 'High' : score >= 50 ? 'Medium' : 'Low';
-        const avgResponse = (1.5 + (idx % 8) * 1.2).toFixed(1);
-        const pastDonations = 2 + (idx % 7);
-
-        return {
-          ...donor,
-          displayName: donor.name || donor.full_name || `${donor.firstName || ''} ${donor.lastName || ''}`.trim() || 'Verified Donor',
-          score,
-          tier,
-          isAreaMatch,
-          avgResponse,
-          pastDonations,
-        };
-      });
-
-      scored.sort((a, b) => b.score - a.score);
-      const top20 = scored.slice(0, 20);
-
-      setRankedDonors(top20);
-      const autoSelected = new Set(top20.slice(0, 5).map((d) => d.id || d.userId));
-      setSelectedDonorIds(autoSelected);
+    try {
+      const scored = await api.getDonationDonorMatches(req.id);
+      const ranked = (scored || []).slice(0, 20).map((donor) => ({
+        ...donor,
+        id: donor.donorId,
+        displayName: donor.name,
+        tier: donor.score >= 70 ? 'High' : donor.score >= 45 ? 'Medium' : 'Low',
+        isAreaMatch: donor.proximityTier === 'Same GN division' || donor.proximityTier === 'Same DS area',
+        avgResponse: 'N/A',
+        pastDonations: donor.historyCount,
+      }));
+      setRankedDonors(ranked);
+      const previous = ranked.filter((donor) => donor.alreadyTargeted).map((donor) => donor.donorId);
+      const recommended = ranked.filter((donor) => donor.score >= 50).slice(0, 5).map((donor) => donor.donorId);
+      setSelectedDonorIds(new Set([...previous, ...recommended]));
+    } catch (err) {
+      setError(err.message || 'Unable to calculate donor matches.');
+      onAddToast?.(err.message, 'error', 'Matching Failed');
+    } finally {
       setIsAiAnalyzing(false);
-    }, 750);
+    }
   };
 
   const handleToggleDonorSelect = (userId) => {
@@ -166,21 +141,30 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     }
   };
 
-  const handleSendEmails = () => {
-    if (selectedDonorIds.size === 0) {
+  const handleSendEmails = async () => {
+    const donorIds = rankedDonors
+      .filter((donor) => selectedDonorIds.has(donor.donorId) && !donor.alreadyTargeted)
+      .map((donor) => donor.donorId);
+    if (donorIds.length === 0) {
       if (onAddToast) onAddToast('Please select at least one donor for outreach.', 'warning', 'No Donors Selected');
       return;
     }
 
     setSendingEmails(true);
-    setTimeout(() => {
-      const msg = `Personalized outreach emails dispatched to ${selectedDonorIds.size} high-probability donors!`;
+    try {
+      const result = await api.sendDonationOutreach(selectedRequestForOutreach.id, donorIds);
+      const msg = result.message;
       setSuccessMsg(msg);
       if (onAddToast) onAddToast(msg, 'success', 'Outreach Dispatched');
-      setSendingEmails(false);
       setSelectedRequestForOutreach(null);
+      fetchData();
       setTimeout(() => setSuccessMsg(null), 5000);
-    }, 600);
+    } catch (err) {
+      setError(err.message || 'Unable to publish personalized requests.');
+      onAddToast?.(err.message, 'error', 'Outreach Failed');
+    } finally {
+      setSendingEmails(false);
+    }
   };
 
   const handleAssessmentSubmit = (e) => {
@@ -233,6 +217,9 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     const q = donorSearchQuery.toLowerCase();
     return name.includes(q) || email.includes(q);
   });
+  const newOutreachCount = rankedDonors.filter((donor) =>
+    selectedDonorIds.has(donor.donorId) && !donor.alreadyTargeted
+  ).length;
 
   return (
     <div>
@@ -636,10 +623,10 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                   <Activity size={36} style={{ color: 'var(--accent-blue)' }} />
                 </div>
                 <h4 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', margin: '0 0 6px' }}>
-                  Running Proximity & Velocity Predictor...
+                  Calculating Donor Suitability...
                 </h4>
                 <p style={{ fontSize: '0.84rem', maxWidth: '420px', margin: '0 auto' }}>
-                  Analyzing historical donation response velocity and geographical alignment to {selectedRequestForOutreach.dsArea}...
+                  Comparing registered address proximity, donation history, item relevance, and request urgency for {selectedRequestForOutreach.dsArea}...
                 </p>
               </div>
             ) : (
@@ -692,8 +679,8 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                         <th style={{ width: '36px' }}></th>
                         <th>Donor</th>
                         <th>Proximity</th>
-                        <th>Velocity</th>
-                        <th>AI Score</th>
+                        <th>History</th>
+                        <th>Match Score</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -703,7 +690,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                         return (
                           <tr
                             key={dId}
-                            onClick={() => handleToggleDonorSelect(dId)}
+                            onClick={() => !donor.alreadyTargeted && handleToggleDonorSelect(dId)}
                             style={{
                               backgroundColor: isChecked ? 'var(--accent-blue-subtle)' : 'transparent',
                               cursor: 'pointer'
@@ -713,6 +700,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                               <input
                                 type="checkbox"
                                 checked={isChecked}
+                                disabled={donor.alreadyTargeted}
                                 onChange={() => handleToggleDonorSelect(dId)}
                               />
                             </td>
@@ -726,11 +714,11 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                               {donor.isAreaMatch ? (
                                 <span className="badge badge-success">✓ Near {selectedRequestForOutreach.dsArea}</span>
                               ) : (
-                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>National Radius</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{donor.proximityTier}</span>
                               )}
                             </td>
                             <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                              ~{donor.avgResponse}h ({donor.pastDonations} pledges)
+                              {donor.pastDonations} previous pledge(s)
                             </td>
                             <td>
                               <span className={`badge ${donor.tier === 'High' ? 'badge-critical' : donor.tier === 'Medium' ? 'badge-medium' : 'badge-low'}`}>
@@ -747,7 +735,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 {/* Footer Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Outreach messages automatically embed verified DS Office drop-off codes.
+                    Selected requests are published privately in each donor's marketplace.
                   </span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
@@ -761,10 +749,10 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                       type="button"
                       className="btn btn-primary"
                       onClick={handleSendEmails}
-                      disabled={sendingEmails || selectedDonorIds.size === 0}
+                      disabled={sendingEmails || newOutreachCount === 0}
                     >
                       <Mail size={15} />
-                      <span>{sendingEmails ? 'Dispatching...' : `Send Personalized Outreach (${selectedDonorIds.size})`}</span>
+                      <span>{sendingEmails ? 'Publishing...' : `Send Personalized Requests (${newOutreachCount})`}</span>
                     </button>
                   </div>
                 </div>
