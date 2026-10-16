@@ -4,11 +4,13 @@ app/routers/relief_camps.py
 Relief Camps management (user's own module) backed by MongoDB Atlas.
 """
 from __future__ import annotations
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import math
+import httpx
 from sqlalchemy.orm import Session
 
 from app.core.security import require_role, TokenPayload
@@ -62,7 +64,8 @@ def format_camp(doc) -> ReliefCampResponse:
             timestamp=h.get("timestamp", datetime.now(timezone.utc)),
             population=h.get("population", 0),
             predictedPopulation=h.get("predictedPopulation", 0),
-            rainfall=h.get("rainfall", 0.0)
+            rainfall=h.get("rainfall", 0.0),
+            source=h.get("source", "unknown"),
         )
         for h in doc.get("hourlyHistory", [])
     ]
@@ -228,19 +231,22 @@ async def update_camp_population(
     if payload.maxCapacityPersons is not None and current_user.role == "admin":
         update_set["maxCapacityPersons"] = payload.maxCapacityPersons
 
-    log_entry = {
-        "timestamp": now,
-        "population": cur_pop,
-        "predictedPopulation": pred_pop,
-        "rainfall": 0.0
-    }
+    update_operation = {"$set": update_set}
+    if payload.currentPopulation is not None:
+        log_entry = {
+            "timestamp": now,
+            "population": cur_pop,
+            "predictedPopulation": pred_pop,
+            "rainfall": 0.0,
+            "source": payload.observationSource or "manual",
+        }
+        update_operation["$push"] = {
+            "hourlyHistory": {"$each": [log_entry], "$slice": -24}
+        }
 
     updated = await relief_camp_collection.find_one_and_update(
         {"_id": ObjectId(camp_id)},
-        {
-            "$set": update_set,
-            "$push": {"hourlyHistory": {"$each": [log_entry], "$slice": -24}}
-        },
+        update_operation,
         return_document=True,
     )
     return format_camp(updated)
@@ -277,17 +283,48 @@ async def predict_population_progression(
     P0 = max(1, req.currentPopulation)
 
     rates = {"Low": 0.12, "Moderate": 0.22, "High": 0.35, "Critical": 0.50}
-    k = rates.get(req.severity, 0.30)
+    base_rate = rates.get(req.severity, 0.30)
+
+    recent_population = [max(0, int(value)) for value in (req.popHistory or [])[:5]]
+    population_deltas = [
+        recent_population[index] - recent_population[index + 1]
+        for index in range(len(recent_population) - 1)
+    ]
+    average_hourly_growth = (
+        max(0.0, sum(population_deltas) / len(population_deltas))
+        if population_deltas else 0.0
+    )
+
+    recent_rain = [max(0.0, float(value)) for value in (req.rainHistory or [])[:3]]
+    average_recent_rain = sum(recent_rain) / len(recent_rain) if recent_rain else 0.0
+    rain_pressure = min(average_recent_rain / 20.0, 1.5)
+
+    river_level = max(0.0, float(req.riverLevel or 0.0))
+    # Hanwella's official alert threshold is 7 m. Levels approaching or
+    # exceeding it increase the expected shelter influx.
+    river_pressure = min(max(0.0, river_level - 5.0) / 5.0, 1.5)
+    weather_code = int(req.weatherCode or 0)
+    weather_pressure = (
+        0.08 if weather_code >= 95
+        else 0.06 if weather_code >= 80
+        else 0.04 if weather_code >= 51
+        else 0.01 if weather_code in {45, 48}
+        else 0.0
+    )
+    if req.humidityPercent is not None and req.humidityPercent >= 90:
+        weather_pressure += 0.01
+    k = base_rate + (rain_pressure * 0.12) + (river_pressure * 0.18) + weather_pressure
 
     p_t = K / (1.0 + ((K - P0) / P0) * math.exp(-k * 1))
-    next_pred = min(int(round(p_t)), K)
+    trend_adjustment = int(round(average_hourly_growth * 0.5))
+    next_pred = min(max(P0, int(round(p_t)) + trend_adjustment), K)
     delta = next_pred - P0
     occ = (next_pred / K) * 100 if K > 0 else 0
 
     projected_hourly = []
     for h in range(1, 7):
         val = K / (1.0 + ((K - P0) / P0) * math.exp(-k * h))
-        val_int = min(int(round(val)), K)
+        val_int = min(max(P0, int(round(val)) + trend_adjustment), K)
         projected_hourly.append({
             "hour": f"+{h}h",
             "estimatedPeople": val_int,
@@ -303,12 +340,104 @@ async def predict_population_progression(
 
     return PopulationPredictionResponse(
         predictedPopulation=next_pred,
+        forecastFor=datetime.now(timezone.utc) + timedelta(hours=1),
         delta=delta,
         maxCapacity=K,
         occupancyPercent=round(occ, 1),
         projectedHourly=projected_hourly,
-        note=note
+        note=note,
+        factors={
+            "severity": req.severity,
+            "averageHourlyGrowth": round(average_hourly_growth, 1),
+            "recentRainfallMm": round(average_recent_rain, 1),
+            "riverLevelM": round(river_level, 2),
+            "temperatureC": req.temperatureC,
+            "humidityPercent": req.humidityPercent,
+            "weatherCode": req.weatherCode,
+            "adjustedGrowthRate": round(k, 3),
+        },
     )
+
+
+@router.get("/environment/kelani")
+async def get_kelani_environment(
+    _current_user: TokenPayload = Depends(
+        require_role(["admin", "volunteer", "disaster_officer"])
+    ),
+):
+    """Return Kaduwela weather and the nearby Hanwella Kelani gauge snapshot."""
+    weather_url = "https://api.open-meteo.com/v1/forecast"
+    river_url = "https://slwaterlevel.mevinu.com/api/gauges/Hanwella"
+    weather_params = {
+        "latitude": 6.9344,
+        "longitude": 79.9830,
+        "current": "temperature_2m,relative_humidity_2m,weather_code,precipitation,rain",
+        "hourly": "precipitation",
+        "past_days": 1,
+        "forecast_days": 1,
+        "timezone": "Asia/Colombo",
+    }
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        weather_result, river_result = await asyncio.gather(
+            client.get(weather_url, params=weather_params),
+            client.get(river_url),
+            return_exceptions=True,
+        )
+
+    weather = {"available": False}
+    rain_history: List[float] = []
+    if not isinstance(weather_result, Exception) and weather_result.is_success:
+        payload = weather_result.json()
+        current = payload.get("current", {})
+        hourly = payload.get("hourly", {})
+        times = hourly.get("time", [])
+        precipitation = hourly.get("precipitation", [])
+        current_time = current.get("time", "")
+        current_hour = f"{current_time[:13]}:00" if current_time else ""
+        current_index = max(
+            (index for index, value in enumerate(times) if value <= current_hour),
+            default=len(precipitation) - 1,
+        )
+        rain_history = [
+            round(float(precipitation[index] or 0.0), 1)
+            for index in range(current_index, max(-1, current_index - 7), -1)
+        ]
+        weather = {
+            "available": True,
+            "temperatureC": current.get("temperature_2m"),
+            "humidityPercent": current.get("relative_humidity_2m"),
+            "precipitationMm": current.get("precipitation", current.get("rain", 0.0)),
+            "weatherCode": current.get("weather_code"),
+            "observedAt": current_time,
+            "source": "Open-Meteo",
+        }
+
+    river = {
+        "available": False,
+        "station": "Hanwella",
+        "basin": "Kelani Ganga",
+        "source": "Sri Lanka Flood Monitor / Irrigation telemetry",
+    }
+    if not isinstance(river_result, Exception) and river_result.is_success:
+        payload = river_result.json()
+        river.update({
+            "available": True,
+            "levelM": payload.get("water_level"),
+            "status": payload.get("status"),
+            "rateOfRiseMPerHour": payload.get("rate_of_rise"),
+            "isRising": payload.get("is_rising"),
+            "alertLevelM": payload.get("alertpull"),
+            "observedAt": payload.get("last_updated_time"),
+        })
+
+    return {
+        "location": "Kaduwela / Kelani River basin",
+        "weather": weather,
+        "rainHistory": rain_history,
+        "river": river,
+        "fetchedAt": datetime.now(timezone.utc),
+    }
 
 
 # 8. GET Relief Camp by ID

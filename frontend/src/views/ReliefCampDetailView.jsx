@@ -17,12 +17,29 @@ import {
   X,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CalendarDays,
+  Clock,
+  Droplets,
+  Waves,
+  Thermometer
 } from 'lucide-react';
 import { api, API_BASE_URL, getAuthToken } from '../api';
 
 const DISASTER_TYPES = ['Flood', 'Landslide'];
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
+
+const getLatestHourlyEntries = (history, limit = 5) => {
+  const entriesByHour = new Map();
+  [...(history || [])]
+    .filter((entry) => entry?.timestamp && Number.isFinite(Number(entry.population)))
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .forEach((entry) => {
+      const hourKey = Math.floor(new Date(entry.timestamp).getTime() / 3600000);
+      if (!entriesByHour.has(hourKey)) entriesByHour.set(hourKey, entry);
+    });
+  return [...entriesByHour.values()].slice(0, limit);
+};
 
 export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }) {
   const token = getAuthToken() || '';
@@ -55,6 +72,8 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
   const [predictionResult, setPredictionResult] = useState(null);
   const [predicting, setPredicting] = useState(false);
   const [applyingPrediction, setApplyingPrediction] = useState(false);
+  const [syncingEnvironment, setSyncingEnvironment] = useState(false);
+  const [environmentData, setEnvironmentData] = useState(null);
   const [weatherStatus, setWeatherStatus] = useState('');
 
   // Create Donation Request Modal State
@@ -87,7 +106,8 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       setManualCount(campData.currentPopulation || 0);
 
       if (campData.hourlyHistory && campData.hourlyHistory.length > 0) {
-        const historyPops = campData.hourlyHistory.map((h) => h.population).reverse();
+        const historyPops = getLatestHourlyEntries(campData.hourlyHistory, 7)
+          .map((entry) => entry.population);
         const padded = [...historyPops, ...Array(7).fill(historyPops[historyPops.length - 1] || 0)].slice(0, 7);
         setPopHistory(padded);
       } else {
@@ -133,6 +153,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     try {
       const updated = await api.updateReliefCampPopulation(camp.id, {
         currentPopulation: Number(manualCount),
+        observationSource: 'manual',
       });
       setCamp(updated);
       setManualCount(updated.currentPopulation);
@@ -222,6 +243,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     try {
       const updated = await api.updateReliefCampPopulation(camp.id, {
         currentPopulation: totalVerifiedCrowd,
+        observationSource: 'image_analysis',
       });
       setCamp(updated);
       setManualCount(updated.currentPopulation);
@@ -233,28 +255,44 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
   };
 
   // --- INFLUX PREDICTOR AI ---
-  const handleAutoRainFetch = async () => {
-    setWeatherStatus('Fetching hourly rainfall from Open-Meteo API...');
+  const handleEnvironmentSync = async (silent = false) => {
+    setSyncingEnvironment(true);
+    if (!silent) setWeatherStatus('Syncing Kaduwela weather and Kelani River conditions...');
     try {
-      const res = await fetch(
-        'https://api.open-meteo.com/v1/forecast?latitude=6.9344&longitude=79.9830&hourly=precipitation&past_days=2&forecast_days=1&timezone=auto'
-      );
-      if (!res.ok) throw new Error('Failed to retrieve weather data');
+      const res = await fetch(`${API_BASE_URL}/relief-camps/environment/kelani`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to retrieve live environmental data');
       const data = await res.json();
-      const times = data.hourly.time;
-      const precip = data.hourly.precipitation;
+      const newRains = [...(data.rainHistory || [])].slice(0, 7);
+      while (newRains.length < 7) newRains.push(0);
+      const liveRiverLevel = Number(data.river?.levelM);
 
-      const now = new Date();
-      let idxNow = times.findIndex((t) => new Date(t) > now) - 1;
-      if (idxNow < 6) idxNow = times.length - 2;
-
-      const newRains = [0, 1, 2, 3, 4, 5, 6].map((offset) =>
-        Number((precip[idxNow - offset] || 0).toFixed(1))
-      );
       setRainHistory(newRains);
-      setWeatherStatus(`✓ Live rainfall synced from weather station for ${times[idxNow]}`);
+      if (data.river?.available && Number.isFinite(liveRiverLevel)) {
+        setRiverLevel(liveRiverLevel);
+      }
+      setHourOfDay(new Date().getHours());
+      setEnvironmentData(data);
+      setWeatherStatus(
+        data.river?.available
+          ? 'Live weather, rainfall, and Hanwella gauge data synchronized.'
+          : 'Weather and rainfall synchronized; live river gauge is temporarily unavailable.'
+      );
+      return {
+        rainHistory: newRains,
+        riverLevel: data.river?.available && Number.isFinite(liveRiverLevel)
+          ? liveRiverLevel
+          : riverLevel,
+        temperatureC: data.weather?.temperatureC,
+        humidityPercent: data.weather?.humidityPercent,
+        weatherCode: data.weather?.weatherCode,
+      };
     } catch (err) {
-      setWeatherStatus('Could not auto-fetch weather. Using manual entries.');
+      setWeatherStatus('Live conditions unavailable. The forecast will use the last synchronized values.');
+      return null;
+    } finally {
+      setSyncingEnvironment(false);
     }
   };
 
@@ -262,6 +300,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!camp) return;
     setPredicting(true);
     try {
+      const liveInputs = await handleEnvironmentSync(true);
       const res = await fetch(`${API_BASE_URL}/relief-camps/predict-population`, {
         method: 'POST',
         headers: {
@@ -272,17 +311,19 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
           currentPopulation: Number(popHistory[0] || camp.currentPopulation),
           maxCapacity: Number(camp.maxCapacityPersons),
           popHistory: popHistory,
-          rainHistory: rainHistory,
-          riverLevel: Number(riverLevel),
+          rainHistory: liveInputs?.rainHistory || rainHistory,
+          riverLevel: Number(liveInputs?.riverLevel ?? riverLevel),
+          temperatureC: liveInputs?.temperatureC ?? environmentData?.weather?.temperatureC,
+          humidityPercent: liveInputs?.humidityPercent ?? environmentData?.weather?.humidityPercent,
+          weatherCode: liveInputs?.weatherCode ?? environmentData?.weather?.weatherCode,
           hourOfDay: Number(hourOfDay),
           severity: predSeverity,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setPredictionResult(data);
-      }
+      if (!res.ok) throw new Error('Forecast service rejected the request');
+      const data = await res.json();
+      setPredictionResult(data);
     } catch (err) {
       if (onAddToast) onAddToast('Error running next-hour prediction', 'error', 'Prediction Failed');
     } finally {
@@ -376,6 +417,16 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       setSubmittingRequest(false);
     }
   };
+
+  const latestFiveObservations = getLatestHourlyEntries(camp?.hourlyHistory, 5).reverse();
+  const observationSlots = [
+    ...Array(Math.max(0, 5 - latestFiveObservations.length)).fill(null),
+    ...latestFiveObservations,
+  ];
+  const predictedFor = new Date(
+    predictionResult?.forecastFor
+      || new Date(camp?.lastUpdated || 0).getTime() + 60 * 60 * 1000
+  );
 
   if (loading) {
     return (
@@ -575,37 +626,112 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
             </div>
 
             {/* 3. Influx Predictor AI */}
-            <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700' }}>Next-Hour Influx Forecast AI</h4>
-                <button className="btn btn-secondary btn-sm" onClick={handleAutoRainFetch}>
+            <div className="population-forecast-panel">
+              <div className="population-forecast-header">
+                <div>
+                  <h4>Next-Hour Population Forecast</h4>
+                  <p>Five latest hourly headcounts followed by the next-hour forecast.</p>
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleEnvironmentSync(false)} disabled={syncingEnvironment}>
                   <CloudRain size={13} />
-                  <span>Sync Rain Data</span>
+                  <span>{syncingEnvironment ? 'Syncing...' : 'Sync Live Conditions'}</span>
                 </button>
               </div>
 
               {weatherStatus && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: '12px' }}>{weatherStatus}</div>
+                <div className="population-forecast-status">{weatherStatus}</div>
               )}
 
-              <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting}>
-                <TrendingUp size={14} />
-                <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
-              </button>
+              <div className="population-hour-grid">
+                {observationSlots.map((entry, index) => (
+                  <div className={`population-hour-card ${entry ? '' : 'empty'}`} key={entry?.timestamp || `empty-${index}`}>
+                    <span className="population-hour-card__step">Hour {index + 1}</span>
+                    {entry ? (
+                      <>
+                        <div className="population-hour-card__date">
+                          <CalendarDays size={13} />
+                          {new Date(entry.timestamp).toLocaleDateString('en-GB', {
+                            timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
+                          })}
+                        </div>
+                        <div className="population-hour-card__time">
+                          <Clock size={13} />
+                          {new Date(entry.timestamp).toLocaleTimeString('en-US', {
+                            timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </div>
+                        <strong>{entry.population}</strong>
+                        <small>{entry.source === 'image_analysis' ? 'Image analysis' : entry.source === 'manual' ? 'Manual count' : 'Verified count'}</small>
+                      </>
+                    ) : (
+                      <div className="population-hour-card__empty">Awaiting hourly observation</div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="population-hour-card population-hour-card--prediction">
+                  <span className="population-hour-card__step">Next Hour</span>
+                  <div className="population-hour-card__date">
+                    <CalendarDays size={13} />
+                    {predictedFor.toLocaleDateString('en-GB', {
+                      timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
+                    })}
+                  </div>
+                  <div className="population-hour-card__time">
+                    <Clock size={13} />
+                    {predictedFor.toLocaleTimeString('en-US', {
+                      timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </div>
+                  <strong>{predictionResult?.predictedPopulation ?? '—'}</strong>
+                  <small>{predictionResult ? `${predictionResult.delta >= 0 ? '+' : ''}${predictionResult.delta} expected` : 'Run forecast'}</small>
+                </div>
+              </div>
+
+              <div className="population-environment-grid">
+                <div className="population-environment-card">
+                  <Thermometer size={18} />
+                  <span>Kaduwela weather</span>
+                  <strong>{environmentData?.weather?.available ? `${environmentData.weather.temperatureC}°C` : 'Not synced'}</strong>
+                  <small>{environmentData?.weather?.available ? `${environmentData.weather.humidityPercent}% humidity · Open-Meteo` : 'Sync to load current weather'}</small>
+                </div>
+                <div className="population-environment-card">
+                  <Droplets size={18} />
+                  <span>Latest rainfall</span>
+                  <strong>{rainHistory[0] || 0} mm</strong>
+                  <small>Recent 3-hour average is used by the forecast</small>
+                </div>
+                <div className="population-environment-card">
+                  <Waves size={18} />
+                  <span>Kelani River · Hanwella</span>
+                  <strong>{Number(riverLevel).toFixed(2)} m</strong>
+                  <small>
+                    {environmentData?.river?.available
+                      ? `${String(environmentData.river.status || 'normal').replaceAll('_', ' ')} · ${environmentData.river.isRising ? 'rising' : 'stable/falling'}`
+                      : 'Last/default value; live gauge unavailable'}
+                  </small>
+                </div>
+              </div>
+
+              <div className="population-forecast-actions">
+                <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting || syncingEnvironment}>
+                  <TrendingUp size={14} />
+                  <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
+                </button>
+                {predictionResult && (
+                  <button className="btn btn-secondary btn-sm" onClick={handleSavePredictedToCamp} disabled={applyingPrediction}>
+                    <span>{applyingPrediction ? 'Applying...' : 'Apply Prediction'}</span>
+                  </button>
+                )}
+              </div>
 
               {predictionResult && (
-                <div style={{ marginTop: '14px', padding: '14px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ fontSize: '1.4rem' }}>{predictionResult.predictedPopulation}</strong> people
-                      <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)' }}>
-                        Delta: {predictionResult.delta >= 0 ? '+' : ''}{predictionResult.delta}
-                      </div>
-                    </div>
-                    <button className="btn btn-primary btn-sm" onClick={handleSavePredictedToCamp} disabled={applyingPrediction}>
-                      <span>Apply Prediction</span>
-                    </button>
-                  </div>
+                <div className="population-forecast-explanation">
+                  <strong>Forecast inputs</strong>
+                  <span>Hourly growth: {predictionResult.factors?.averageHourlyGrowth ?? 0} people/hour</span>
+                  <span>Recent rain: {predictionResult.factors?.recentRainfallMm ?? 0} mm</span>
+                  <span>River level: {predictionResult.factors?.riverLevelM ?? riverLevel} m</span>
+                  <p>{predictionResult.note}</p>
                 </div>
               )}
             </div>
