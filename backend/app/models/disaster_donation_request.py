@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from math import ceil
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class RequestItem(BaseModel):
@@ -16,6 +17,12 @@ class RequestItem(BaseModel):
     donatedQuantity: float = Field(default=0.0, ge=0)
     remainingQuantity: Optional[float] = None
     status: Literal["remaining", "fulfilled"] = "remaining"
+
+    @field_validator("neededQuantity", mode="before")
+    @classmethod
+    def round_required_quantity_up(cls, value: float) -> int:
+        """Relief requests must reserve enough whole supply units."""
+        return ceil(float(value))
 
 
 class DonationEntry(BaseModel):
