@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { api, API_BASE_URL, getAuthToken } from '../api';
 
-const DISASTER_TYPES = ['Flood', 'Landslide', 'Tsunami', 'Drought', 'Fire', 'Other'];
+const DISASTER_TYPES = ['Flood', 'Landslide'];
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
 
 export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }) {
@@ -667,77 +667,108 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       {/* Modal: Publish Request */}
       {isRequestModalOpen && (
         <div className="modal-overlay" onClick={() => setIsRequestModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '680px' }}>
-            <div className="modal-header">
-              <h2 className="modal-title">Publish Relief Request</h2>
-              <button className="modal-close-btn" onClick={() => setIsRequestModalOpen(false)}>
+          <div className="modal-content relief-request-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header relief-request-modal__header">
+              <div className="relief-request-modal__heading">
+                <span className="relief-request-modal__icon"><CloudRain size={22} /></span>
+                <div>
+                  <span className="relief-request-modal__eyebrow">CAMP SUPPLY REQUEST</span>
+                  <h2 className="modal-title">Publish Relief Request</h2>
+                  <p>Choose the population basis, disaster details, and required supplies.</p>
+                </div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setIsRequestModalOpen(false)} aria-label="Close request form">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateRequestSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div
+            <form onSubmit={handleCreateRequestSubmit} className="relief-request-form">
+              <section className="relief-request-section">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Population basis</h3>
+                    <p>Quantities will be calculated using this headcount.</p>
+                  </div>
+                </div>
+                <div className="relief-request-population-grid">
+                <button
+                  type="button"
                   onClick={() => setPopulationBasis('current')}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: `2px solid ${populationBasis === 'current' ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
-                    cursor: 'pointer'
-                  }}
+                  className={`relief-request-population-card ${populationBasis === 'current' ? 'active' : ''}`}
+                  aria-pressed={populationBasis === 'current'}
                 >
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>CURRENT</span>
-                  <h4 style={{ margin: 0 }}>{camp.currentPopulation} people</h4>
-                </div>
-                <div
+                  <span>CURRENT POPULATION</span>
+                  <strong>{camp.currentPopulation} <small>people</small></strong>
+                  {populationBasis === 'current' && <CheckCircle2 size={18} />}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPopulationBasis('predicted')}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: `2px solid ${populationBasis === 'predicted' ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
-                    cursor: 'pointer'
-                  }}
+                  className={`relief-request-population-card ${populationBasis === 'predicted' ? 'active' : ''}`}
+                  aria-pressed={populationBasis === 'predicted'}
                 >
-                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)' }}>PREDICTED</span>
-                  <h4 style={{ margin: 0 }}>{camp.predictedPopulation || camp.currentPopulation} people</h4>
+                  <span>PREDICTED POPULATION</span>
+                  <strong>{camp.predictedPopulation || camp.currentPopulation} <small>people</small></strong>
+                  {populationBasis === 'predicted' && <CheckCircle2 size={18} />}
+                </button>
                 </div>
-              </div>
+              </section>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
+              <section className="relief-request-section">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Request details</h3>
+                    <p>This project accepts flood and landslide relief requests.</p>
+                  </div>
+                </div>
+                <div className="relief-request-field-grid">
+                  <div className="relief-request-field">
                   <label className="form-label">Disaster Type</label>
                   <select className="form-input" value={reqDisasterType} onChange={(e) => setReqDisasterType(e.target.value)}>
                     {DISASTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                <div>
+                  <div className="relief-request-field">
                   <label className="form-label">Severity Level</label>
                   <select className="form-input" value={reqSeverity} onChange={(e) => setReqSeverity(e.target.value)}>
                     {SEVERITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div>
-                <label className="form-label">Catalog Items</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+              <section className="relief-request-section relief-request-catalog">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Required relief items</h3>
+                    <p>Select every supply category needed by this camp.</p>
+                  </div>
+                  <span className="relief-request-selected-count">
+                    <Layers size={14} /> {selectedCatalogItemKeys.length} selected
+                  </span>
+                </div>
+                <div className="relief-request-item-grid">
                   {catalogItems.map((item) => {
                     const key = item.itemId || item.item;
                     const isChecked = selectedCatalogItemKeys.includes(key);
                     return (
-                      <label key={key} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                      <label key={key} className={`relief-request-item ${isChecked ? 'selected' : ''}`}>
                         <input type="checkbox" checked={isChecked} onChange={() => toggleCatalogItem(key)} />
-                        <span style={{ fontSize: '0.82rem' }}>{item.item}</span>
+                        <span>{item.item}</span>
+                        {isChecked && <CheckCircle2 size={16} />}
                       </label>
                     );
                   })}
                 </div>
-              </div>
+              </section>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsRequestModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={submittingRequest}>
+              <div className="relief-request-actions">
+                <span>Request for <strong>{chosenPopulationForRequest} people</strong></span>
+                <div>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsRequestModalOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={submittingRequest}>
                   {submittingRequest ? 'Publishing...' : 'Publish Request'}
-                </button>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
