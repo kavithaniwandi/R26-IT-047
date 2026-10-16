@@ -279,6 +279,11 @@ async def predict_population_progression(
     req: PopulationPredictionRequest,
     _current_user: TokenPayload = Depends(require_role(["admin", "volunteer", "disaster_officer"])),
 ):
+    if len(req.popHistory or []) < 5:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Five real hourly population observations are required for forecasting",
+        )
     K = req.maxCapacity
     P0 = max(1, req.currentPopulation)
 

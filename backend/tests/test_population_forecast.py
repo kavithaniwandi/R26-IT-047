@@ -39,6 +39,24 @@ async def test_rain_and_river_level_increase_next_hour_forecast():
     assert wet.factors["riverLevelM"] == 7.5
 
 
+@pytest.mark.asyncio
+async def test_forecast_requires_five_real_hourly_observations():
+    request = PopulationPredictionRequest(
+        currentPopulation=20,
+        maxCapacity=100,
+        popHistory=[20, 18, 16, 14],
+    )
+
+    with pytest.raises(relief_camps.HTTPException) as error:
+        await relief_camps.predict_population_progression(
+            request,
+            _current_user=_token(),
+        )
+
+    assert error.value.status_code == 422
+    assert "Five real hourly" in error.value.detail
+
+
 class _CampCollection:
     def __init__(self, document):
         self.document = document

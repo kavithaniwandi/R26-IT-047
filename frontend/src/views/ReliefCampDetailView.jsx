@@ -32,7 +32,11 @@ const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
 const getLatestHourlyEntries = (history, limit = 5) => {
   const entriesByHour = new Map();
   [...(history || [])]
-    .filter((entry) => entry?.timestamp && Number.isFinite(Number(entry.population)))
+    .filter((entry) =>
+      entry?.timestamp
+      && Number.isFinite(Number(entry.population))
+      && ['manual', 'image_analysis'].includes(entry.source)
+    )
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .forEach((entry) => {
       const hourKey = Math.floor(new Date(entry.timestamp).getTime() / 3600000);
@@ -108,18 +112,9 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       if (campData.hourlyHistory && campData.hourlyHistory.length > 0) {
         const historyPops = getLatestHourlyEntries(campData.hourlyHistory, 7)
           .map((entry) => entry.population);
-        const padded = [...historyPops, ...Array(7).fill(historyPops[historyPops.length - 1] || 0)].slice(0, 7);
-        setPopHistory(padded);
+        setPopHistory(historyPops);
       } else {
-        setPopHistory([
-          campData.currentPopulation || 0,
-          Math.max(0, (campData.currentPopulation || 0) - 8),
-          Math.max(0, (campData.currentPopulation || 0) - 15),
-          Math.max(0, (campData.currentPopulation || 0) - 25),
-          Math.max(0, (campData.currentPopulation || 0) - 35),
-          Math.max(0, (campData.currentPopulation || 0) - 45),
-          Math.max(0, (campData.currentPopulation || 0) - 50),
-        ]);
+        setPopHistory([]);
       }
 
       if (reqsRes.ok) {
@@ -157,7 +152,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       });
       setCamp(updated);
       setManualCount(updated.currentPopulation);
-      setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
+      setPopHistory(getLatestHourlyEntries(updated.hourlyHistory, 7).map((entry) => entry.population));
       if (onAddToast) onAddToast(`Manual population updated to ${updated.currentPopulation} people.`, 'success', 'Population Saved');
     } catch (err) {
       if (onAddToast) onAddToast(err.message || 'Failed to update population', 'error', 'Update Failed');
@@ -247,7 +242,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       });
       setCamp(updated);
       setManualCount(updated.currentPopulation);
-      setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
+      setPopHistory(getLatestHourlyEntries(updated.hourlyHistory, 7).map((entry) => entry.population));
       if (onAddToast) onAddToast(`Verified AI crowd count of ${totalVerifiedCrowd} applied!`, 'success', 'AI Count Applied');
     } catch (err) {
       if (onAddToast) onAddToast(err.message || 'Failed to apply detected crowd count', 'error', 'Action Failed');
@@ -298,6 +293,16 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
 
   const handlePredictProgression = async () => {
     if (!camp) return;
+    if (popHistory.length < 5) {
+      if (onAddToast) {
+        onAddToast(
+          `Collect ${5 - popHistory.length} more hourly population observation${5 - popHistory.length === 1 ? '' : 's'} before forecasting.`,
+          'warning',
+          'More Observations Required'
+        );
+      }
+      return;
+    }
     setPredicting(true);
     try {
       const liveInputs = await handleEnvironmentSync(true);
@@ -310,7 +315,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         body: JSON.stringify({
           currentPopulation: Number(popHistory[0] || camp.currentPopulation),
           maxCapacity: Number(camp.maxCapacityPersons),
-          popHistory: popHistory,
+          popHistory: popHistory.slice(0, 5),
           rainHistory: liveInputs?.rainHistory || rainHistory,
           riverLevel: Number(liveInputs?.riverLevel ?? riverLevel),
           temperatureC: liveInputs?.temperatureC ?? environmentData?.weather?.temperatureC,
@@ -419,6 +424,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
   };
 
   const latestFiveObservations = getLatestHourlyEntries(camp?.hourlyHistory, 5).reverse();
+  const hasForecastHistory = latestFiveObservations.length === 5;
   const observationSlots = [
     ...Array(Math.max(0, 5 - latestFiveObservations.length)).fill(null),
     ...latestFiveObservations,
@@ -714,7 +720,7 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
               </div>
 
               <div className="population-forecast-actions">
-                <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting || syncingEnvironment}>
+                <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting || syncingEnvironment || !hasForecastHistory}>
                   <TrendingUp size={14} />
                   <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
                 </button>
@@ -724,6 +730,12 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                   </button>
                 )}
               </div>
+
+              {!hasForecastHistory && (
+                <div className="population-forecast-history-warning">
+                  {latestFiveObservations.length}/5 real hourly observations collected. Add a verified manual or image-analysis count during each hour to enable forecasting.
+                </div>
+              )}
 
               {predictionResult && (
                 <div className="population-forecast-explanation">
