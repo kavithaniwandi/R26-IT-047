@@ -153,6 +153,16 @@ body {
   overflow-x: hidden;
 }
 
+.donor-matching-grid {
+  grid-template-columns: minmax(330px, 0.9fr) minmax(500px, 1.35fr);
+}
+
+@media (max-width: 1100px) {
+  .donor-matching-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 code, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
