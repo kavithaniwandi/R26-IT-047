@@ -17,6 +17,8 @@ from typing import Iterable, Mapping, Optional
 
 import joblib
 import numpy as np
+
+from app.models.disaster_donation_request import whole_required_quantity
 import pandas as pd
 from sklearn.exceptions import InconsistentVersionWarning
 
@@ -275,7 +277,7 @@ def prepare_candidate_rows(donor: Mapping, requests: Iterable[Mapping]) -> tuple
             if remaining is None:
                 remaining = max(
                     0.0,
-                    float(item.get("neededQuantity") or 0)
+                    float(whole_required_quantity(item.get("neededQuantity") or 0))
                     - float(item.get("pledgedQuantity") or 0)
                     - float(item.get("donatedQuantity") or 0),
                 )

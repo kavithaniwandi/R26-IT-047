@@ -17,6 +17,7 @@ from app.models.role import Role, RoleEnum
 from app.models.disaster_donation_request import (
     BatchPledgeCreate,
     DisasterDonationRequestCreate,
+    whole_required_quantity,
 )
 from app.services.pledge_expiry import expire_stale_pledges
 from app.services.donor_matching import (
@@ -156,7 +157,9 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
     req_id = str(doc.get("_id"))
     items_out = []
     for item in doc.get("items", []):
-        needed = float(item.get("neededQuantity", 0))
+        # Normalize legacy fractional requirements as well as newly-created
+        # records. Supply requirements always represent whole usable units.
+        needed = float(whole_required_quantity(item.get("neededQuantity", 0)))
         pledged = float(item.get("pledgedQuantity", 0))
         donated = float(item.get("donatedQuantity", 0))
         rem = max(0.0, needed - donated - pledged)
@@ -220,6 +223,43 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
     )
 
 
+async def _persist_whole_required_quantities(document: dict) -> None:
+    """Upgrade legacy fractional request quantities when a request is read."""
+    items = document.get("items", [])
+    changed = False
+    for item in items:
+        needed = float(whole_required_quantity(item.get("neededQuantity", 0)))
+        pledged = float(item.get("pledgedQuantity", 0))
+        donated = float(item.get("donatedQuantity", 0))
+        remaining = max(0.0, needed - donated - pledged)
+        item_status = "fulfilled" if donated >= needed else "remaining"
+
+        if (
+            item.get("neededQuantity") != needed
+            or item.get("remainingQuantity") != remaining
+            or item.get("status") != item_status
+        ):
+            item["neededQuantity"] = needed
+            item["remainingQuantity"] = remaining
+            item["status"] = item_status
+            changed = True
+
+    request_status = (
+        "fulfilled"
+        if items and all(item.get("status") == "fulfilled" for item in items)
+        else "remaining"
+    )
+    if document.get("status") != request_status:
+        document["status"] = request_status
+        changed = True
+
+    if changed:
+        await disaster_requests_collection.update_one(
+            {"_id": document["_id"]},
+            {"$set": {"items": items, "status": request_status}},
+        )
+
+
 def _normalise(value: Optional[str]) -> str:
     return " ".join((value or "").strip().casefold().split())
 
@@ -251,15 +291,25 @@ async def get_all_disaster_requests(
 ):
     await expire_stale_pledges()
     query = {}
-    donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
+    donor_aliases = set()
+    if _current_user.role == "volunteer":
+        # A volunteer owns only the requests created with their authenticated ID.
+        # Keep this restriction server-side so it cannot be bypassed by changing
+        # frontend query parameters.
+        query["createdBy"] = _current_user.sub
     if _current_user.role == "donor" and scope == "personalized":
-        query["targetedDonorIds"] = {"$in": _sql_donor_alias_ids(db, _current_user.sub)}
+        donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
+        query["targetedDonorIds"] = {"$in": list(donor_aliases)}
+    elif _current_user.role == "donor":
+        donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
     if dsArea:
         query["dsArea"] = dsArea
     if status_filter:
         query["status"] = status_filter
     cursor = disaster_requests_collection.find(query).sort("createdAt", -1)
     docs = await cursor.to_list(length=200)
+    for document in docs:
+        await _persist_whole_required_quantities(document)
     if _current_user.role == "donor":
         docs = [
             {
@@ -550,9 +600,13 @@ async def get_disaster_request(
     await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
-    document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    query = {"_id": ObjectId(req_id)}
+    if _current_user.role == "volunteer":
+        query["createdBy"] = _current_user.sub
+    document = await disaster_requests_collection.find_one(query)
     if not document:
         raise HTTPException(status_code=404, detail="Disaster request not found")
+    await _persist_whole_required_quantities(document)
     if _current_user.role == "donor":
         identity_ids = set(_sql_donor_alias_ids(db, _current_user.sub))
         document = {
@@ -609,11 +663,14 @@ async def accept_donation_at_ds_office(
                         float(itm.get("pledgedQuantity", 0)) - transfer_quantity,
                     )
                     itm["donatedQuantity"] = float(itm.get("donatedQuantity", 0)) + transfer_quantity
+                    needed_quantity = float(
+                        whole_required_quantity(itm.get("neededQuantity", 0))
+                    )
                     itm["remainingQuantity"] = max(
                         0.0,
-                        float(itm.get("neededQuantity", 0)) - itm["donatedQuantity"],
+                        needed_quantity - itm["donatedQuantity"],
                     )
-                    if itm["donatedQuantity"] >= float(itm.get("neededQuantity", 0)):
+                    if itm["donatedQuantity"] >= needed_quantity:
                         itm["status"] = "fulfilled"
             break
 
@@ -647,6 +704,9 @@ async def create_disaster_request(
     doc["donations"] = []
 
     for itm in doc.get("items", []):
+        itm["neededQuantity"] = float(
+            whole_required_quantity(itm["neededQuantity"])
+        )
         itm["pledgedQuantity"] = 0.0
         itm["donatedQuantity"] = 0.0
         itm["remainingQuantity"] = float(itm["neededQuantity"])
@@ -710,7 +770,7 @@ async def add_pledge_to_request(
             raise HTTPException(status_code=404, detail=f"Requested item '{p.itemName}' was not found")
         available = max(
             0.0,
-            float(target_item.get("neededQuantity", 0))
+            float(whole_required_quantity(target_item.get("neededQuantity", 0)))
             - float(target_item.get("pledgedQuantity", 0))
             - float(target_item.get("donatedQuantity", 0)),
         )

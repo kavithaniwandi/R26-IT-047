@@ -7,6 +7,11 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+def whole_required_quantity(value: float) -> int:
+    """Convert a calculated supply requirement to sufficient whole units."""
+    return ceil(float(value))
+
+
 class RequestItem(BaseModel):
     itemId: Optional[str] = None
     itemName: str = Field(..., min_length=2)
@@ -22,7 +27,7 @@ class RequestItem(BaseModel):
     @classmethod
     def round_required_quantity_up(cls, value: float) -> int:
         """Relief requests must reserve enough whole supply units."""
-        return ceil(float(value))
+        return whole_required_quantity(value)
 
 
 class DonationEntry(BaseModel):
