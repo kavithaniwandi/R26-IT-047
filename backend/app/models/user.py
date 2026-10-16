@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -36,6 +36,14 @@ class User(Base):
     # Optional contact info (used by SOS notification system)
     phone: str = Column(String(20), nullable=True)
     address: str = Column(String(500), nullable=True)
+
+    # Donor recommendation profile. These remain nullable for non-donor roles;
+    # donor matching only scores active donors with a complete profile.
+    donor_type: str = Column(String(30), nullable=True)
+    preferred_donation_category: str = Column(String(40), nullable=True)
+    capacity_level: str = Column(String(20), nullable=True)
+    latitude: float = Column(Float, nullable=True)
+    longitude: float = Column(Float, nullable=True)
 
     # Role FK — defaults to 'victim' role (set in auth service)
     role_id: int = Column(Integer, ForeignKey("roles.id"), nullable=False)

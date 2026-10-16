@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
@@ -77,8 +77,25 @@ def init_db() -> None:
     from app.models import camp, donation, notification, role, sms_log, sos, user, victim  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_user_donor_profile_columns()
     _seed_roles()
     _seed_demo_users()
+
+
+def _ensure_user_donor_profile_columns() -> None:
+    """Small additive migration for deployments created before donor profiles."""
+    existing = {column["name"] for column in inspect(engine).get_columns("users")}
+    columns = {
+        "donor_type": "VARCHAR(30)",
+        "preferred_donation_category": "VARCHAR(40)",
+        "capacity_level": "VARCHAR(20)",
+        "latitude": "FLOAT",
+        "longitude": "FLOAT",
+    }
+    with engine.begin() as connection:
+        for name, sql_type in columns.items():
+            if name not in existing:
+                connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {sql_type}"))
 
 
 def _seed_roles() -> None:

@@ -75,6 +75,7 @@ export const api = {
     return apiRequest(`/users${qs ? `?${qs}` : ''}`);
   },
   createUser: (payload) => apiRequest('/users', { method: 'POST', body: JSON.stringify(payload) }),
+  updateDonorProfile: (userId, payload) => apiRequest(`/users/${userId}/donor-profile`, { method: 'PATCH', body: JSON.stringify(payload) }),
   changeUserRole: (userId, role) => apiRequest(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   toggleUserStatus: (userId, is_active) => apiRequest(`/users/${userId}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
 
@@ -168,6 +169,8 @@ export const api = {
   },
   createDisasterRequest: (payload) => apiRequest('/disaster-donation-requests', { method: 'POST', body: JSON.stringify(payload) }),
   getDonationDonorMatches: (requestId) => apiRequest(`/disaster-donation-requests/${requestId}/donor-matches`),
+  getConsolidatedDonationDonorMatches: (requestIds) => apiRequest('/disaster-donation-requests/donor-insights/donor-matches', { method: 'POST', body: JSON.stringify({ requestIds }) }),
+  getDonorMatchingModelInfo: () => apiRequest('/disaster-donation-requests/donor-insights/model-info'),
   sendDonationOutreach: (requestId, donorIds) => apiRequest(`/disaster-donation-requests/${requestId}/outreach`, { method: 'POST', body: JSON.stringify({ donorIds }) }),
   pledgeDisasterRequest: (requestId, pledges) => apiRequest(`/disaster-donation-requests/${requestId}/pledge`, { method: 'POST', body: JSON.stringify({ pledges }) }),
   getOfficerPledges: () => apiRequest('/disaster-donation-requests/officer/pledges'),
