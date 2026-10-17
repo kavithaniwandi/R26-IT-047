@@ -4,7 +4,7 @@ app/routers/disaster_officer.py
 Disaster Officer endpoints powered directly by MongoDB Atlas collections.
 """
 from __future__ import annotations
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from pydantic import BaseModel
@@ -21,7 +21,6 @@ from app.models.disaster_donation_request import (
 )
 from app.services.pledge_expiry import expire_stale_pledges
 from app.services.donor_matching import (
-    DonorModelUnavailable,
     model_information,
     predict_compatibility,
 )
@@ -112,7 +111,7 @@ class DonorMatchOut(BaseModel):
     score: float
     compatibilityScore: float
     priorityScore: float
-    modelName: str = "Linear Regression"
+    modelName: str = "Explainable Hybrid Match Score"
     donorType: str
     preferredCategory: str
     capacityLevel: str
@@ -121,6 +120,11 @@ class DonorMatchOut(BaseModel):
     categoryMatchScore: float
     capacityMatchScore: float
     proximityScore: float
+    reliabilityScore: float
+    recencyScore: float
+    factorScores: Dict[str, float]
+    confidence: str
+    dataQualityWarnings: List[str]
     proximityTier: str
     historyCount: int
     receivedDonationCount: int
@@ -456,7 +460,7 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             1 for donation in donor_history
             if _normalise(donation.get("itemName")) in target_items
         )
-        _priority_score, prediction = predict_compatibility(donor, request_docs)
+        _priority_score, prediction = predict_compatibility(donor, request_docs, donor_history)
         if not prediction.get("eligible"):
             ineligible_count += 1
             continue
@@ -469,9 +473,9 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             f"Distance input: {distance_km:g} km from {distance_source}",
         ]
         if donor_history:
-            reasons.append(f"History (not a model feature): {len(donor_history)} pledge(s), {received_count} received")
+            reasons.append(f"Reliability uses {len(donor_history)} pledge(s), {received_count} received")
         else:
-            reasons.append("No historical response feature is used by this synthetic compatibility model")
+            reasons.append("New donor: neutral history factors applied")
         if relevant_count:
             reasons.append(f"{relevant_count} prior donation item match(es), shown for context only")
 
@@ -488,6 +492,11 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             categoryMatchScore=prediction["categoryMatchScore"],
             capacityMatchScore=prediction["capacityMatchScore"],
             proximityScore=prediction["proximityScore"],
+            reliabilityScore=prediction["reliabilityScore"],
+            recencyScore=prediction["recencyScore"],
+            factorScores=prediction["factorScores"],
+            confidence=prediction["confidence"],
+            dataQualityWarnings=prediction["dataQualityWarnings"],
             proximityTier=proximity_tier,
             historyCount=len(donor_history), receivedDonationCount=received_count,
             relevantDonationCount=relevant_count, reasons=reasons,
@@ -501,14 +510,7 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
 async def get_donor_matching_model_info(
     _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
 ):
-    try:
-        load_info = model_information()
-        # Force artifact loading here so the health response reflects runtime compatibility.
-        from app.services.donor_matching import load_pipeline
-        load_pipeline()
-        return load_info
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return model_information()
 
 
 @router.post("/donor-insights/donor-matches", response_model=ConsolidatedDonorMatchesOut)
@@ -531,16 +533,13 @@ async def get_consolidated_donor_matches(
     }
     if len(group_keys) != 1:
         raise HTTPException(status_code=400, detail="Requests must belong to one GN division and disaster type")
-    try:
-        matches, ineligible_count = await _rank_registered_donors(db, documents)
-        return ConsolidatedDonorMatchesOut(
-            matches=matches,
-            eligibleDonorCount=len(matches),
-            ineligibleDonorCount=ineligible_count,
-            model=model_information(),
-        )
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    matches, ineligible_count = await _rank_registered_donors(db, documents)
+    return ConsolidatedDonorMatchesOut(
+        matches=matches,
+        eligibleDonorCount=len(matches),
+        ineligibleDonorCount=ineligible_count,
+        model=model_information(),
+    )
 
 
 @router.get("/{req_id}/donor-matches", response_model=List[DonorMatchOut])
@@ -556,11 +555,8 @@ async def get_ranked_donor_matches(
     request_doc = await disaster_requests_collection.find_one(query)
     if not request_doc:
         raise HTTPException(status_code=404, detail="Disaster request not found")
-    try:
-        matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
-        return matches
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
+    return matches
 
 
 @router.post("/{req_id}/outreach", response_model=DonorOutreachResult)
@@ -579,6 +575,43 @@ async def send_personalized_donor_outreach(
     now = datetime.now(timezone.utc)
     query = {"_id": ObjectId(req_id)}
     await _apply_officer_scope(query, token_payload, db)
+    request_doc = await disaster_requests_collection.find_one(query)
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+
+    ranked_matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
+    selected_ids = set(donor_ids)
+    ranking_snapshots = [
+        {
+            "donorId": match.donorId,
+            "score": match.score,
+            "factorScores": match.factorScores,
+            "confidence": match.confidence,
+            "donorType": match.donorType,
+            "preferredCategory": match.preferredCategory,
+            "capacityLevel": match.capacityLevel,
+            "distanceKm": match.distanceKm,
+            "historyCount": match.historyCount,
+            "receivedDonationCount": match.receivedDonationCount,
+        }
+        for match in ranked_matches
+        if match.donorId in selected_ids
+    ]
+    request_snapshot = {
+        "disasterType": request_doc.get("disasterType"),
+        "severity": request_doc.get("severity"),
+        "dsArea": request_doc.get("dsArea"),
+        "gnDivision": request_doc.get("gnDivision"),
+        "peopleCount": request_doc.get("people_count", 0),
+        "items": [
+            {
+                "itemName": item.get("itemName"),
+                "requiredCategory": item.get("requiredCategory") or item.get("category"),
+                "remainingQuantity": item.get("remainingQuantity"),
+            }
+            for item in request_doc.get("items", [])
+        ],
+    }
     result = await disaster_requests_collection.update_one(
         query,
         {
@@ -586,7 +619,10 @@ async def send_personalized_donor_outreach(
             "$set": {"lastOutreachAt": now},
             "$push": {"outreachHistory": {
                 "officerId": token_payload.sub, "donorIds": donor_ids,
-                "sentAt": now, "channel": "in_app",
+                "sentAt": now, "channel": "in_app", "schemaVersion": 2,
+                "scoringMethod": model_information()["selectedModel"],
+                "requestSnapshot": request_snapshot,
+                "rankingSnapshots": ranking_snapshots,
             }},
         },
     )

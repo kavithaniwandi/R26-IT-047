@@ -573,7 +573,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
         </div>
       )}
 
-      {/* MODAL 1: MODEL-BASED DONOR COMPATIBILITY & OUTREACH */}
+      {/* DONOR MATCH SCORING & OUTREACH MODAL */}
       {selectedRequestForOutreach && (
         <div className="modal-overlay" onClick={() => setSelectedRequestForOutreach(null)}>
           <div className="modal-content" style={{ maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
@@ -654,7 +654,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                         <th>Donor</th>
                         <th>Proximity</th>
                         <th>History</th>
-                        <th>Compatibility Score</th>
+                        <th>Explainable Match Score</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -709,7 +709,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 {/* Footer Controls */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Compatibility scores use synthetic compatibility data; they are not response probabilities.
+                    Match scores combine category, proximity, capacity, reliability, and recency; they are not response probabilities.
                   </span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
