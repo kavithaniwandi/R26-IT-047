@@ -139,6 +139,27 @@
   color: #0f172a;
 }
 
+.priority-toolbar-summary {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.priority-specialty-unmatched-count {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  color: #9a3412;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
 .priority-empty {
   text-align: center;
   padding: 32px 20px !important;
@@ -395,6 +416,16 @@
   border: 1px solid #bfdbfe;
   border-radius: 6px;
   color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+
+.ppc-specialty-unmatched {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  color: #9a3412;
   font-size: 10px;
   font-weight: 800;
   padding: 2px 8px;

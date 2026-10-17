@@ -268,6 +268,31 @@
   opacity: 0.5;
 }
 
+.cs-page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -42px 0 12px;
+}
+
+.cs-btn-secondary {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.cs-btn-secondary:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
 .cs-progress-track {
   display: flex;
   align-items: center;
@@ -336,6 +361,62 @@
 .cs-field input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.75;
+}
+
+.cs-shift-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.8fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-shift-control select {
+  min-width: 0;
+}
+
+.cs-shift-separator {
+  color: #64748b;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.cs-shift-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cs-shift-preset,
+.cs-shift-clear {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 32px;
+  padding: 0.35rem 0.75rem;
+}
+
+.cs-shift-preset:hover,
+.cs-shift-clear:hover {
+  border-color: #1565c0;
+  color: #1565c0;
+}
+
+.cs-shift-preset.selected {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #075985;
+}
+
+.cs-shift-clear {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
 }
 
 .cs-req,

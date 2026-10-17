@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const HEALTH_CONFIG = {
   healthy:  { bg: "#dcfce7", border: "#86efac", text: "#166534", dot: "#16a34a", label: "All systems operational" },

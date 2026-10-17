@@ -9,7 +9,35 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from app.models.severity_service import COMPLAINT_MAPPING_REVIEW_REASON
+
 router = APIRouter(prefix="/triage", tags=["Triage"])
+
+
+def _normalise_patient_doc(doc: dict[str, Any]) -> dict[str, Any]:
+    """Return patient documents with stable UI-friendly field names."""
+    doc["_id"] = str(doc["_id"])
+    doc["id"] = doc.get("patient_id") or doc["_id"]
+    doc["submittedAt"] = doc.get("submitted_at")
+
+    symptoms = doc.get("symptoms") or doc.get("original_symptoms_text") or doc.get("model_symptoms")
+    if not doc.get("complaint_text") and symptoms:
+        doc["complaint_text"] = symptoms
+    if not doc.get("original_symptoms_text") and symptoms:
+        doc["original_symptoms_text"] = symptoms
+
+    normalised_rules = []
+    for rule in doc.get("matched_rules") or []:
+        text = str(rule).replace("â", "-").replace("—", "-")
+        normalised_rules.append(text)
+    doc["matched_rules"] = normalised_rules
+
+    if not doc.get("mapping_review_reason") and any(
+        "complaint not recognised" in rule for rule in normalised_rules
+    ):
+        doc["mapping_review_reason"] = COMPLAINT_MAPPING_REVIEW_REASON
+
+    return doc
 
 
 @router.post("/session/start")
@@ -120,6 +148,44 @@ async def list_archives(limit: int = 50, skip: int = 0) -> dict[str, Any]:
     except Exception as exc:
         print(f"[triage] list_archives failed: {exc}")
         return {"archives": [], "total": 0}
+
+
+@router.get("/patients")
+async def list_patients(
+    limit: int = 200,
+    skip: int = 0,
+    session_id: str | None = None,
+    camp_id: str | None = None,
+) -> dict[str, Any]:
+    """Return persisted triage patient records from MongoDB."""
+    try:
+        from app.services.mongo_service import _db
+
+        if _db is None:
+            return {"patients": [], "total": 0}
+
+        query: dict[str, Any] = {}
+        if session_id:
+            query["session_id"] = session_id
+        if camp_id:
+            query["camp.id"] = camp_id
+
+        cursor = (
+            _db.triage_patients
+            .find(query)
+            .sort("submitted_at", -1)
+            .skip(skip)
+            .limit(min(max(limit, 1), 500))
+        )
+        patients = []
+        async for doc in cursor:
+            patients.append(_normalise_patient_doc(doc))
+
+        total = await _db.triage_patients.count_documents(query)
+        return {"patients": patients, "total": total}
+    except Exception as exc:
+        print(f"[triage] list_patients failed: {exc}")
+        return {"patients": [], "total": 0}
 
 
 @router.get("/archives/{session_id}")

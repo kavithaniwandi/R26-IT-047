@@ -94,14 +94,55 @@ class SeverityClassifyRequest(BaseModel):
         return value
 
 
+class SuggestedSpecialty(BaseModel):
+    primary: str
+    secondary: list[str] = Field(default_factory=list)
+    matched_keywords: list[str] = Field(default_factory=list)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    reason: str
+    fallback: bool = False
+
+
+class ComplaintMapping(BaseModel):
+    mapped_terms: list[str] = Field(default_factory=list)
+    unmapped_terms: list[str] = Field(default_factory=list)
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    threshold: float = Field(default=0.0, ge=0.0, le=1.0)
+    floor_applied: bool = False
+    floor_changed_result: bool = False
+    reason_code: Literal["NO_MAPPING", "LOW_COVERAGE", "PARTIAL_MATCH", "DANGER_TERM_UNMAPPED"] | None = None
+    danger_terms: list[str] = Field(default_factory=list)
+
+
+class VitalWarning(BaseModel):
+    field: str
+    raw_value: str | int | float | None = None
+    used_value: float | None = None
+    code: str
+    message: str
+
+
 class SeverityClassifyResponse(BaseModel):
     severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     priority_score: float = Field(..., ge=0.0, le=100.0)
     risk_score: int = Field(..., ge=0, le=100)
     method: Literal["rule_based", "ml"]
+    ml_skipped_reason: str | None = None
     scores: dict[Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"], float]
     matched_rules: list[str]
     critical_trigger: str | None
+    incomplete_vitals: bool = False
+    incomplete_vitals_reason: str | None = None
+    vitals_warnings: list[VitalWarning] = Field(default_factory=list)
+    can_override: bool = True
+    interpreted_as: dict | None = None
+    mapped: bool = False
+    mapping_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    mapped_complaints: list[str] = Field(default_factory=list)
+    high_acuity_terms: list[str] = Field(default_factory=list)
+    model_symptoms: str | None = None
+    original_symptoms_text: str | None = None
+    complaint_mapping: ComplaintMapping | None = None
     should_queue: bool
     queue_reason: Literal["auto_triage", "audit_sample", "rule_flag", "not_queued"]
     queue_title: str
@@ -109,11 +150,13 @@ class SeverityClassifyResponse(BaseModel):
     queue_reason_text: str
     recommended_action: str
     display_note: str
+    suggested_specialty: SuggestedSpecialty | None = None
 
 
 class ExtractRequest(BaseModel):
     clinical_note: str = Field(..., min_length=1)
     symptoms: str = ""
+    age: int | None = Field(default=None, ge=0, le=120)
 
     @field_validator("clinical_note")
     @classmethod
@@ -126,6 +169,7 @@ class ExtractRequest(BaseModel):
 class ExtractResponse(BaseModel):
     condition_group: str
     specialty: str
+    specialties: list[str] = Field(default_factory=list)
     extracted_symptoms: list[str]
     confidence: float = Field(..., ge=0.0, le=1.0)
     valid: bool = True

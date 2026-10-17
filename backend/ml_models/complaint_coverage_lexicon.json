@@ -1,0 +1,37 @@
+{
+  "duration_words": [
+    "ago",
+    "day",
+    "days",
+    "hour",
+    "hours",
+    "minute",
+    "minutes",
+    "week",
+    "weeks"
+  ],
+  "body_qualifiers": [
+    "arm",
+    "foot",
+    "hand",
+    "left",
+    "leg",
+    "right"
+  ],
+  "severity_quality_adjectives": [
+    "crushing",
+    "mild",
+    "possible",
+    "severe",
+    "small",
+    "sudden",
+    "superficial"
+  ],
+  "vitals_process_words": [
+    "history",
+    "noted",
+    "stable",
+    "vital",
+    "vitals"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "base": {
+    "headache pain in head": [
+      "headache",
+      "mild headache",
+      "head pain"
+    ],
+    "medication refill": [
+      "ran out of medication",
+      "ran out of meds",
+      "out of meds",
+      "needs refill",
+      "refill",
+      "ran out of [a-z0-9_ ]{1,40} medication"
+    ],
+    "diabetes follow up": [
+      "diabetes medication",
+      "diabetes meds",
+      "diabetic medication",
+      "sugar check"
+    ],
+    "shortness of breath dyspnoea": [
+      "shortness of breath",
+      "short of breath",
+      "difficulty breathing"
+    ]
+  },
+  "approved": {
+    "diarrhea": [
+      "diarrhoea"
+    ],
+    "nausea and vomiting": [
+      "vomiting"
+    ],
+    "shortness of breath dyspnoea": [
+      "breathlessness",
+      "shortness of breath",
+      "respiratory distress"
+    ],
+    "altered mental status confusion": [
+      "confused",
+      "drowsy"
+    ],
+    "sweating diaphoresis": [
+      "sweating"
+    ],
+    "laceration cut wound": [
+      "cut",
+      "laceration",
+      "bleeding controlled"
+    ],
+    "paralysis weakness one side hemiplegia": [
+      "(arm|leg|one-sided|left-sided|right-sided) weakness"
+    ]
+  },
+  "conditional": {
+    "infected_wound": {
+      "skin infection cellulitis": [
+        "infected(?: [a-z0-9_]+){0,2} wound",
+        "pus"
+      ]
+    },
+    "insulin": {
+      "diabetes management": [
+        "insulin"
+      ]
+    }
+  }
+}

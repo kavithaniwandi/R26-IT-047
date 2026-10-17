@@ -3,7 +3,12 @@
  * Centralized API client for Disaster Relief Module Backend.
  */
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+export const API_BASE_URL = configuredApiBase
+  ? configuredApiBase.endsWith('/api/v1')
+    ? configuredApiBase
+    : `${configuredApiBase}/api/v1`
+  : '/api/v1';
 
 export const getAuthToken = () => localStorage.getItem('dr_token');
 export const setAuthToken = (token) => localStorage.setItem('dr_token', token);
@@ -99,6 +104,10 @@ export const api = {
   startTriageSession: (payload) => apiRequest('/triage/session/start', { method: 'POST', body: JSON.stringify(payload) }),
   saveTriagePatient: (payload) => apiRequest('/triage/patient/save', { method: 'POST', body: JSON.stringify(payload) }),
   endTriageSession: (payload) => apiRequest('/triage/session/end', { method: 'POST', body: JSON.stringify(payload) }),
+  getTriagePatients: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/triage/patients${qs ? `?${qs}` : ''}`);
+  },
   getTriageArchives: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return apiRequest(`/triage/archives${qs ? `?${qs}` : ''}`);

@@ -19,21 +19,27 @@ from app.database import init_db
 from app.routers import admin_stats as admin_router
 from app.routers import auth as auth_router
 from app.routers import camps as camps_router
+from app.routers import divisions as divisions_router
+from app.routers import donation_items as donation_items_router
+from app.routers import donation_history as donation_history_router
 from app.routers import donations as donations_router
 from app.routers import heatmap as heatmap_router
 from app.routers import notifications as notifications_router
+try:
+    from app.routers import population as population_router
+except ImportError as exc:
+    population_router = None
+    __import__("logging").getLogger(__name__).warning(
+        "population router disabled (missing dependency): %s", exc
+    )
+from app.routers import relief_camps as relief_camps_router
 from app.routers import sms as sms_router
 from app.routers import sos as sos_router
 from app.routers import triage as triage_router
 from app.routers import users as users_router
 from app.routers import victims as victims_router
 from app.routers import disaster_officer
-from app.routers import donation_items as donation_items_router
-from app.routers import population as population_router
 from app.routers import donors as donors_router
-from app.routers import relief_camps as relief_camps_router
-from app.routers import divisions as divisions_router
-from app.routers import donation_history as donation_history_router
 from app.routers import component_users as component_users_router
 from app.models.schemas import (
     ExtractRequest,
@@ -100,6 +106,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5176",
+        "http://localhost:5177",
+        "http://127.0.0.1:5177",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
@@ -121,20 +135,32 @@ app.include_router(admin_router.router, prefix=API_V1_PREFIX)
 app.include_router(users_router.router, prefix=API_V1_PREFIX)
 app.include_router(sos_router.router, prefix=API_V1_PREFIX)
 app.include_router(camps_router.router, prefix=API_V1_PREFIX)
+app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
+app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
+if population_router is not None:
+    app.include_router(population_router.router, prefix=API_V1_PREFIX)
 app.include_router(heatmap_router.router, prefix=API_V1_PREFIX)
 app.include_router(donations_router.router, prefix=API_V1_PREFIX)
+app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
+app.include_router(donation_history_router.router, prefix=API_V1_PREFIX)
 app.include_router(notifications_router.router, prefix=API_V1_PREFIX)
 app.include_router(victims_router.router, prefix=API_V1_PREFIX)
 app.include_router(sms_router.router, prefix=API_V1_PREFIX)
 app.include_router(triage_router.router, prefix=API_V1_PREFIX)
 app.include_router(disaster_officer.router, prefix=API_V1_PREFIX)
-app.include_router(donation_items_router.router, prefix=API_V1_PREFIX)
-app.include_router(population_router.router, prefix=API_V1_PREFIX)
 app.include_router(donors_router.router, prefix=API_V1_PREFIX)
-app.include_router(relief_camps_router.router, prefix=API_V1_PREFIX)
-app.include_router(divisions_router.router, prefix=API_V1_PREFIX)
-app.include_router(donation_history_router.router, prefix=API_V1_PREFIX)
 app.include_router(component_users_router.router, prefix=API_V1_PREFIX)
+
+
+@app.get("/", tags=["Health"], summary="API landing")
+def api_landing() -> dict[str, object]:
+    return {
+        "message": "Disaster Relief Medical Donation Module API is running.",
+        "health": "/health",
+        "docs": "/api/docs",
+        "api_prefix": API_V1_PREFIX,
+        "frontend_ports": [5173, 5174, 5175, 5176, 5177],
+    }
 
 
 @app.get("/health", tags=["Health"], summary="Liveness probe")
@@ -347,6 +373,7 @@ async def extract_severity_entities(request: ExtractRequest) -> ExtractResponse:
         return extract_clinical_entities(
             clinical_note=request.clinical_note,
             symptoms=request.symptoms,
+            age=request.age,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Clinical NLP extraction failed.") from exc
@@ -375,6 +402,17 @@ async def classify_severity(request: SeverityClassifyRequest) -> SeverityClassif
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Severity classification failed.") from exc
+
+
+@app.get("/api/severity/unmapped-terms")
+async def severity_unmapped_terms(limit: int = 50) -> dict:
+    """Return the most frequent unmapped complaint terms from saved triage patients."""
+    try:
+        from app.services.mongo_service import get_unmapped_terms
+
+        return {"terms": await get_unmapped_terms(limit=limit)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unmapped terms aggregation failed.") from exc
 
 
 @app.get("/api/system/credit-status", tags=["System"])

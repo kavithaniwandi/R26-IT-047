@@ -1,0 +1,92 @@
+{
+  "entries": [
+    {
+      "id": "pregnancy_bleeding",
+      "floor": "HIGH",
+      "all_of": [
+        ["pregnant", "weeks pregnant", "postpartum"],
+        ["vaginal bleeding", "bleeding"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "self_harm_wound_or_overdose",
+      "floor": "HIGH",
+      "all_of": [
+        ["self harm", "self-harm", "overdose"],
+        ["cut", "wound", "bleeding", "tablets"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "snake_bite",
+      "floor": "HIGH",
+      "any_of": [
+        ["snake bite", "snakebite", "cobra", "viper", "bitten by snake"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "crush_landslide_limb_symptoms",
+      "floor": "HIGH",
+      "all_of": [
+        ["crush", "crushed", "pinned", "buried", "trapped under debris", "landslide"],
+        ["limb", "pain", "swelling", "numb"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "hypoglycaemia_insulin_danger",
+      "floor": "HIGH",
+      "all_of": [
+        ["hypoglycaemia", "hypoglycemia", "low sugar", "insulin overdose"],
+        ["confusion", "confused", "drowsy", "clammy", "seizure"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "dehydration_signs_child_elderly",
+      "floor": "HIGH",
+      "age": {
+        "any": [
+          { "lt": 12 },
+          { "gte": 65 }
+        ]
+      },
+      "all_of": [
+        ["sunken eyes", "weak pulse", "no urine", "very thirsty", "dry mouth"],
+        ["diarrhoea", "diarrhea", "vomiting"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "dehydration_signs_general",
+      "floor": "MEDIUM",
+      "all_of": [
+        ["sunken eyes", "weak pulse", "no urine", "very thirsty", "dry mouth"],
+        ["diarrhoea", "diarrhea", "vomiting"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "elderly_fall_cannot_walk",
+      "floor": "HIGH",
+      "age": { "gte": 65 },
+      "all_of": [
+        ["fall", "fell"],
+        ["cannot stand", "unable to walk", "deformity"]
+      ],
+      "review_status": "pending clinician review"
+    },
+    {
+      "id": "elderly_fall_hip_leg_pain",
+      "floor": "MEDIUM",
+      "age": { "gte": 65 },
+      "all_of": [
+        ["fall", "fell"],
+        ["hip pain", "leg pain", "groin pain", "cannot stand", "unable to walk"]
+      ],
+      "review_status": "pending clinician review"
+    }
+  ]
+}

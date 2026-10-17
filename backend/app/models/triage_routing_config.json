@@ -1,0 +1,6 @@
+{
+  "pediatric_age_cutoff": 12,
+  "geriatric_age_cutoff": 65,
+  "pediatric_boost_multiplier": 1.2,
+  "geriatric_boost_multiplier": 0.5
+}

@@ -130,6 +130,9 @@ export default function PriorityQueue() {
     MEDIUM: patients.filter((patient) => patient.severity === "MEDIUM").length,
     LOW: patients.filter((patient) => patient.severity === "LOW").length,
   };
+  const specialtyUnmatchedCount = patients.filter(
+    (patient) => patient.specialty_unmatched
+  ).length;
 
   const handleEndSession = useCallback(() => {
     if (!session) return;
@@ -205,9 +208,16 @@ export default function PriorityQueue() {
         </section>
 
         <section className="priority-toolbar">
-          <p>
-            <strong>{patients.length}</strong> patient{patients.length !== 1 ? "s" : ""} in session
-          </p>
+          <div className="priority-toolbar-summary">
+            <p>
+              <strong>{patients.length}</strong> patient{patients.length !== 1 ? "s" : ""} in session
+            </p>
+            {specialtyUnmatchedCount > 0 && (
+              <span className="priority-specialty-unmatched-count">
+                {specialtyUnmatchedCount} no matching specialist
+              </span>
+            )}
+          </div>
           <div className="priority-stat-row">
             {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((severity) => (
               <div key={severity} className="priority-stat-box">
@@ -300,6 +310,11 @@ export default function PriorityQueue() {
                               {patient.critical_trigger && (
                                 <span className="ppc-redflag">{patient.critical_trigger}</span>
                               )}
+                              {patient.specialty_unmatched && (
+                                <span className="ppc-specialty-unmatched">
+                                  No matching specialist
+                                </span>
+                              )}
                               {patient.clinician_override && (
                                 <span className="ppc-override">
                                   Override {patient.clinician_override.from} to {patient.clinician_override.to}
@@ -350,6 +365,11 @@ export default function PriorityQueue() {
                         >
                           {patient.severity}
                         </span>
+                        {patient.specialty_unmatched && (
+                          <span className="ppc-specialty-unmatched">
+                            No matching specialist
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

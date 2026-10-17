@@ -1,7 +1,28 @@
-from app.models.severity_ml_service import predict_severity_ml
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+
+from app.models.severity_ml_service import diagnose_complaint_mapping, predict_severity_ml_detailed
+from app.models.config import settings
+from app.models.specialty_service import suggest_specialty
+from app.models.text_negation import is_span_negated, normalize_clinical_text
+from app.models.vitals_normalizer import ML_VITAL_KEYS, normalize_vitals_for_scoring
 
 
+SAFETY_FLOORS_PATH = Path(__file__).resolve().parents[2] / "ml_models" / "complaint_safety_floors.json"
 SUPPORTED_MODES = {"rule_based", "ml"}
+MIN_VITALS_FOR_ML = 4
+COMPLAINT_MAPPING_REVIEW_REASON = "complaint not recognised - review"
+COMPLAINT_REASON_NO_MAPPING = "NO_MAPPING"
+COMPLAINT_REASON_LOW_COVERAGE = "LOW_COVERAGE"
+COMPLAINT_REASON_PARTIAL_MATCH = "PARTIAL_MATCH"
+COMPLAINT_REASON_DANGER_TERM_UNMAPPED = "DANGER_TERM_UNMAPPED"
+DANGER_TERM_REVIEW_REASON = "danger term unmapped - review"
+SEVERITY_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+def _count_numeric_vitals(vitals: dict | None) -> int:
+    normalized = normalize_vitals_for_scoring(vitals)
+    return sum(1 for key in ML_VITAL_KEYS if normalized.get(key) is not None)
 
 
 def _normalize_scores(scores: dict[str, float]) -> dict[str, float]:
@@ -37,6 +58,252 @@ def _display_risk_score(result: dict, normalized_scores: dict[str, float]) -> in
         return round(max(0, min(100, priority_score)))
 
     return _compute_risk_score(normalized_scores)
+
+
+def _floor_rule_result(result: dict, floor: str, reason: str) -> dict:
+    floor = (floor or "MEDIUM").upper()
+    if floor not in SEVERITY_RANK:
+        floor = "MEDIUM"
+    if SEVERITY_RANK[result["severity"]] >= SEVERITY_RANK[floor]:
+        return result
+
+    raised = dict(result)
+    raised["severity"] = floor
+    raised["priority_score"] = max(float(raised.get("priority_score", 0.0)), {"MEDIUM": 40.0, "HIGH": 60.0}.get(floor, 40.0))
+    scores = dict(raised.get("scores") or {})
+    scores[floor] = max(float(scores.get(floor, 0.0)), 1.0)
+    raised["scores"] = scores
+    matched = list(raised.get("matched_rules") or [])
+    if reason not in matched:
+        matched.append(reason)
+    raised["matched_rules"] = matched
+    return raised
+
+
+def _append_reason(result: dict, reason: str) -> dict:
+    updated = dict(result)
+    matched = list(updated.get("matched_rules") or [])
+    if reason not in matched:
+        matched.append(reason)
+    updated["matched_rules"] = matched
+    return updated
+
+
+def _complaint_reason_code(mapped_terms: list[str], unmapped_terms: list[str], coverage: float, threshold: float) -> str | None:
+    if not mapped_terms:
+        return COMPLAINT_REASON_NO_MAPPING
+    if coverage < threshold:
+        return COMPLAINT_REASON_LOW_COVERAGE
+    if unmapped_terms:
+        return COMPLAINT_REASON_PARTIAL_MATCH
+    return None
+
+
+def _coverage_below_threshold(coverage: float, threshold: float) -> bool:
+    """Floor applies only when coverage < threshold; coverage == threshold does not floor."""
+    return coverage < threshold
+
+
+def _complaint_mapping_payload(
+    result: dict,
+    threshold: float,
+    floor_applied: bool = False,
+    floor_changed_result: bool = False,
+    reason_code: str | None = None,
+) -> dict:
+    diagnostic = dict(result.get("mapping_diagnostic") or {})
+    mapped_terms = list(diagnostic.get("mapped_terms") or result.get("mapped_complaints") or [])
+    unmapped_terms = list(diagnostic.get("unmapped_terms") or [])
+    coverage = float(diagnostic.get("coverage", result.get("mapping_confidence") or 0.0))
+    return {
+        "mapped_terms": mapped_terms,
+        "unmapped_terms": unmapped_terms,
+        "coverage": coverage,
+        "threshold": threshold,
+        "floor_applied": floor_applied,
+        "floor_changed_result": floor_changed_result,
+        "reason_code": reason_code or _complaint_reason_code(mapped_terms, unmapped_terms, coverage, threshold),
+        "danger_terms": list(result.get("danger_terms") or []),
+    }
+
+
+def _complaint_coverage_mode() -> str:
+    mode = str(getattr(settings, "COMPLAINT_COVERAGE_MODE", "legacy") or "legacy").lower()
+    return "clinical" if mode == "clinical" else "legacy"
+
+
+def _approved_synonyms_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_APPROVED_SYNONYMS_ENABLED", False))
+
+
+def _conditional_synonyms_enabled() -> list[str]:
+    return list(getattr(settings, "COMPLAINT_CONDITIONAL_SYNONYMS_ENABLED", []) or [])
+
+
+def _danger_term_floor_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_DANGER_TERM_FLOOR_ENABLED", False))
+
+
+def _danger_term_floor() -> str:
+    return str(getattr(settings, "COMPLAINT_DANGER_TERM_FLOOR", "HIGH") or "HIGH").upper()
+
+
+def _safety_floors_enabled() -> bool:
+    return bool(getattr(settings, "COMPLAINT_SAFETY_FLOORS_ENABLED", True))
+
+
+@lru_cache(maxsize=1)
+def _safety_floor_config() -> list[dict]:
+    data = json.loads(SAFETY_FLOORS_PATH.read_text(encoding="utf-8"))
+    return list(data.get("entries") or [])
+
+
+def _term_pattern(term: str) -> re.Pattern:
+    normalized = normalize_clinical_text(term).replace(".", " ")
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    pattern = re.escape(normalized).replace(r"\ ", r"\s+")
+    return re.compile(rf"(?<![a-z0-9_]){pattern}(?![a-z0-9_])")
+
+
+@lru_cache(maxsize=1)
+def _compiled_safety_floor_config() -> list[dict]:
+    compiled = []
+    for entry in _safety_floor_config():
+        compiled.append(
+            {
+                **entry,
+                "all_of": [
+                    [(term, _term_pattern(str(term))) for term in group]
+                    for group in entry.get("all_of") or []
+                ],
+                "any_of": [
+                    [(term, _term_pattern(str(term))) for term in group]
+                    for group in entry.get("any_of") or []
+                ],
+            }
+        )
+    return compiled
+
+
+def _age_condition_matches(age: int | None, condition: dict | None) -> bool:
+    if not condition:
+        return True
+    if "any" in condition:
+        return any(_age_condition_matches(age, part) for part in condition.get("any") or [])
+    if age is None:
+        return False
+    if "lt" in condition and not age < int(condition["lt"]):
+        return False
+    if "lte" in condition and not age <= int(condition["lte"]):
+        return False
+    if "gt" in condition and not age > int(condition["gt"]):
+        return False
+    if "gte" in condition and not age >= int(condition["gte"]):
+        return False
+    return True
+
+
+def _first_non_negated_term(text: str, group: list[tuple[str, re.Pattern]]) -> str | None:
+    for term, pattern in group:
+        for match in pattern.finditer(text):
+            if not is_span_negated(text, match.start()):
+                return str(term)
+    return None
+
+
+def _matching_safety_floors(text: str, age: int | None) -> list[dict]:
+    cleaned = normalize_clinical_text(text)
+    matches = []
+    for entry in _compiled_safety_floor_config():
+        if not _age_condition_matches(age, entry.get("age")):
+            continue
+
+        matched_terms = []
+        all_matched = True
+        for group in entry.get("all_of") or []:
+            term = _first_non_negated_term(cleaned, group)
+            if not term:
+                all_matched = False
+                break
+            matched_terms.append(term)
+        if not all_matched:
+            continue
+
+        any_groups = entry.get("any_of") or []
+        if any_groups:
+            any_matched = False
+            for group in any_groups:
+                term = _first_non_negated_term(cleaned, group)
+                if term:
+                    matched_terms.append(term)
+                    any_matched = True
+                    break
+            if not any_matched:
+                continue
+
+        matches.append(
+            {
+                "id": str(entry.get("id")),
+                "floor": str(entry.get("floor", "MEDIUM")).upper(),
+                "matched_terms": matched_terms,
+                "review_status": entry.get("review_status"),
+            }
+        )
+    return matches
+
+
+def apply_complaint_safety_floors(result: dict, text: str, age: int | None, enabled: bool | None = None) -> dict:
+    if enabled is None:
+        enabled = _safety_floors_enabled()
+    if not enabled:
+        return result
+
+    updated = result
+    applied = list(updated.get("safety_floors") or [])
+    for match in _matching_safety_floors(text, age):
+        floor = match["floor"]
+        if floor not in SEVERITY_RANK:
+            continue
+        reason = f"safety floor: {match['id']} - review"
+        updated = _floor_rule_result(updated, floor, reason)
+        updated = _append_reason(updated, reason)
+        applied.append(match)
+
+    if applied:
+        updated = dict(updated)
+        updated["safety_floors"] = applied
+    return updated
+
+
+def _age65_abnormal_vital_count(age: int | None, vitals: dict | None) -> int:
+    if age is None or age < 65:
+        return 0
+    checks = (
+        ("vital_spo2", lambda value: value < 94),
+        ("vital_sbp", lambda value: value < 90),
+        ("vital_hr", lambda value: value > 110),
+        ("vital_rr", lambda value: value > 22),
+    )
+    count = 0
+    for key, predicate in checks:
+        value = normalize_vitals_for_scoring(vitals).get(key)
+        if value is not None:
+            count += int(predicate(value))
+    return count
+
+
+def apply_age65_abnormal_vitals_layer(result: dict, age: int | None, vitals: dict | None, enabled: bool | None = None) -> dict:
+    if enabled is None:
+        enabled = settings.ENABLE_AGE65_ABNORMAL_VITALS
+    if not enabled:
+        return result
+
+    abnormal_count = _age65_abnormal_vital_count(age, vitals)
+    if abnormal_count <= 0:
+        return result
+
+    floor = "HIGH" if abnormal_count >= 2 else "MEDIUM"
+    return _floor_rule_result(result, floor, f"age65_abnormal_vitals:{abnormal_count}")
 
 
 def _build_queue_policy(
@@ -157,44 +424,170 @@ def classify_note(
 
     from app.models.severity_rules import predict_severity
 
+    normalized_vitals = normalize_vitals_for_scoring(vitals)
+    scoring_vitals = normalized_vitals.values
+    vitals_warnings = normalized_vitals.warnings
+    numeric_vital_count = normalized_vitals.count_for_ml()
+    incomplete_vitals = numeric_vital_count < MIN_VITALS_FOR_ML
+    incomplete_reason = "incomplete vitals — review"
+
     # CRITICAL pre-check runs regardless of mode.
     # The ML model was trained on 3 classes (LOW/MEDIUM/HIGH) only.
     # Critical trigger detection is handled exclusively by the rule engine
     # and acts as a hard safety floor before the ML path is reached.
     rule_result = predict_severity(clinical_note, age=age)
+    effective_method = mode
+    ml_skipped_reason = None
+    mapping_probe = (
+        diagnose_complaint_mapping(
+            symptoms=symptoms,
+            clinical_note=clinical_note,
+            coverage_mode=_complaint_coverage_mode(),
+            approved_synonyms=_approved_synonyms_enabled(),
+            conditional_synonyms=_conditional_synonyms_enabled(),
+        )
+        if mode == "ml"
+        else {}
+    )
+    complaint_mapping = _complaint_mapping_payload(
+        mapping_probe,
+        settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+    )
     if rule_result["critical_trigger"] is not None:
         result = rule_result
     elif mode == "ml":
-        result = predict_severity_ml(
-            clinical_note=clinical_note,
-            age=age,
-            condition_group=condition_group,
-            vitals=vitals,
-            has_red_flag=has_red_flag,
-            red_flag_count=red_flag_count,
-            rf_flags=rf_flags,
-            symptoms=symptoms,
-        )
+        if incomplete_vitals:
+            result = dict(rule_result)
+            result = _floor_rule_result(result, settings.INCOMPLETE_VITALS_FLOOR, incomplete_reason)
+            result["method"] = "rule_based"
+            result["ml_skipped_reason"] = "insufficient_vitals"
+            effective_method = "rule_based"
+            ml_skipped_reason = "insufficient_vitals"
+        else:
+            result = predict_severity_ml_detailed(
+                clinical_note=clinical_note,
+                age=age,
+                condition_group=condition_group,
+                vitals=scoring_vitals,
+                has_red_flag=has_red_flag,
+                red_flag_count=red_flag_count,
+                rf_flags=rf_flags,
+                symptoms=symptoms,
+                coverage_mode=_complaint_coverage_mode(),
+                approved_synonyms=_approved_synonyms_enabled(),
+                conditional_synonyms=_conditional_synonyms_enabled(),
+            )
+            mapping_confidence = float(result.get("mapping_confidence") or 0.0)
+            mapped_complaints = result.get("mapped_complaints") or []
+            base_complaint_mapping = _complaint_mapping_payload(
+                result,
+                settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+            )
+            danger_terms = list(result.get("danger_terms") or [])
+            danger_floor = _danger_term_floor_enabled() and bool(danger_terms)
+            low_mapping_coverage = (
+                not mapped_complaints
+                or _coverage_below_threshold(
+                    mapping_confidence,
+                    settings.COMPLAINT_MAPPING_COVERAGE_THRESHOLD,
+                )
+            )
+            if danger_floor or low_mapping_coverage:
+                reason = DANGER_TERM_REVIEW_REASON if danger_floor else COMPLAINT_MAPPING_REVIEW_REASON
+                reason_code = COMPLAINT_REASON_DANGER_TERM_UNMAPPED if danger_floor else None
+                floor = _danger_term_floor() if danger_floor else settings.COMPLAINT_MAPPING_FLOOR
+                floor_changed_result = (
+                    SEVERITY_RANK[result["severity"]]
+                    < SEVERITY_RANK.get(floor, SEVERITY_RANK["MEDIUM"])
+                )
+                result = _floor_rule_result(result, floor, reason)
+                result = _append_reason(result, reason)
+                result["mapped"] = False
+                result["mapping_review_reason"] = reason
+                complaint_mapping = {
+                    **base_complaint_mapping,
+                    "floor_applied": True,
+                    "floor_changed_result": floor_changed_result,
+                    "reason_code": reason_code or base_complaint_mapping["reason_code"],
+                    "danger_terms": danger_terms,
+                }
+            else:
+                complaint_mapping = base_complaint_mapping
     else:
         result = rule_result
+
+    danger_terms = list(mapping_probe.get("danger_terms") or result.get("danger_terms") or [])
+    if mode == "ml" and _danger_term_floor_enabled() and danger_terms:
+        floor = _danger_term_floor()
+        floor_changed_result = (
+            SEVERITY_RANK[result["severity"]]
+            < SEVERITY_RANK.get(floor, SEVERITY_RANK["MEDIUM"])
+        )
+        result = _floor_rule_result(result, floor, DANGER_TERM_REVIEW_REASON)
+        result = _append_reason(result, DANGER_TERM_REVIEW_REASON)
+        result["mapping_review_reason"] = DANGER_TERM_REVIEW_REASON
+        complaint_mapping = {
+            **complaint_mapping,
+            "floor_applied": True,
+            "floor_changed_result": floor_changed_result,
+            "reason_code": COMPLAINT_REASON_DANGER_TERM_UNMAPPED,
+            "danger_terms": danger_terms,
+        }
+
+    if mode == "ml":
+        safety_floor_text = f"{symptoms or ''} {clinical_note or ''}".strip()
+        result = apply_complaint_safety_floors(result, safety_floor_text, age)
+
+    result = apply_age65_abnormal_vitals_layer(result, age, scoring_vitals)
 
     normalized_scores = _normalize_scores(result["scores"])
     risk_score = _display_risk_score(result, normalized_scores)
     queue_policy = _build_queue_policy(
         result["severity"],
         risk_score,
-        mode,
+        effective_method,
         result["matched_rules"],
         result["critical_trigger"],
         source=source,
+    )
+    red_flag_payload = dict(rf_flags or {})
+    if has_red_flag and not red_flag_payload:
+        red_flag_payload["has_red_flag"] = 1
+    suggested_specialty = suggest_specialty(
+        symptoms=symptoms,
+        clinical_note=clinical_note,
+        red_flags=red_flag_payload,
+        age=age,
+        severity=result["severity"],
+        mapped_complaints=result.get("mapped_complaints", []),
+        vitals=scoring_vitals,
     )
     return {
         "severity": result["severity"],
         "priority_score": result["priority_score"],
         "risk_score": risk_score,
-        "method": mode,
+        "method": effective_method,
+        "ml_skipped_reason": ml_skipped_reason,
         "scores": normalized_scores,
         "matched_rules": result["matched_rules"],
         "critical_trigger": result["critical_trigger"],
+        "incomplete_vitals": incomplete_vitals,
+        "incomplete_vitals_reason": incomplete_reason if incomplete_vitals else None,
+        "vitals_warnings": vitals_warnings,
+        "can_override": result["critical_trigger"] is None,
+        "mapped_complaints": result.get("mapped_complaints", []),
+        "high_acuity_terms": result.get("high_acuity_terms", []),
+        "model_symptoms": result.get("model_symptoms"),
+        "original_symptoms_text": result.get("original_symptoms_text"),
+        "interpreted_as": {
+            "mapped_phrases": result.get("mapped_complaints", []),
+            "high_acuity_terms": result.get("high_acuity_terms", []),
+        },
+        "mapped": bool(result.get("mapped", result.get("mapped_complaints") or result.get("high_acuity_terms"))),
+        "mapping_confidence": float(result.get("mapping_confidence", 1.0 if result.get("mapped_complaints") or result.get("high_acuity_terms") else 0.0)),
+        "mapping_review_reason": result.get("mapping_review_reason"),
+        "complaint_mapping": complaint_mapping,
+        "safety_floors": result.get("safety_floors", []),
+        "suggested_specialty": suggested_specialty,
         **queue_policy,
     }
