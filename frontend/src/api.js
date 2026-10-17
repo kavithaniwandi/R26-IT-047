@@ -157,6 +157,9 @@ export const api = {
   // SOS Emergency Contact Alert (real SMS dispatch to selected contacts)
   sendSOSAlertToContacts: (payload) =>
     apiRequest('/sos/alert-contacts', { method: 'POST', body: JSON.stringify(payload) }),
+  getEmergencyContacts: () => apiRequest('/sos/contacts'),
+  saveEmergencyContacts: (contacts) =>
+    apiRequest('/sos/contacts', { method: 'PUT', body: JSON.stringify(contacts) }),
   // Donors (MongoDB)
   getDonors: () => apiRequest('/donors'),
   getDonorDetail: (donorId) => apiRequest(`/donors/${donorId}`),
