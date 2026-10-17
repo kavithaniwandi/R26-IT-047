@@ -7,10 +7,8 @@ import {
   AlertCircle, 
   Clock, 
   Filter, 
-  Plus, 
   Search, 
   Radio, 
-  FileText, 
   Activity, 
   X, 
   RefreshCw,
@@ -24,7 +22,7 @@ import {
 import { api } from '../api';
 
 export default function DisasterOfficer({ currentUser, onAddToast }) {
-  const [activeTab, setActiveTab] = useState('unpledged'); // 'unpledged' | 'pending_pledges' | 'completed' | 'assessments'
+  const [activeTab, setActiveTab] = useState('unpledged'); // 'unpledged' | 'pending_pledges' | 'completed'
   const [loading, setLoading] = useState(false);
   const [acceptingId, setAcceptingId] = useState(null);
   const [error, setError] = useState(null);
@@ -41,18 +39,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
   const [selectedDonorIds, setSelectedDonorIds] = useState(new Set());
   const [donorSearchQuery, setDonorSearchQuery] = useState('');
   const [sendingEmails, setSendingEmails] = useState(false);
-
-  // Field Assessment Modal State
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
-  const [assessmentForm, setAssessmentForm] = useState({
-    district: 'Colombo',
-    ds_division: 'Kaduwela',
-    gn_division: 'Ranala',
-    risk_level: 'High',
-    affected_households: 25,
-    critical_notes: 'Kelani riverbank water levels rising rapidly. Evacuation access road flooded.',
-    immediate_actions: 'Deploy rescue boats and establish emergency rations drop.',
-  });
 
   const fetchData = async () => {
     setLoading(true);
@@ -165,15 +151,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     } finally {
       setSendingEmails(false);
     }
-  };
-
-  const handleAssessmentSubmit = (e) => {
-    e.preventDefault();
-    const msg = `Ground damage assessment for ${assessmentForm.gn_division} (${assessmentForm.district}) logged.`;
-    setSuccessMsg(msg);
-    if (onAddToast) onAddToast(msg, 'success', 'Assessment Logged');
-    setShowAssessmentModal(false);
-    setTimeout(() => setSuccessMsg(null), 5000);
   };
 
   // Completed Donations List
@@ -307,13 +284,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
         >
           <CheckCircle2 size={16} />
           <span>Verified at DS Office ({completedDonationsList.length})</span>
-        </button>
-        <button
-          className={`btn ${activeTab === 'assessments' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('assessments')}
-        >
-          <FileText size={16} />
-          <span>Damage Assessments</span>
         </button>
       </div>
 
@@ -603,40 +573,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
         </div>
       )}
 
-      {/* TAB 4: DAMAGE ASSESSMENTS */}
-      {activeTab === 'assessments' && (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">Divisional Secretariat Damage Assessments</h2>
-              <p className="card-subtitle">Official verified ground logs for disaster relief deployment</p>
-            </div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAssessmentModal(true)}>
-              <Plus size={14} />
-              <span>New Assessment</span>
-            </button>
-          </div>
-
-          <div style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '40px 20px',
-            textAlign: 'center',
-            border: '1px dashed var(--border-subtle)',
-          }}>
-            <FileText size={40} style={{ color: 'var(--accent-blue)', marginBottom: '12px', opacity: 0.8 }} />
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: '0 0 6px' }}>Damage Surveys Up to Date</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '440px', margin: '0 auto 16px' }}>
-              Log ground damage evaluations to generate automatic relief allocation tickets.
-            </p>
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowAssessmentModal(true)}>
-              <Plus size={14} />
-              <span>Create Initial Assessment</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 1: MODEL-BASED DONOR COMPATIBILITY & OUTREACH */}
       {selectedRequestForOutreach && (
         <div className="modal-overlay" onClick={() => setSelectedRequestForOutreach(null)}>
@@ -800,107 +736,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
         </div>
       )}
 
-      {/* MODAL 2: FIELD ASSESSMENT */}
-      {showAssessmentModal && (
-        <div className="modal-overlay" onClick={() => setShowAssessmentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h3 className="modal-title">Log Field Damage Assessment</h3>
-                <p className="card-subtitle">Official ground survey recording</p>
-              </div>
-              <button className="modal-close-btn" onClick={() => setShowAssessmentModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAssessmentSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">District</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    value={assessmentForm.district}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, district: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">DS Division</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    value={assessmentForm.ds_division}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, ds_division: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">GN Division</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    value={assessmentForm.gn_division}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, gn_division: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Risk Severity Level</label>
-                  <select
-                    className="form-select"
-                    value={assessmentForm.risk_level}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, risk_level: e.target.value })}
-                  >
-                    <option value="Critical">Critical (Immediate Danger)</option>
-                    <option value="High">High (Flood / Landslide Path)</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Estimated Affected Households</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="form-input"
-                  value={assessmentForm.affected_households}
-                  onChange={(e) => setAssessmentForm({ ...assessmentForm, affected_households: parseInt(e.target.value, 10) || 1 })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Critical Field Notes & Observations</label>
-                <textarea
-                  rows="3"
-                  className="form-textarea"
-                  value={assessmentForm.critical_notes}
-                  onChange={(e) => setAssessmentForm({ ...assessmentForm, critical_notes: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAssessmentModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Submit Official Assessment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
