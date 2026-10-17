@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
 
+    # Text.lk SMS Gateway (primary provider)
+    # API: POST https://app.text.lk/api/v3/sms/send
+    # Auth: Bearer token in Authorization header
+    # Free trial: ~10 SMS units; TextLKDemo sender ID (testing only)
+    TEXTLK_ENABLED: bool = False
+    TEXTLK_API_TOKEN: str = ""
+    TEXTLK_API_URL: str = "https://app.text.lk/api/v3/sms/send"
+    TEXTLK_SENDER_ID: str = "TextLKDemo"
+    TEXTLK_TIMEOUT_SECONDS: int = 15
+
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",

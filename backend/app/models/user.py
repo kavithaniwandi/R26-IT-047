@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -44,6 +44,9 @@ class User(Base):
     capacity_level: str = Column(String(20), nullable=True)
     latitude: float = Column(Float, nullable=True)
     longitude: float = Column(Float, nullable=True)
+
+    # Emergency contacts (JSON-encoded array of up to 4 verified contacts)
+    emergency_contacts: str | None = Column(Text, nullable=True)
 
     # Role FK — defaults to 'victim' role (set in auth service)
     role_id: int = Column(Integer, ForeignKey("roles.id"), nullable=False)

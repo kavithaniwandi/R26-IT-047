@@ -73,17 +73,42 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [latestBroadcastLog, setLatestBroadcastLog] = useState([]);
 
-  // 4 Emergency Contacts State
-  const defaultContacts = [
-    { id: 1, name: 'Sunil Perera', relation: 'Father / Family Head', phone: '+94 77 123 4567', notifySMS: true, notifyCall: true },
-    { id: 2, name: 'Kumari Silva', relation: 'Mother', phone: '+94 71 889 9112', notifySMS: true, notifyCall: true },
-    { id: 3, name: 'Chaminda Perera', relation: 'Brother / Field Responder', phone: '+94 76 345 6789', notifySMS: true, notifyCall: true },
-    { id: 4, name: 'Dr. Nalin Jayawardena', relation: 'Family Physician', phone: '+94 70 998 8776', notifySMS: true, notifyCall: false },
+  const _PLACEHOLDER_PHONES = [
+    '+94 77 123 4567',
+    '+94 71 889 9112',
+    '+94 76 345 6789',
+    '+94 70 998 8776',
+    '+94771234567',
+    '+94718899112',
+    '+94763456789',
+    '+94709988776',
+    '0771234567',
+    '0718899112',
+    '0763456789',
+    '0709988776',
   ];
 
+  const isPlaceholderPhone = (phone) => {
+    if (!phone) return true;
+    const clean = phone.replace(/[\s\-\(\)\.]/g, '');
+    return _PLACEHOLDER_PHONES.some(p => p.replace(/[\s\-\(\)\.]/g, '') === clean);
+  };
+
+  // 4 Emergency Contacts State (No hardcoded demo contacts; empty until user adds them)
   const [emergencyContacts, setEmergencyContacts] = useState(() => {
     const saved = localStorage.getItem(`dr_victim_contacts_${user?.id || 'guest'}`);
-    return saved ? JSON.parse(saved) : defaultContacts;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Discard any legacy demo/placeholder numbers
+          return parsed.filter(c => c && c.phone && !isPlaceholderPhone(c.phone));
+        }
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [editingContact, setEditingContact] = useState(null);
@@ -178,6 +203,17 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
       } catch (e) {
         console.warn('SMS logs fetch', e);
       }
+
+      try {
+        const savedContacts = await api.getEmergencyContacts();
+        if (Array.isArray(savedContacts)) {
+          const valid = savedContacts.filter(c => c && c.phone && !isPlaceholderPhone(c.phone));
+          setEmergencyContacts(valid);
+          localStorage.setItem(`dr_victim_contacts_${user?.id || 'guest'}`, JSON.stringify(valid));
+        }
+      } catch (e) {
+        console.warn('Emergency contacts fetch from server:', e);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -189,12 +225,21 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
     loadData();
   }, []);
 
-  // Save contacts
-  const saveContacts = (updated) => {
-    setEmergencyContacts(updated);
-    localStorage.setItem(`dr_victim_contacts_${user?.id || 'guest'}`, JSON.stringify(updated));
-    if (onAddToast) {
-      onAddToast('Emergency contacts updated successfully.', 'success', 'Contacts Saved');
+  // Save contacts locally and sync to backend
+  const saveContacts = async (updated) => {
+    const valid = updated.filter(c => c && c.phone && !isPlaceholderPhone(c.phone));
+    setEmergencyContacts(valid);
+    localStorage.setItem(`dr_victim_contacts_${user?.id || 'guest'}`, JSON.stringify(valid));
+    try {
+      await api.saveEmergencyContacts(valid);
+      if (onAddToast) {
+        onAddToast('Emergency contacts updated and saved on server.', 'success', 'Contacts Saved');
+      }
+    } catch (err) {
+      console.warn('Could not sync contacts to server:', err);
+      if (onAddToast) {
+        onAddToast('Contacts saved locally (' + (err.message || 'Server sync error') + ')', 'warning', 'Saved Locally');
+      }
     }
   };
 
@@ -227,18 +272,40 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
     );
   };
 
-  // Send real SMS alerts to all emergency contacts (any number ≥ 1)
+  // Helper to format provider dispatch status accurately without misrepresenting provider acceptance as confirmed delivery
+  const formatDispatchStatus = (status) => {
+    if (!status) return 'Not sent';
+    const s = String(status).toLowerCase();
+    if (s === 'delivered') return 'Delivered (Handset verified)';
+    if (s === 'sent') return 'Accepted by SMS provider (Queued for transmission)';
+    if (s === 'simulated') return 'Simulated (Text.lk disabled)';
+    if (s.startsWith('error') || s === 'failed') return 'Failed';
+    return status;
+  };
+
+  // Send real SMS alerts only to verified emergency contacts (max 4, never placeholders)
   const triggerEmergencyBroadcastToContacts = async (sosId, priority) => {
     const timestamp = new Date().toLocaleTimeString('en-GB');
-    const contactsToAlert = emergencyContacts.filter(c => c.phone && c.phone.trim());
+
+    if (!sosId || isNaN(Number(sosId)) || Number(sosId) <= 0) {
+      if (onAddToast) {
+        onAddToast('SMS dispatch aborted: A valid active SOS distress beacon is required.', 'error', 'Invalid SOS');
+      }
+      return;
+    }
+
+    const contactsToAlert = emergencyContacts.filter(c => c.phone && c.phone.trim() && !isPlaceholderPhone(c.phone));
 
     if (!contactsToAlert.length) {
       setLatestBroadcastLog([]);
       setShowBroadcastModal(true);
+      if (onAddToast) {
+        onAddToast('No emergency contacts saved. Please add verified contacts in the Emergency Contacts tab.', 'warning', 'No Contacts Saved');
+      }
       return;
     }
 
-    // Build local preview log immediately (will update with real status after API call)
+    // Build local preview log immediately
     const previewLog = contactsToAlert.map((c) => ({
       id: c.id,
       name: c.name,
@@ -273,24 +340,28 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
       // Update log with real dispatch status from backend
       const dispatched = result.dispatch_log || [];
       const updatedLog = previewLog.map((log) => {
-        const match = dispatched.find(d => d.phone.replace(/\s/g, '') === log.phone.replace(/\s/g, ''));
+        const match = dispatched.find(d => d.phone.replace(/[\s\-\(\)\.]/g, '') === log.phone.replace(/[\s\-\(\)\.]/g, ''));
         return {
           ...log,
-          status: match?.status === 'sent' ? 'DELIVERED (ACK 200 OK)' : (match?.status || 'ERROR'),
+          status: formatDispatchStatus(match?.status),
+          provider: match?.status === 'simulated' ? 'LOCAL SIMULATOR (No Real SMS Sent)' : (match?.provider || 'TEXTLK'),
         };
       });
       setLatestBroadcastLog(updatedLog);
 
       if (onAddToast) {
+        const hasSimulated = dispatched.some(d => d.status === 'simulated');
+        const title = hasSimulated ? 'Simulation Mode' : 'Provider Accepted';
+        const actionText = hasSimulated ? 'simulated' : 'transmitted to provider';
         onAddToast(
-          `SMS alert sent to ${result.contacts_alerted}/${result.total_contacts} emergency contacts.`,
-          'success',
-          '📱 Contacts Alerted'
+          `SOS alert ${actionText} for ${result.contacts_alerted}/${result.total_contacts} emergency contacts.`,
+          'info',
+          title
         );
       }
     } catch (err) {
       // Mark all as error in the log
-      setLatestBroadcastLog(previewLog.map(l => ({ ...l, status: 'ERROR - Check network' })));
+      setLatestBroadcastLog(previewLog.map(l => ({ ...l, status: 'Failed (' + (err.message || 'Network error') + ')' })));
       if (onAddToast) {
         onAddToast('SMS dispatch to contacts failed: ' + (err.message || 'Unknown error'), 'error', 'SMS Error');
       }
@@ -305,6 +376,9 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
     setError(null);
     try {
       const res = await api.createSOS(formData);
+      if (!res || !res.id) {
+        throw new Error('SOS record creation did not return a valid SOS ID.');
+      }
       playEmergencyBeep();
       const msg = `EMERGENCY SOS #${res.id} TRANSMITTED! Urgency Priority Score: ${res.priority_score}/100. Responders & 1990 Emergency Services have been notified.`;
       setSuccessMsg(msg);
@@ -313,7 +387,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
       }
 
       // Automatically send message to the 4 emergency contacts!
-      triggerEmergencyBroadcastToContacts(res.id, res.priority_score);
+      await triggerEmergencyBroadcastToContacts(res.id, res.priority_score);
 
       loadData();
       setTimeout(() => setSuccessMsg(null), 10000);
@@ -1076,76 +1150,138 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
             <div className="card" style={{ padding: '28px', marginBottom: '24px' }}>
               <div className="card-header">
                 <div>
-                  <h2 className="card-title" style={{ fontSize: '1.25rem' }}>My SOS Emergency Contacts ({emergencyContacts.length})</h2>
+                  <h2 className="card-title" style={{ fontSize: '1.25rem' }}>My SOS Emergency Contacts ({emergencyContacts.length}/4)</h2>
                   <p className="card-subtitle">
-                    These trusted contacts will be <strong>automatically notified via SMS & WhatsApp</strong> the moment you trigger your SOS beacon during a disaster. Add as many as you need — no minimum required.
+                    These trusted contacts will be <strong>notified via SMS & WhatsApp</strong> the moment you trigger your SOS beacon during a disaster. You can save up to 4 genuine contacts.
                   </p>
                 </div>
 
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => triggerEmergencyBroadcastToContacts(999, 95)}
-                  title="Simulate SMS Alert to all 4 contacts"
-                >
-                  <Send size={14} style={{ color: 'var(--accent-emerald)' }} />
-                  <span>Test Emergency Alert Broadcast</span>
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {emergencyContacts.length < 4 && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setEditingContact({ id: Date.now(), name: '', relation: 'Family Member', phone: '', isNew: true })}
+                    >
+                      <Plus size={14} />
+                      <span>Add Contact</span>
+                    </button>
+                  )}
+
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      const latestSOS = activeSOSList && activeSOSList.length > 0 ? activeSOSList[0] : null;
+                      if (!latestSOS || !latestSOS.id) {
+                        if (onAddToast) {
+                          onAddToast('Please trigger an SOS distress beacon first before testing contact dispatch.', 'warning', 'No Active SOS');
+                        }
+                        return;
+                      }
+                      triggerEmergencyBroadcastToContacts(latestSOS.id, latestSOS.priority_score || 95);
+                    }}
+                    title="Test SMS Alert to saved contacts"
+                    disabled={emergencyContacts.length === 0}
+                  >
+                    <Send size={14} style={{ color: 'var(--accent-emerald)' }} />
+                    <span>Test Emergency Broadcast</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Contacts Grid */}
-              <div className="contacts-grid">
-                {emergencyContacts.map((c, idx) => (
-                  <div key={c.id} className="contact-card">
-                    <div className="contact-card-top">
-                      <div className="contact-avatar">
-                        #{idx + 1}
+              {emergencyContacts.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '36px 20px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '2px dashed var(--border-color)',
+                  marginTop: '16px',
+                }}>
+                  <AlertTriangle size={36} style={{ color: 'var(--accent-amber)', marginBottom: '10px' }} />
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                    No Emergency Contacts Saved
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
+                    No fallback contacts are used. Add at least 1 verified contact (up to 4) so emergency rescue services and your family can be notified when you trigger your SOS beacon.
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setEditingContact({ id: Date.now(), name: '', relation: 'Family Member', phone: '', isNew: true })}
+                  >
+                    <Plus size={16} />
+                    <span>Add Your First Emergency Contact</span>
+                  </button>
+                </div>
+              ) : (
+                /* Contacts Grid */
+                <div className="contacts-grid">
+                  {emergencyContacts.map((c, idx) => (
+                    <div key={c.id} className="contact-card">
+                      <div className="contact-card-top">
+                        <div className="contact-avatar">
+                          #{idx + 1}
+                        </div>
+                        <span className="contact-relation-badge">{c.relation}</span>
                       </div>
-                      <span className="contact-relation-badge">{c.relation}</span>
-                    </div>
 
-                    <div>
-                      <div className="contact-name">{c.name}</div>
-                      <div className="contact-phone">{c.phone}</div>
-                    </div>
+                      <div>
+                        <div className="contact-name">{c.name}</div>
+                        <div className="contact-phone">{c.phone}</div>
+                      </div>
 
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--accent-emerald)', fontWeight: '700' }}>✓ Auto-SMS Active</span>
-                      <span>&bull;</span>
-                      <span>✓ 1-Click WhatsApp</span>
-                    </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--accent-emerald)', fontWeight: '700' }}>✓ Auto-SMS Active</span>
+                        <span>&bull;</span>
+                        <span>✓ 1-Click WhatsApp</span>
+                      </div>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ flex: 1 }}
-                        onClick={() => setEditingContact(c)}
-                      >
-                        <Edit2 size={13} />
-                        <span>Edit</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ flex: 1 }}
+                          onClick={() => setEditingContact({ ...c, isNew: false })}
+                        >
+                          <Edit2 size={13} />
+                          <span>Edit</span>
+                        </button>
 
-                      <a
-                        href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`[EMERGENCY TEST] Hi ${c.name}, you are registered as my emergency contact on the Sri Lanka Disaster Relief System.`)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-success btn-sm"
-                        title="Send WhatsApp Ping"
-                      >
-                        <Share2 size={13} />
-                        <span>Share</span>
-                      </a>
+                        <a
+                          href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`[EMERGENCY TEST] Hi ${c.name}, you are registered as my emergency contact on the Sri Lanka Disaster Relief System.`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-success btn-sm"
+                          title="Send WhatsApp Ping"
+                        >
+                          <Share2 size={13} />
+                          <span>Share</span>
+                        </a>
+
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: 'var(--accent-rose)' }}
+                          onClick={() => {
+                            const updated = emergencyContacts.filter(x => x.id !== c.id);
+                            saveContacts(updated);
+                          }}
+                          title="Remove Contact"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Edit Contact Form Drawer / Modal if open */}
+            {/* Edit/Add Contact Form Modal */}
             {editingContact && (
               <div className="modal-overlay" onClick={() => setEditingContact(null)}>
                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                   <div className="modal-header">
-                    <h2 className="modal-title">Edit Emergency Contact #{editingContact.id}</h2>
+                    <h2 className="modal-title">
+                      {editingContact.isNew ? 'Add Emergency Contact' : `Edit Emergency Contact (${editingContact.name})`}
+                    </h2>
                     <button className="modal-close-btn" onClick={() => setEditingContact(null)}>
                       <X size={18} />
                     </button>
@@ -1153,7 +1289,15 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
 
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    const updated = emergencyContacts.map((c) => c.id === editingContact.id ? editingContact : c);
+                    if (isPlaceholderPhone(editingContact.phone)) {
+                      if (onAddToast) {
+                        onAddToast('Placeholder demo numbers (e.g. +94 77 123 4567) cannot be saved. Please enter a genuine phone number.', 'error', 'Invalid Phone Number');
+                      }
+                      return;
+                    }
+                    const updated = editingContact.isNew
+                      ? [...emergencyContacts, { ...editingContact, isNew: undefined }]
+                      : emergencyContacts.map((c) => c.id === editingContact.id ? editingContact : c);
                     saveContacts(updated);
                     setEditingContact(null);
                   }}>
@@ -1165,6 +1309,7 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                         className="custom-input"
                         value={editingContact.name}
                         onChange={(e) => setEditingContact({ ...editingContact, name: e.target.value })}
+                        placeholder="e.g. Nimal Shantha"
                       />
                     </div>
 
@@ -1188,8 +1333,11 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
                         className="custom-input"
                         value={editingContact.phone}
                         onChange={(e) => setEditingContact({ ...editingContact, phone: e.target.value })}
-                        placeholder="+94 77 123 4567"
+                        placeholder="+94 77 999 8811"
                       />
+                      <small style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                        Must be a real recipient mobile number (e.g. +9477XXXXXXX). Demo numbers are rejected.
+                      </small>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
@@ -1347,28 +1495,48 @@ export function VictimPortalView({ user: initialUser, onAddToast, onReturnToAdmi
               <div style={{ fontSize: '0.84rem', fontWeight: '800', color: 'var(--accent-emerald)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <CheckCircle2 size={16} />
                 <span>
-                  {latestBroadcastLog.filter(l => l.status !== 'SENDING...').length > 0
-                    ? `${latestBroadcastLog.filter(l => l.status.startsWith('DELIVERED')).length} / ${latestBroadcastLog.length} Emergency Contacts Alerted`
+                  {latestBroadcastLog.length === 0
+                    ? 'No emergency contacts configured to receive SMS.'
+                    : latestBroadcastLog.filter(l => l.status !== 'SENDING...').length > 0
+                    ? `${latestBroadcastLog.filter(l => !l.status.toLowerCase().startsWith('failed')).length} / ${latestBroadcastLog.length} Emergency Contacts Processed`
                     : `Sending alerts to ${latestBroadcastLog.length} contact${latestBroadcastLog.length !== 1 ? 's' : ''}...`}
                 </span>
               </div>
 
-              {latestBroadcastLog.map((log) => (
-                <div key={log.id} className="broadcast-item">
-                  <div>
-                    <div style={{ fontWeight: '800', color: 'var(--text-primary)' }}>
-                      {log.name} ({log.relation})
-                    </div>
-                    <div className="font-mono" style={{ fontSize: '0.74rem', color: 'var(--accent-blue)' }}>
-                      {log.phone} &bull; {log.provider}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span className="badge badge-success">✓ {log.status}</span>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{log.time}</div>
-                  </div>
+              {latestBroadcastLog.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  No emergency contacts found. Please add verified contacts in the Emergency Contacts tab.
                 </div>
-              ))}
+              ) : (
+                latestBroadcastLog.map((log) => {
+                  const s = log.status.toLowerCase();
+                  const badgeClass = s.includes('delivered')
+                    ? 'badge-success'
+                    : s.includes('accepted')
+                    ? 'badge-warning'
+                    : s.includes('simulated')
+                    ? 'badge-info'
+                    : s.includes('failed')
+                    ? 'badge-danger'
+                    : 'badge-secondary';
+                  return (
+                    <div key={log.id} className="broadcast-item">
+                      <div>
+                        <div style={{ fontWeight: '800', color: 'var(--text-primary)' }}>
+                          {log.name} ({log.relation})
+                        </div>
+                        <div className="font-mono" style={{ fontSize: '0.74rem', color: 'var(--accent-blue)' }}>
+                          {log.phone} &bull; {log.provider}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span className={`badge ${badgeClass}`}>{log.status}</span>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{log.time}</div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
