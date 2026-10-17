@@ -211,6 +211,15 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     }
   });
 
+  const unpledgedRequestsByGn = Object.entries(
+    unpledgedRequestsList.reduce((groups, request) => {
+      const gnDivision = request.gnDivision || 'Unassigned GN Division';
+      if (!groups[gnDivision]) groups[gnDivision] = [];
+      groups[gnDivision].push(request);
+      return groups;
+    }, {})
+  ).sort(([left], [right]) => left.localeCompare(right));
+
   const visibleDonors = rankedDonors.filter((d) => {
     const name = (d.displayName || '').toLowerCase();
     const email = (d.email || '').toLowerCase();
@@ -255,7 +264,9 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
               Disaster Officer Command Center
             </h1>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-              Verify incoming donor supplies, monitor item-wise deficit requests, and trigger AI-targeted outreach.
+              {currentUser?.assigned_ds_area
+                ? `${currentUser.assigned_ds_area} DS Area · GN-level donation request coordination`
+                : 'Verify incoming donor supplies, monitor item-wise deficit requests, and trigger AI-targeted outreach.'}
             </p>
           </div>
         </div>
@@ -347,7 +358,9 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
           <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 className="card-title">Open Disaster Item Requests (Unpledged Deficits)</h2>
-              <p className="card-subtitle">Supply shortages requiring proactive targeted donor outreach</p>
+              <p className="card-subtitle">
+                {currentUser?.assigned_ds_area || 'Assigned'} DS Area requests, separated by GN Division
+              </p>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={fetchData} disabled={loading}>
               <RefreshCw size={14} className={loading ? 'spin' : ''} />
@@ -375,7 +388,26 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 </p>
               </div>
             ) : (
-              unpledgedRequestsList.map((req) => (
+              unpledgedRequestsByGn.map(([gnDivision, requests]) => (
+                <React.Fragment key={gnDivision}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--accent-blue-subtle)',
+                    border: '1px solid hsla(217, 91%, 60%, 0.25)',
+                    color: 'var(--accent-blue)',
+                  }}>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                      <MapPin size={15} /> {gnDivision} GN Division
+                    </strong>
+                    <span className="badge badge-info">
+                      {requests.length} request{requests.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  {requests.map((req) => (
                 <div
                   key={req.id}
                   style={{
@@ -441,6 +473,8 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                     })}
                   </div>
                 </div>
+                  ))}
+                </React.Fragment>
               ))
             )}
           </div>

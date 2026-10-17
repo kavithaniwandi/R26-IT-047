@@ -76,7 +76,7 @@ export const api = {
   },
   createUser: (payload) => apiRequest('/users', { method: 'POST', body: JSON.stringify(payload) }),
   updateDonorProfile: (userId, payload) => apiRequest(`/users/${userId}/donor-profile`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  changeUserRole: (userId, role) => apiRequest(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  changeUserRole: (userId, role, assignedDsArea = null) => apiRequest(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role, assigned_ds_area: assignedDsArea }) }),
   toggleUserStatus: (userId, is_active) => apiRequest(`/users/${userId}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
 
   // SOS
