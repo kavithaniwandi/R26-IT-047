@@ -47,7 +47,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 
 import { api } from './api';
-import { PORTAL_CONFIG, detectCurrentPortal, getPortalForRole } from './portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG, detectCurrentPortal, getPortalForRole } from './portalConfig';
 import {
   playEmergencyBeep,
   playSuccessChime,
@@ -80,7 +80,9 @@ function DashboardApp() {
   const selectedPortalRole = PORTAL_CONFIG[selectedPortal]?.defaultRole;
   const isVolunteerDispatchHidden = authenticatedUser?.role === 'volunteer'
     && selectedPortal === 'volunteer';
-  const canAccessSelectedPortal = !isVolunteerDispatchHidden && (
+  const isAdminRolePortal = authenticatedUser?.role === 'admin'
+    && ADMIN_HIDDEN_PORTAL_IDS.has(selectedPortal);
+  const canAccessSelectedPortal = !isVolunteerDispatchHidden && !isAdminRolePortal && (
     authenticatedUser?.role === 'admin'
       || !selectedPortalRole
       || selectedPortalRole === authenticatedUser?.role
@@ -513,6 +515,7 @@ function DashboardApp() {
         onOpenLoginModal={handleSwitchAccount}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
+        userRole={user?.role}
       />
 
       {/* Global Toast Notifications */}
@@ -625,6 +628,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
         onOpenLoginModal={handleLogout}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
+        userRole={user?.role}
       />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>

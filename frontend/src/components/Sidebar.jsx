@@ -22,7 +22,7 @@ import {
   Building2,
   Target
 } from 'lucide-react';
-import { PORTAL_CONFIG } from '../portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG } from '../portalConfig';
 
 export function Sidebar({ 
   currentPortal, 
@@ -56,7 +56,7 @@ export function Sidebar({
   ];
 
   const visiblePortals = user?.role === 'admin'
-    ? portals
+    ? portals.filter((portal) => !ADMIN_HIDDEN_PORTAL_IDS.has(portal.id))
     : portals.filter((portal) => (
         portal.id !== 'volunteer' &&
         PORTAL_CONFIG[portal.id]?.defaultRole === user?.role

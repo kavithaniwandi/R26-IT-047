@@ -121,6 +121,17 @@ export const PORTAL_CONFIG = {
   },
 };
 
+// Role-owned operational workspaces are intentionally excluded from the
+// administrator session. Admins manage users and system-wide operations from
+// Admin Command; they do not impersonate stakeholder workflows.
+export const ADMIN_HIDDEN_PORTAL_IDS = new Set([
+  'donor',
+  'volunteer_dash',
+  'disaster_donation',
+  'disaster_officer',
+  'donor_matching',
+]);
+
 /**
  * Detect current portal from port, URL path, query params, or environment variable.
  */
