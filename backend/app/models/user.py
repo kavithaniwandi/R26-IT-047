@@ -37,6 +37,10 @@ class User(Base):
     phone: str = Column(String(20), nullable=True)
     address: str = Column(String(500), nullable=True)
 
+    # Operational boundary for disaster officers. Requests are scoped to this
+    # DS area by the API, rather than trusting a client-supplied filter.
+    assigned_ds_area: str = Column(String(120), nullable=True, index=True)
+
     # Donor recommendation profile. These remain nullable for non-donor roles;
     # donor matching only scores active donors with a complete profile.
     donor_type: str = Column(String(30), nullable=True)

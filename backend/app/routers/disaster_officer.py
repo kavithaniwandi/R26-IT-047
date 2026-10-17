@@ -277,6 +277,51 @@ def _sql_donor_alias_ids(db: Session, donor_id: str) -> List[str]:
     ] or [donor_id]
 
 
+async def _assigned_officer_ds_area(
+    token: TokenPayload,
+    db: Session,
+) -> Optional[str]:
+    """Return the authenticated officer's server-side DS assignment.
+
+    Admin and authority users intentionally return ``None`` because their
+    existing cross-area oversight access is unchanged.
+    """
+    if token.role != "disaster_officer":
+        return None
+
+    assigned_area = None
+    if token.sub.isdigit():
+        officer = db.query(User).filter(User.id == int(token.sub)).first()
+        assigned_area = officer.assigned_ds_area if officer else None
+    elif ObjectId.is_valid(token.sub):
+        officer = await users_collection.find_one({"_id": ObjectId(token.sub)})
+        if officer:
+            assigned_area = (
+                officer.get("assignedDsArea")
+                or officer.get("assigned_ds_area")
+                or officer.get("dsArea")
+            )
+
+    assigned_area = (assigned_area or "").strip()
+    if not assigned_area:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This disaster officer account has no assigned DS area.",
+        )
+    return assigned_area
+
+
+async def _apply_officer_scope(
+    query: dict,
+    token: TokenPayload,
+    db: Session,
+) -> dict:
+    assigned_area = await _assigned_officer_ds_area(token, db)
+    if assigned_area:
+        query["dsArea"] = assigned_area
+    return query
+
+
 # ── Route Endpoints ──────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[DisasterRequestGroupOut])
@@ -306,6 +351,7 @@ async def get_all_disaster_requests(
         query["dsArea"] = dsArea
     if status_filter:
         query["status"] = status_filter
+    await _apply_officer_scope(query, _current_user, db)
     cursor = disaster_requests_collection.find(query).sort("createdAt", -1)
     docs = await cursor.to_list(length=200)
     for document in docs:
@@ -474,9 +520,9 @@ async def get_consolidated_donor_matches(
     ids = list(dict.fromkeys(payload.requestIds))
     if not ids or any(not ObjectId.is_valid(value) for value in ids):
         raise HTTPException(status_code=400, detail="Select valid GN-level request records")
-    documents = await disaster_requests_collection.find(
-        {"_id": {"$in": [ObjectId(value) for value in ids]}}
-    ).to_list(length=200)
+    query = {"_id": {"$in": [ObjectId(value) for value in ids]}}
+    await _apply_officer_scope(query, _current_user, db)
+    documents = await disaster_requests_collection.find(query).to_list(length=200)
     if len(documents) != len(ids):
         raise HTTPException(status_code=404, detail="One or more donation request records were not found")
     group_keys = {
@@ -505,7 +551,9 @@ async def get_ranked_donor_matches(
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
-    request_doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, _current_user, db)
+    request_doc = await disaster_requests_collection.find_one(query)
     if not request_doc:
         raise HTTPException(status_code=404, detail="Disaster request not found")
     try:
@@ -520,6 +568,7 @@ async def send_personalized_donor_outreach(
     req_id: str,
     payload: DonorOutreachCreate,
     token_payload: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
+    db: Session = Depends(get_db),
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
@@ -528,8 +577,10 @@ async def send_personalized_donor_outreach(
         raise HTTPException(status_code=400, detail="Select at least one donor")
 
     now = datetime.now(timezone.utc)
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
     result = await disaster_requests_collection.update_one(
-        {"_id": ObjectId(req_id)},
+        query,
         {
             "$addToSet": {"targetedDonorIds": {"$each": donor_ids}},
             "$set": {"lastOutreachAt": now},
@@ -554,9 +605,12 @@ async def get_officer_pending_pledges(
     _current_user: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer"])
     ),
+    db: Session = Depends(get_db),
 ):
     await expire_stale_pledges()
-    cursor = disaster_requests_collection.find({"donations.status": "pledged"})
+    query = {"donations.status": "pledged"}
+    await _apply_officer_scope(query, _current_user, db)
+    cursor = disaster_requests_collection.find(query)
     docs = await cursor.to_list(length=200)
 
     pledges_out = []
@@ -603,6 +657,7 @@ async def get_disaster_request(
     query = {"_id": ObjectId(req_id)}
     if _current_user.role == "volunteer":
         query["createdBy"] = _current_user.sub
+    await _apply_officer_scope(query, _current_user, db)
     document = await disaster_requests_collection.find_one(query)
     if not document:
         raise HTTPException(status_code=404, detail="Disaster request not found")
@@ -626,12 +681,15 @@ async def accept_donation_at_ds_office(
     token_payload: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer"])
     ),
+    db: Session = Depends(get_db),
 ):
     await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
 
-    doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
+    doc = await disaster_requests_collection.find_one(query)
     if not doc:
         raise HTTPException(status_code=404, detail="Disaster request not found")
 
