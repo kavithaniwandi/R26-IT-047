@@ -2,22 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   MapPin, 
-  Users, 
   CheckCircle2, 
   AlertCircle, 
   Clock, 
-  Filter, 
-  Search, 
-  Radio, 
   Activity, 
-  X, 
   RefreshCw,
-  Mail,
-  Send,
-  Package,
-  Truck,
-  Sparkles,
-  Check
+  Package
 } from 'lucide-react';
 import { api } from '../api';
 
@@ -31,14 +21,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
   // Core Data Lists
   const [pledges, setPledges] = useState([]);
   const [disasterRequests, setDisasterRequests] = useState([]);
-
-  // AI Personalized Outreach Modal State
-  const [selectedRequestForOutreach, setSelectedRequestForOutreach] = useState(null);
-  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
-  const [rankedDonors, setRankedDonors] = useState([]);
-  const [selectedDonorIds, setSelectedDonorIds] = useState(new Set());
-  const [donorSearchQuery, setDonorSearchQuery] = useState('');
-  const [sendingEmails, setSendingEmails] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,78 +60,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
       if (onAddToast) onAddToast(err.message, 'error', 'Action Failed');
     } finally {
       setAcceptingId(null);
-    }
-  };
-
-  // AI Donor Ranking & Outreach Analysis
-  const handleOpenOutreachModal = async (req) => {
-    setSelectedRequestForOutreach(req);
-    setIsAiAnalyzing(true);
-    setSelectedDonorIds(new Set());
-    setDonorSearchQuery('');
-    try {
-      const scored = await api.getDonationDonorMatches(req.id);
-      const ranked = (scored || []).slice(0, 20).map((donor) => ({
-        ...donor,
-        id: donor.donorId,
-        displayName: donor.name,
-        tier: donor.score >= 70 ? 'High' : donor.score >= 45 ? 'Medium' : 'Low',
-        isAreaMatch: donor.proximityTier === 'Same GN division' || donor.proximityTier === 'Same DS area',
-        avgResponse: 'N/A',
-        pastDonations: donor.historyCount,
-      }));
-      setRankedDonors(ranked);
-      const previous = ranked.filter((donor) => donor.alreadyTargeted).map((donor) => donor.donorId);
-      const recommended = ranked.filter((donor) => donor.score >= 50).slice(0, 5).map((donor) => donor.donorId);
-      setSelectedDonorIds(new Set([...previous, ...recommended]));
-    } catch (err) {
-      setError(err.message || 'Unable to calculate donor matches.');
-      onAddToast?.(err.message, 'error', 'Matching Failed');
-    } finally {
-      setIsAiAnalyzing(false);
-    }
-  };
-
-  const handleToggleDonorSelect = (userId) => {
-    setSelectedDonorIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
-    });
-  };
-
-  const handleSelectAllVisible = (e, visibleDonors) => {
-    if (e.target.checked) {
-      setSelectedDonorIds(new Set(visibleDonors.map((d) => d.id || d.userId)));
-    } else {
-      setSelectedDonorIds(new Set());
-    }
-  };
-
-  const handleSendEmails = async () => {
-    const donorIds = rankedDonors
-      .filter((donor) => selectedDonorIds.has(donor.donorId) && !donor.alreadyTargeted)
-      .map((donor) => donor.donorId);
-    if (donorIds.length === 0) {
-      if (onAddToast) onAddToast('Please select at least one donor for outreach.', 'warning', 'No Donors Selected');
-      return;
-    }
-
-    setSendingEmails(true);
-    try {
-      const result = await api.sendDonationOutreach(selectedRequestForOutreach.id, donorIds);
-      const msg = result.message;
-      setSuccessMsg(msg);
-      if (onAddToast) onAddToast(msg, 'success', 'Outreach Dispatched');
-      setSelectedRequestForOutreach(null);
-      fetchData();
-      setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err) {
-      setError(err.message || 'Unable to publish personalized requests.');
-      onAddToast?.(err.message, 'error', 'Outreach Failed');
-    } finally {
-      setSendingEmails(false);
     }
   };
 
@@ -197,16 +107,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     }, {})
   ).sort(([left], [right]) => left.localeCompare(right));
 
-  const visibleDonors = rankedDonors.filter((d) => {
-    const name = (d.displayName || '').toLowerCase();
-    const email = (d.email || '').toLowerCase();
-    const q = donorSearchQuery.toLowerCase();
-    return name.includes(q) || email.includes(q);
-  });
-  const newOutreachCount = rankedDonors.filter((donor) =>
-    selectedDonorIds.has(donor.donorId) && !donor.alreadyTargeted
-  ).length;
-
   return (
     <div>
       {/* Officer Command Banner */}
@@ -243,7 +143,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
               {currentUser?.assigned_ds_area
                 ? `${currentUser.assigned_ds_area} DS Area · GN-level donation request coordination`
-                : 'Verify incoming donor supplies, monitor item-wise deficit requests, and trigger AI-targeted outreach.'}
+                : 'Verify incoming donor supplies and monitor item-wise deficit requests.'}
             </p>
           </div>
         </div>
@@ -406,14 +306,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                       </div>
                     </div>
 
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => handleOpenOutreachModal(req)}
-                      style={{ padding: '8px 14px' }}
-                    >
-                      <Sparkles size={14} />
-                      <span>AI Donor Outreach</span>
-                    </button>
                   </div>
 
                   {/* Open Item Deficit Pill Matrix */}
@@ -569,169 +461,6 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* DONOR MATCH SCORING & OUTREACH MODAL */}
-      {selectedRequestForOutreach && (
-        <div className="modal-overlay" onClick={() => setSelectedRequestForOutreach(null)}>
-          <div className="modal-content" style={{ maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  <Sparkles size={14} />
-                  <span>Donor Compatibility Recommendation Model</span>
-                </div>
-                <h3 className="modal-title">Personalized Outreach: {selectedRequestForOutreach.reliefCamp}</h3>
-                <p className="card-subtitle">{selectedRequestForOutreach.gnDivision} &bull; {selectedRequestForOutreach.dsArea} ({selectedRequestForOutreach.severity} {selectedRequestForOutreach.disasterType})</p>
-              </div>
-              <button className="modal-close-btn" onClick={() => setSelectedRequestForOutreach(null)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {isAiAnalyzing ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <div className="spin" style={{ display: 'inline-block', marginBottom: '16px' }}>
-                  <Activity size={36} style={{ color: 'var(--accent-blue)' }} />
-                </div>
-                <h4 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', margin: '0 0 6px' }}>
-                  Calculating Donor Suitability...
-                </h4>
-                <p style={{ fontSize: '0.84rem', maxWidth: '420px', margin: '0 auto' }}>
-                  Applying the trained donor-request pipeline to registered donor attributes and this request for {selectedRequestForOutreach.dsArea}...
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Search & Bulk Toggle Toolbar */}
-                <div style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  marginBottom: '16px'
-                }}>
-                  <div className="search-box" style={{ width: '240px' }}>
-                    <Search className="search-icon" size={14} />
-                    <input
-                      type="text"
-                      className="form-input search-input"
-                      placeholder="Search suitable donors..."
-                      value={donorSearchQuery}
-                      onChange={(e) => setDonorSearchQuery(e.target.value)}
-                      style={{ padding: '6px 10px 6px 32px', fontSize: '0.82rem' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.82rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                      <input
-                        type="checkbox"
-                        checked={visibleDonors.length > 0 && visibleDonors.every((d) => selectedDonorIds.has(d.id || d.userId))}
-                        onChange={(e) => handleSelectAllVisible(e, visibleDonors)}
-                      />
-                      <span>Select All Top Matched</span>
-                    </label>
-                    <span style={{ color: 'var(--accent-blue)', fontWeight: '800' }}>
-                      {selectedDonorIds.size} Selected
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ranked Donors Table */}
-                <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', marginBottom: '20px' }}>
-                  <table className="custom-table" style={{ margin: 0 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '36px' }}></th>
-                        <th>Donor</th>
-                        <th>Proximity</th>
-                        <th>History</th>
-                        <th>Explainable Match Score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleDonors.map((donor) => {
-                        const dId = donor.id || donor.userId;
-                        const isChecked = selectedDonorIds.has(dId);
-                        return (
-                          <tr
-                            key={dId}
-                            onClick={() => !donor.alreadyTargeted && handleToggleDonorSelect(dId)}
-                            style={{
-                              backgroundColor: isChecked ? 'var(--accent-blue-subtle)' : 'transparent',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <td onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                disabled={donor.alreadyTargeted}
-                                onChange={() => handleToggleDonorSelect(dId)}
-                              />
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                                {donor.displayName}
-                              </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{donor.email}</div>
-                            </td>
-                            <td>
-                              {donor.isAreaMatch ? (
-                                <span className="badge badge-success">✓ Near {selectedRequestForOutreach.dsArea}</span>
-                              ) : (
-                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{donor.proximityTier}</span>
-                              )}
-                            </td>
-                            <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                              {donor.pastDonations} previous pledge(s)
-                            </td>
-                            <td>
-                              <span className={`badge ${donor.tier === 'High' ? 'badge-critical' : donor.tier === 'Medium' ? 'badge-medium' : 'badge-low'}`}>
-                                {donor.tier} ({donor.score}%)
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Footer Controls */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Match scores combine category, proximity, capacity, reliability, and recency; they are not response probabilities.
-                  </span>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setSelectedRequestForOutreach(null)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={handleSendEmails}
-                      disabled={sendingEmails || newOutreachCount === 0}
-                    >
-                      <Mail size={15} />
-                      <span>{sendingEmails ? 'Publishing...' : `Send Personalized Requests (${newOutreachCount})`}</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
