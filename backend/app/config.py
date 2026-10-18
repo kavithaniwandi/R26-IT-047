@@ -1,11 +1,5 @@
 
-from pathlib import Path
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Resolve the .env file relative to this file so the app starts correctly
-# regardless of the working directory (e.g. run from project root or backend/).
-_BASE_DIR = Path(__file__).resolve().parents[1]
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -13,10 +7,8 @@ class Settings(BaseSettings):
     MONGODB_URL: str | None = None
     DATABASE_NAME: str | None = None
 
-    # Security — default is a safe non-empty string so pydantic_settings never
-    # raises a ValidationError on startup when .env is absent.  The real value
-    # must be set in backend/.env before deploying.
-    SECRET_KEY: str = "change-this-in-production"
+    # Security
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
@@ -54,11 +46,9 @@ class Settings(BaseSettings):
     SMS_EMERGENCY_SHORTCODE: str = "1919"
     SMS_SENDER_NAME: str = "DISASTER-RELIEF"
 
-    model_config = SettingsConfigDict(
-        env_file=_BASE_DIR / ".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    class Config:
+        env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

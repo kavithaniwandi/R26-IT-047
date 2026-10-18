@@ -9,12 +9,27 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
 from typing import Iterable, Mapping, Optional
 
+import joblib
 import numpy as np
+import pandas as pd
 
 from app.models.disaster_donation_request import whole_required_quantity
 HYBRID_SCORE_NAME = "Explainable Hybrid Match Score"
+XGBOOST_MODEL_FILE = Path(__file__).resolve().parents[2] / "ml_models" / "disaster-donation-request" / "donor_xgboost_model.joblib"
+
+
+@lru_cache(maxsize=1)
+def load_donor_xgboost_package() -> Optional[dict]:
+    if not XGBOOST_MODEL_FILE.is_file():
+        return None
+    try:
+        return joblib.load(str(XGBOOST_MODEL_FILE))
+    except Exception:
+        return None
 HYBRID_WEIGHTS = {
     "category": 0.30,
     "proximity": 0.25,
@@ -43,13 +58,22 @@ CAPACITY_LEVELS = {"Low", "Medium", "High"}
 
 
 def model_information() -> dict:
-    return {
+    info = {
         "selectedModel": HYBRID_SCORE_NAME,
         "method": "weighted_rule_based",
         "scoreMeaning": "Explainable donor-request match score, not response probability",
         "weights": {name: round(weight * 100) for name, weight in HYBRID_WEIGHTS.items()},
         "futureModel": "CatBoostRanker after sufficient real outreach outcomes are collected",
     }
+    xgb_pkg = load_donor_xgboost_package()
+    if xgb_pkg:
+        info["mlModel"] = {
+            "name": xgb_pkg.get("model_name", "XGBoost Donor Matching & Handover Predictor"),
+            "algorithm": xgb_pkg.get("algorithm", "XGBClassifier"),
+            "version": xgb_pkg.get("version", "1.0.0"),
+            "metrics": xgb_pkg.get("metrics", {}),
+        }
+    return info
 
 
 def _normalise(value: object) -> str:
@@ -315,7 +339,48 @@ def predict_compatibility(
         "reliability": reliability,
         "recency": recency,
     }
-    score = sum(factors[name] * weight for name, weight in HYBRID_WEIGHTS.items())
+
+    xgb_pkg = load_donor_xgboost_package()
+    scoring_method = HYBRID_SCORE_NAME
+    if xgb_pkg and "model" in xgb_pkg:
+        try:
+            received_dates = []
+            for record in history_records:
+                if record.get("status") == "received":
+                    val = record.get("acceptedAt") or record.get("donatedAt")
+                    if isinstance(val, datetime):
+                        received_dates.append(val if val.tzinfo else val.replace(tzinfo=timezone.utc))
+            days_since_last = float(max(0, (datetime.now(timezone.utc) - max(received_dates)).days)) if received_dates else 90.0
+
+            df_input = pd.DataFrame([
+                {
+                    "donor_type": row["donor_type"],
+                    "preferred_category": row["preferred_category"],
+                    "capacity_level": row["capacity_level"],
+                    "disaster_type": row["disaster_type"],
+                    "severity": row["severity"],
+                    "affected_population": row["affected_population"],
+                    "required_category": row["required_category"],
+                    "distance_km": row["distance_km"],
+                    "required_quantity": row["required_quantity"],
+                    "category_match_score": row["category_match_score"],
+                    "capacity_match_score": row["capacity_match_score"],
+                    "proximity_score": row["proximity_score"],
+                    "past_fulfillment_rate": float(reliability),
+                    "days_since_last_donation": float(days_since_last),
+                }
+                for row in rows
+            ])
+            probs = xgb_pkg["model"].predict_proba(df_input)[:, 1]
+            score = float(np.average(probs, weights=weights))
+            scoring_method = "XGBoost Handover Predictor"
+        except Exception:
+            score = sum(factors[name] * weight for name, weight in HYBRID_WEIGHTS.items())
+            scoring_method = HYBRID_SCORE_NAME
+    else:
+        score = sum(factors[name] * weight for name, weight in HYBRID_WEIGHTS.items())
+        scoring_method = HYBRID_SCORE_NAME
+
     has_coordinates = details["distanceSource"] == "registered coordinates"
     resolved_count = sum(
         1 for record in history_records
@@ -325,7 +390,8 @@ def predict_compatibility(
     details.update({
         "priorityScore": round(score, 6),
         "compatibilityScore": round(score * 100, 1),
-        "scoringMethod": HYBRID_SCORE_NAME,
+        "scoringMethod": scoring_method,
+        "modelType": "XGBoost" if scoring_method.startswith("XGBoost") else "Hybrid",
         "categoryMatchScore": round(category, 3),
         "capacityMatchScore": round(capacity, 3),
         "proximityScore": round(proximity, 3),

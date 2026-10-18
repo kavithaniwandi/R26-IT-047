@@ -1,150 +1,102 @@
 {
-  "model_directory": "v3_retrained",
-  "source_files": [
-    "v3_retrained/manifest.json",
-    "v3_retrained/metrics.json"
-  ],
-  "manifest": {
-    "created_utc": "2026-10-16T13:09:59.016112+00:00",
-    "data_file": "Donation_Appeal_MASTER_FINAL_v8_7100.csv",
-    "data_sha256": "5074b1ebedc3f96118a982408b761b03af31b9e0cf4b398f6b190c742b7cedf4",
-    "load_info": {
-      "rows_in_file": 7100,
-      "rows_after_cleaning": 7100,
-      "rows_after_exact_duplicate_removal": 7100,
-      "corpus_rows": 7100
-    },
-    "development_rows": 5687,
-    "test_rows": 1413,
-    "protocol": {
-      "seed": 42,
-      "folds": 5,
-      "near_duplicate_threshold": 0.8,
-      "tolerance_margin": 0.005,
-      "splitter": "StratifiedGroupKFold",
-      "test_set": "first fold, used once, after tolerance selection",
-      "shipped_model_trained_on": "development rows only"
-    },
-    "environment": {
-      "python": "3.10.22",
-      "numpy": "1.26.4",
-      "scikit_learn": "1.7.2",
-      "scipy": "1.15.3",
-      "pandas": "2.3.3",
-      "joblib": "1.6.0"
-    },
-    "artifacts": {
-      "appeal_quality_vectorizer.joblib": "672e154faf8cc442bcd07e40dfbaabf7519ca0af2c4f386aa7e1afd6ae388a82",
-      "appeal_quality_vectorizer_si.joblib": "5a64568e9606858240236a9a4b33e4068b389232435dbbc68d0a6669f569a39c",
-      "appeal_quality_vectorizer_ta.joblib": "7e0e9804306cd70f536e70963edcd93b45b5cb1407cdebe08f078c4d34d4dd00",
-      "appeal_quality_svd_en.joblib": "28a772bc12e1788d13eeb7e7f7c205caeaf33c2e88eed496314daca233e2fdc3",
-      "appeal_quality_svd_si.joblib": "edf750c68744496605977187a8ff514fc694bf7502812637d84f6e15a5ed3f61",
-      "appeal_quality_svd_ta.joblib": "167f4694552c04213bb9c7663f54970334a868bdf1a99b81d2f3c285ca332c79",
-      "appeal_quality_scaler.joblib": "2e162af87d205ef0ae24f6b7a4cadcffc0ab819ca47f158dd441c7fdf06903ef",
-      "appeal_quality_classifier.joblib": "caea567eb1a680e131bb73487c411ed8d6631de1435eb625ab541c536242ab2e",
-      "appeal_quality_label_encoder.joblib": "fb813132fb962dd039264662eb0d7c5e6cf047142aa028dc8931db5c1a44a612",
-      "appeal_quality_regressor.joblib": "b5eab56b037711740371235b9c916de9f335c2437ce2f2c46077f58103116c57",
-      "appeal_quality_isotonic.joblib": "c8134b0a8a5a0016447e531aa9d560afae0d37cf4c54ed49070ed3dfd27732c1",
-      "appeal_quality_config.joblib": "76d849de6dcbe425ae9f22a20c7afb6104a7f58cb6b9d5b6d99bd57f7b077b34"
-    },
-    "selected_boundary_tolerance": 0.5,
-    "test_accuracy": 0.8287331917905166
+  "n": 1136,
+  "accuracy": 0.789612676056338,
+  "accuracy_wilson_95": {
+    "low": 0.7649549861527009,
+    "high": 0.8123182783947931
   },
-  "metrics": {
-    "test_accuracy": 0.8287331917905166,
-    "test_rows": 1413,
-    "test_rows_correct": 1171,
-    "test_label_matches_score_band": 0.8117480537862704,
-    "test_macro_f1": 0.8314497501025763,
-    "test_classifier_only_accuracy": 0.8124557678697806,
-    "test_score_band_only_accuracy": 0.7636234961075725,
-    "majority_class_baseline": 0.3559801840056617,
-    "test_score_mae": 0.3649508683194885,
-    "test_score_r2": 0.7933857204077247,
-    "per_language": {
-      "English": {
-        "n": 914,
-        "accuracy": 0.7680525164113785
+  "balanced_accuracy": 0.7924031037078838,
+  "macro_f1": 0.7955554557639942,
+  "per_class_recall": {
+    "low": 0.8454810495626822,
+    "medium": 0.6557788944723618,
+    "high": 0.8759493670886076
+  },
+  "mae": 0.3404375487579127,
+  "r_squared": 0.7180732143104434,
+  "per_language": {
+    "English": {
+      "n": 929,
+      "accuracy": 0.7621097954790097
+    },
+    "Sinhala": {
+      "n": 100,
+      "accuracy": 0.9
+    },
+    "Tamil": {
+      "n": 107,
+      "accuracy": 0.9252336448598131
+    }
+  },
+  "confusion_matrices": {
+    "overall": {
+      "true_low": {
+        "pred_low": 290,
+        "pred_medium": 51,
+        "pred_high": 2
       },
-      "Sinhala": {
-        "n": 250,
-        "accuracy": 0.948
+      "true_medium": {
+        "pred_low": 6,
+        "pred_medium": 261,
+        "pred_high": 131
       },
-      "Tamil": {
-        "n": 249,
-        "accuracy": 0.9317269076305221
+      "true_high": {
+        "pred_low": 1,
+        "pred_medium": 48,
+        "pred_high": 346
       }
     },
-    "per_class": {
-      "high": {
-        "precision": 0.7927927927927928,
-        "recall": 0.8747514910536779,
-        "f1-score": 0.831758034026465,
-        "support": 503.0
+    "English": {
+      "true_low": {
+        "pred_low": 242,
+        "pred_medium": 45,
+        "pred_high": 2
       },
-      "low": {
-        "precision": 0.8962264150943396,
-        "recall": 0.9245742092457421,
-        "f1-score": 0.9101796407185628,
-        "support": 411.0
+      "true_medium": {
+        "pred_low": 6,
+        "pred_medium": 186,
+        "pred_high": 128
       },
-      "medium": {
-        "precision": 0.8087557603686636,
-        "recall": 0.7034068136272545,
-        "f1-score": 0.752411575562701,
-        "support": 499.0
+      "true_high": {
+        "pred_low": 0,
+        "pred_medium": 40,
+        "pred_high": 280
       }
     },
-    "confusion_matrix_labels": [
-      "high",
-      "low",
-      "medium"
-    ],
-    "confusion_matrix": [
-      [
-        440,
-        6,
-        57
-      ],
-      [
-        5,
-        380,
-        26
-      ],
-      [
-        110,
-        38,
-        351
-      ]
-    ],
-    "cv_accuracy_mean": 0.8374286041295125,
-    "cv_accuracy_std": 0.007201981432223904,
-    "cv_fold_accuracy": [
-      0.8271391529818496,
-      0.8405017921146953,
-      0.8401060070671378,
-      0.8476527900797166,
-      0.8317432784041631
-    ],
-    "cv_classifier_only_fold_accuracy": [
-      0.808124459809853,
-      0.8082437275985663,
-      0.8242049469964664,
-      0.83348095659876,
-      0.8230702515177797
-    ],
-    "tolerance_sweep": {
-      "0.0": 0.7056444522595393,
-      "0.05": 0.7647265693687357,
-      "0.1": 0.7775628626692457,
-      "0.15": 0.7935642693863196,
-      "0.2": 0.8083347986636188,
-      "0.25": 0.8188851767188324,
-      "0.3": 0.8215227712326358,
-      "0.35": 0.8267979602602427,
-      "0.4": 0.8315456303850888,
-      "0.5": 0.8373483383154563
+    "Sinhala": {
+      "true_low": {
+        "pred_low": 21,
+        "pred_medium": 3,
+        "pred_high": 0
+      },
+      "true_medium": {
+        "pred_low": 0,
+        "pred_medium": 37,
+        "pred_high": 2
+      },
+      "true_high": {
+        "pred_low": 1,
+        "pred_medium": 4,
+        "pred_high": 32
+      }
     },
-    "selected_boundary_tolerance": 0.5
-  }
+    "Tamil": {
+      "true_low": {
+        "pred_low": 27,
+        "pred_medium": 3,
+        "pred_high": 0
+      },
+      "true_medium": {
+        "pred_low": 0,
+        "pred_medium": 38,
+        "pred_high": 1
+      },
+      "true_high": {
+        "pred_low": 0,
+        "pred_medium": 4,
+        "pred_high": 34
+      }
+    }
+  },
+  "source_predictions": "robustness\\outputs\\appeal_parity_predictions.csv"
 }

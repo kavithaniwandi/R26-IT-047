@@ -83,6 +83,10 @@ class DisasterRequestGroupOut(BaseModel):
     donations: List[DonationEntryOut]
     targetedDonorCount: int = 0
     lastOutreachAt: Optional[datetime] = None
+    compatibilityScore: Optional[float] = None
+    priorityScore: Optional[float] = None
+    matchReasons: Optional[List[str]] = None
+    factorScores: Optional[Dict[str, float]] = None
 
 
 class OfficerPledgeItemOut(BaseModel):
@@ -225,6 +229,10 @@ def format_mongo_doc(doc: dict) -> DisasterRequestGroupOut:
         donations=donations_out,
         targetedDonorCount=len(doc.get("targetedDonorIds", [])),
         lastOutreachAt=doc.get("lastOutreachAt"),
+        compatibilityScore=doc.get("compatibilityScore"),
+        priorityScore=doc.get("priorityScore"),
+        matchReasons=doc.get("matchReasons"),
+        factorScores=doc.get("factorScores"),
     )
 
 
@@ -327,6 +335,62 @@ async def _apply_officer_scope(
     return query
 
 
+async def _resolve_donor_profile_for_scoring(db: Optional[Session], user_id: str) -> Optional[dict]:
+    if db is not None and user_id.isdigit():
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if user:
+            return {
+                "donorId": str(user.id),
+                "name": user.full_name,
+                "email": user.email,
+                "phone": user.phone,
+                "address": user.address or "Kaduwela",
+                "source": "SQL account",
+                "donor_type": user.donor_type or "Individual",
+                "preferred_category": user.preferred_donation_category or "Dry Rations",
+                "capacity_level": user.capacity_level or "Medium",
+                "latitude": user.latitude,
+                "longitude": user.longitude,
+            }
+    if ObjectId.is_valid(user_id):
+        m_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        if m_user:
+            name = " ".join(
+                part for part in [m_user.get("firstName"), m_user.get("lastName")] if part
+            ) or m_user.get("full_name") or "Registered Donor"
+            return {
+                "donorId": str(m_user["_id"]),
+                "name": name,
+                "email": m_user.get("email"),
+                "phone": m_user.get("phone"),
+                "address": m_user.get("address") or "Kaduwela",
+                "source": "MongoDB account",
+                "donor_type": m_user.get("donorType") or m_user.get("donor_type") or "Individual",
+                "preferred_category": (
+                    m_user.get("preferredCategory")
+                    or m_user.get("preferredDonationCategory")
+                    or m_user.get("preferred_donation_category")
+                    or "Dry Rations"
+                ),
+                "capacity_level": m_user.get("capacityLevel") or m_user.get("capacity_level") or "Medium",
+                "latitude": m_user.get("latitude") or m_user.get("lat"),
+                "longitude": m_user.get("longitude") or m_user.get("lng"),
+            }
+    return {
+        "donorId": str(user_id),
+        "name": "Donor",
+        "email": None,
+        "phone": None,
+        "address": "Kaduwela",
+        "source": "Default profile",
+        "donor_type": "Individual",
+        "preferred_category": "Dry Rations",
+        "capacity_level": "Medium",
+        "latitude": None,
+        "longitude": None,
+    }
+
+
 # ── Route Endpoints ──────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[DisasterRequestGroupOut])
@@ -347,11 +411,8 @@ async def get_all_disaster_requests(
         # Keep this restriction server-side so it cannot be bypassed by changing
         # frontend query parameters.
         query["createdBy"] = _current_user.sub
-    if _current_user.role == "donor" and scope == "personalized":
-        donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
-        query["targetedDonorIds"] = {"$in": list(donor_aliases)}
-    elif _current_user.role == "donor":
-        donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub))
+    if _current_user.role == "donor":
+        donor_aliases = set(_sql_donor_alias_ids(db, _current_user.sub) if db else [_current_user.sub])
     if dsArea:
         query["dsArea"] = dsArea
     if status_filter:
@@ -362,6 +423,55 @@ async def get_all_disaster_requests(
     for document in docs:
         await _persist_whole_required_quantities(document)
     if _current_user.role == "donor":
+        donor_profile = await _resolve_donor_profile_for_scoring(db, _current_user.sub)
+        donor_history = []
+        if donor_profile:
+            norm_email = _normalise(donor_profile.get("email"))
+            history_docs = await disaster_requests_collection.find(
+                {"donations.0": {"$exists": True}}, {"donations": 1}
+            ).to_list(length=500)
+            for h_doc in history_docs:
+                for donation in h_doc.get("donations", []):
+                    d_id = str(donation.get("donorId", ""))
+                    d_email = _normalise(donation.get("donorEmail"))
+                    if d_id in donor_aliases or (norm_email and d_email == norm_email):
+                        donor_history.append(donation)
+
+        for document in docs:
+            if donor_profile:
+                _prio, details = predict_compatibility(donor_profile, [document], donor_history)
+                if details.get("eligible"):
+                    distance_km = float(details.get("distanceKm", 0.0))
+                    distance_source = details.get("distanceSource", "area")
+                    reasons = [
+                        f"{details.get('preferredCategory', 'General')} preference match; {details.get('capacityLevel', 'Standard')} capacity",
+                        f"Proximity: {distance_km:g} km from {distance_source}",
+                    ]
+                    document["compatibilityScore"] = float(details.get("compatibilityScore", 0.0))
+                    document["priorityScore"] = float(details.get("priorityScore", 0.0))
+                    document["matchReasons"] = reasons
+                    document["factorScores"] = details.get("factorScores", {})
+                else:
+                    document["compatibilityScore"] = 0.0
+                    document["priorityScore"] = 0.0
+                    document["matchReasons"] = [f"Missing {', '.join(details.get('missing', []))}"] if details.get("missing") else []
+                    document["factorScores"] = {}
+            else:
+                document["compatibilityScore"] = 0.0
+                document["priorityScore"] = 0.0
+                document["matchReasons"] = []
+                document["factorScores"] = {}
+
+        # For scope="personalized" ("For You" tab), sort requests by ML match score and limit to top 10!
+        if scope == "personalized":
+            docs.sort(
+                key=lambda d: (
+                    -float(d.get("priorityScore") or 0.0),
+                    -(d.get("createdAt").timestamp() if isinstance(d.get("createdAt"), datetime) else 0)
+                )
+            )
+            docs = docs[:10]
+
         docs = [
             {
                 **document,

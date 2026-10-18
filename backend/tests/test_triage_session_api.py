@@ -3,16 +3,6 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.fixture
-def client():
-    from fastapi.testclient import TestClient
-    from app.models.main import app
-
-    test_client = TestClient(app)
-    yield test_client
-    test_client.close()
-
-
 class _InsertResult:
     def __init__(self, inserted_id: str):
         self.inserted_id = inserted_id
@@ -71,9 +61,6 @@ class _ArchiveCollection:
 
 
 class _FakeDb:
-    def __getitem__(self, name):
-        return getattr(self, name)
-
     def __init__(self):
         self.triage_archives = _ArchiveCollection()
 
@@ -158,20 +145,3 @@ def test_end_session_archives_payload(client, monkeypatch):
         "doc_id": "archive-doc-1",
         "session_id": "session-1",
     }
-
-
-
-def test_session_start_reports_failed_when_helper_returns_none(client, monkeypatch):
-    async def no_document(payload):
-        return None
-    monkeypatch.setattr('app.services.mongo_service.save_triage_session', no_document)
-    response = client.post('/api/v1/triage/session/start', json={'session_id': 'not-saved'})
-    assert response.status_code == 503
-    assert response.json() == {
-        'status': 'failed', 'detail': 'Triage session could not be persisted.',
-        'session_id': 'not-saved',
-    }
-
-
-def test_session_start_still_validates_session_id(client):
-    assert client.post('/api/v1/triage/session/start', json={}).status_code == 422

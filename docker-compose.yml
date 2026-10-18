@@ -1,0 +1,80 @@
+# ============================================================
+# docker-compose.yml
+# Services: MySQL 8.0 · FastAPI Backend · Adminer (DB GUI)
+# ============================================================
+
+services:
+
+  # MySQL 8.0 Database
+  db:
+    image: mysql:8.0
+    container_name: disaster_relief_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-disaster_relief}
+      MYSQL_USER: ${MYSQL_USER:-relief_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-relief_pass}
+    ports:
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - relief_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: app
+    container_name: disaster_relief_backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-relief_user}:${MYSQL_PASSWORD:-relief_pass}@db:3306/${MYSQL_DATABASE:-disaster_relief}
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - relief_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Adminer - Web-based MySQL GUI
+  adminer:
+    image: adminer:latest
+    container_name: disaster_relief_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - relief_net
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  relief_net:
+    driver: bridge

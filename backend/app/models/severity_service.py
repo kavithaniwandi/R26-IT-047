@@ -315,45 +315,61 @@ def _build_queue_policy(
     source: str = "TRIAGE",
 ) -> dict:
     source = source.upper()
-    should_queue = True
 
     if severity in {"CRITICAL", "HIGH"}:
         reason = "auto_triage"
+        threshold = 80 if severity == "CRITICAL" else 50
         title = f"{severity} risk - {source} review"
         description = (
             f"Auto-triage assigned {severity} severity "
-            f"(risk score {risk_score}). Queued for {source} review "
-            "in severity order."
+            f"(risk score {risk_score}). Meets prompt review threshold "
+            f"for {source} cases."
         )
         reason_text = (
-            f"Included: registered {source} patient with {severity} severity "
-            f"and risk {risk_score}."
+            f"Included: {severity} severity + risk {risk_score} >= "
+            f"{threshold} ({source})."
         )
         action = "Review and confirm severity or escalate as needed."
         should_queue = True
-    elif severity == "MEDIUM":
+    elif severity == "MEDIUM" and risk_score >= 40:
         reason = "auto_triage"
+        threshold = 40
         title = f"MEDIUM risk - {source} review"
         description = (
             "Auto-triage assigned MEDIUM severity "
-            f"(risk score {risk_score}). Queued after HIGH/CRITICAL "
-            f"and before LOW {source} cases."
+            f"(risk score {risk_score}). Meets review threshold "
+            f"for {source} cases."
         )
         reason_text = (
-            f"Included: registered {source} patient with MEDIUM severity "
-            f"and risk {risk_score}."
+            f"Included: MEDIUM severity + risk {risk_score} >= "
+            f"{threshold} ({source})."
         )
         action = "Review and confirm severity within the standard workflow."
         should_queue = True
-    else:
-        reason = "auto_triage"
-        title = f"LOW risk - {source} review"
+    elif severity == "LOW" and matched_rules:
+        reason = "audit_sample"
+        title = f"Triage audit - LOW {source} sample"
         description = (
-            f"Auto-triage assigned LOW severity with risk score {risk_score}. "
-            "Queued after CRITICAL, HIGH and MEDIUM cases."
+            f"Audit sample from {source} stream. "
+            f"Auto-classified as LOW (risk score {risk_score}). "
+            "Verify classification and documentation quality."
         )
-        reason_text = f"Included: every registered {source} patient enters the queue, including LOW severity."
-        action = "Review in queue order after higher-severity cases."
+        reason_text = (
+            f"Included: LOW severity audit sample with matched rule evidence "
+            f"({source})."
+        )
+        action = "Verify classification as an audit/sample item."
+        should_queue = True
+    else:
+        reason = "not_queued"
+        title = "No priority queue item created"
+        description = (
+            f"Auto-triage assigned {severity} severity with risk score {risk_score}. "
+            "Does not meet the threshold for queue inclusion."
+        )
+        reason_text = f"Excluded: {severity} severity + risk {risk_score} below threshold."
+        action = "No queue action required."
+        should_queue = False
 
     if critical_trigger:
         reason = "rule_flag"
@@ -386,7 +402,9 @@ def _display_note(severity: str, risk_score: int, reason: str, source: str) -> s
         return f"Risk score {risk_score} / 100 - Prompt clinical review required."
     if severity == "MEDIUM":
         return f"Risk score {risk_score} / 100 - Standard clinical review workflow."
-    return f"Risk score {risk_score} / 100 - Queued after higher-severity cases."
+    if reason == "audit_sample":
+        return f"Risk score {risk_score} / 100 - Audit sample, verify classification."
+    return f"Risk score {risk_score} / 100 - No queue action required."
 
 
 def classify_note(

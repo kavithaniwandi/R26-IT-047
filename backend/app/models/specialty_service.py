@@ -51,92 +51,8 @@ def _keyword_matches(text: str, keyword: str) -> list[tuple[int, int]]:
     return [
         (match.start(), match.end())
         for match in pattern.finditer(text)
-        if _is_current_patient_evidence(text, match.start(), match.end())
+        if not is_span_negated(text, match.start())
     ]
-
-
-def _is_current_patient_evidence(text: str, start: int, end: int) -> bool:
-    """Conservative local context filtering; does not alter severity text handling."""
-    prefix = re.split(r"[.;,!?]|\b(?:but|however|now|current|currently|today)\b", text[:start])[-1]
-    if re.match(r"\s+(?:(?:is|are|was|were)\s+)?(?:absent|not present|denied|ruled out|resolved)\b", text[end:]):
-        return False
-    if is_span_negated(prefix, len(prefix)):
-        return False
-    # Extend negation across coordinated lists without crossing a new assertion.
-    negation = re.search(r"\b(?:no|not|denies|deny|denied|without|negative for)\b(.*)$", prefix)
-    if negation and re.search(r"\b(?:or|and|nor)\b", negation.group(1)):
-        if not re.search(r"\b(?:with|has|reports|developed|presents)\b", negation.group(1)):
-            return False
-    if re.search(r"\b(?:family history of|history of|previously|previous|past|resolved|childhood)\b", prefix):
-        return False
-    if re.search(r"\bknown\s*$", prefix):
-        return False
-    if re.search(r"\b(?:my|his|her|their|patient s)\s*$", prefix) and re.match(
-        r"(?:child|son|daughter)\b", text[start:]
-    ):
-        return False
-    relative = re.search(
-        r"\b(?:(?:mother|father|sister|brother|wife|husband|partner)|(?:my|his|her|their|patient s)\s+(?:child|son|daughter))\s+(?:has|had|with|reports|is|was)\b",
-        prefix,
-    )
-    if relative and not re.search(r"\b(?:patient|he|she)\s+(?:has|reports|is)\b", prefix[relative.end():]):
-        return False
-    return True
-
-
-def _routine_phrase_preferences_allowed(severity: str, flags: set[str], vitals: dict | None) -> bool:
-    if severity not in {"LOW", "MEDIUM"} or flags:
-        return False
-    # Reuse the model's existing abnormal-vital feature boundaries; do not
-    # introduce new clinical thresholds or alter its severity decision.
-    from app.models.severity_pipeline import VITAL_THRESHOLDS
-    import operator
-
-    comparisons = {"<": operator.lt, ">": operator.gt, ">=": operator.ge, "==": operator.eq}
-    hr = _numeric_vital(vitals, "vital_hr")
-    if hr is not None and hr > HR_EMERGENCY_BOOST_THRESHOLD:
-        return False
-    for name, (key, comparison, threshold) in VITAL_THRESHOLDS.items():
-        if name == "vf_pain_none":
-            continue
-        value = _numeric_vital(vitals, key)
-        if value is not None and comparisons[comparison](value, threshold):
-            return False
-    return True
-
-
-def _rule_keyword_hits(text: str, rule: dict, rules: dict, prefer_specific: bool = False) -> list[str]:
-    """Count an equivalent clinical signal once per specialty, longest phrase first."""
-    groups = {
-        normalize_clinical_text(term): index
-        for index, terms in enumerate(rules.get("equivalent_keywords") or [])
-        for term in terms
-    }
-    hits = []
-    seen = set()
-    occupied = []
-    for keyword in sorted(rule.get("keywords") or [], key=lambda term: (-len(term), term)):
-        matches = _keyword_matches(text, keyword)
-        if prefer_specific:
-            specific_spans = [
-                span
-                for preference in rules.get("specific_phrase_preferences") or []
-                if preference["generic_specialty"] == rule["specialty"] and preference["generic"] == keyword
-                for span in _keyword_matches(text, preference["specific"])
-            ]
-            if matches and all(any(a <= start and end <= b for a, b in specific_spans) for start, end in matches):
-                continue
-        signal = groups.get(normalize_clinical_text(keyword), keyword)
-        if signal in seen:
-            continue
-        for start, end in matches:
-            if any(start < used_end and end > used_start for used_start, used_end in occupied):
-                continue
-            hits.append(keyword)
-            seen.add(signal)
-            occupied.append((start, end))
-            break
-    return hits
 
 
 def _active_red_flags(red_flags: Any) -> set[str]:
@@ -175,7 +91,7 @@ def _add_score(
 def _matched_terms(text: str, terms: list[str] | tuple[str, ...] | set[str]) -> list[str]:
     matches: list[str] = []
     occupied: list[tuple[int, int]] = []
-    for term in sorted(terms, key=lambda value: (-len(str(value)), str(value))):
+    for term in terms:
         term_text = str(term)
         for start, end in _keyword_matches(text, term_text):
             if any(start < used_end and end > used_start for used_start, used_end in occupied):
@@ -209,45 +125,36 @@ def suggest_specialty(
     vitals: dict | None = None,
 ) -> dict:
     rules = _load_rules()
-    # Mapped model phrases can expand synonyms or lose negation/context. Raw patient
-    # text remains authoritative whenever it is available.
-    raw_parts = [part.strip() for part in (symptoms or "", clinical_note or "") if part.strip()]
-    text = normalize_clinical_text(". ".join(raw_parts or mapped_complaints or []))
+    text = normalize_clinical_text(
+        " ".join(
+            item
+            for item in [
+                symptoms or "",
+                clinical_note or "",
+                " ".join(mapped_complaints or []),
+            ]
+            if item
+        )
+    )
     normalized_severity = str(severity).upper()
     active_flags = _active_red_flags(red_flags)
-    prefer_specific = _routine_phrase_preferences_allowed(normalized_severity, active_flags, vitals)
     scores: dict[str, float] = {}
     matched_by_specialty: dict[str, list[str]] = {}
     clinical_hit_specialties: set[str] = set()
-    review_reasons: list[str] = []
-    pediatric = (rules.get("age_boosts") or {}).get("pediatric") or {}
-    pediatric_cutoff = int(pediatric.get("age_lt", 12))
-    pediatric_terms = ("child", "children", "paediatric", "pediatric", "infant", "toddler", "newborn")
-    pediatric_context = any(_keyword_matches(text, term) for term in pediatric_terms)
-    pediatric_eligible = age < pediatric_cutoff if age is not None else pediatric_context
-    if age is not None and age >= pediatric_cutoff and pediatric_context:
-        review_reasons.append("Patient age conflicts with pediatric wording; confirm whose symptoms are described.")
-    elif age is None and pediatric_context:
-        review_reasons.append("Pediatric wording found but patient age is missing; confirm age.")
     cardiac_pattern, cardiac_features, cardiac_config = _cardiac_chest_pain_pattern(text, rules)
 
     for rule in rules.get("rules") or []:
         specialty = rule["specialty"]
-        if specialty == PEDIATRIC_LABEL and not pediatric_eligible:
-            continue
         weight = float(rule.get("weight", 1.0))
-        keyword_hits = _rule_keyword_hits(text, rule, rules, prefer_specific)
-        for keyword in keyword_hits:
-            _add_score(scores, matched_by_specialty, clinical_hit_specialties, specialty, weight, keyword)
+        for keyword in rule.get("keywords") or []:
+            if _keyword_matches(text, keyword):
+                _add_score(scores, matched_by_specialty, clinical_hit_specialties, specialty, weight, keyword)
 
         flag_hits = active_flags.intersection(set(rule.get("red_flags") or []))
         if flag_hits:
+            boost = float(rule.get("red_flag_weight", 1.0)) * len(flag_hits)
             for flag in sorted(flag_hits):
-                flag_weight = float(rule.get("red_flag_weight", 1.0))
-                related = set((rules.get("red_flag_keywords") or {}).get(flag, []))
-                # A checkbox and the same symptom in prose are one observation.
-                already_scored = weight if related.intersection(keyword_hits) else 0.0
-                _add_score(scores, matched_by_specialty, clinical_hit_specialties, specialty, max(0.0, flag_weight - already_scored), flag)
+                _add_score(scores, matched_by_specialty, clinical_hit_specialties, specialty, boost / len(flag_hits), flag)
 
     if cardiac_pattern:
         _add_score(
@@ -347,7 +254,7 @@ def suggest_specialty(
     default_primary = rules.get("default_primary", GENERAL_PRACTICE_LABEL)
     fallback = not bool(clinical_hit_specialties - {GERIATRIC_LABEL}) and not non_geriatric_scores
 
-    if fallback and normalized_severity != "CRITICAL":
+    if fallback:
         return {
             "primary": default_primary,
             "secondary": [GERIATRIC_LABEL] if scores.get(GERIATRIC_LABEL) else [],
@@ -355,9 +262,6 @@ def suggest_specialty(
             "confidence": 0.1,
             "reason": "No specific specialty keywords found",
             "fallback": True,
-            "evidence": {GERIATRIC_LABEL: matched_by_specialty[GERIATRIC_LABEL]} if scores.get(GERIATRIC_LABEL) else {},
-            "evidence_scores": {key: round(value, 2) for key, value in scores.items()},
-            "review_reasons": review_reasons,
         }
 
     ranked = sorted(non_geriatric_scores, key=lambda item: (-non_geriatric_scores[item], item))
@@ -384,7 +288,7 @@ def suggest_specialty(
     if normalized_severity == "CRITICAL":
         emergency = rules.get("critical_primary", EMERGENCY_LABEL)
         primary = emergency
-        if clinical_primary != emergency and scores.get(clinical_primary, 0.0) > 0:
+        if clinical_primary != emergency:
             secondary.append(clinical_primary)
     elif normalized_severity == "LOW" and clinical_primary not in {PEDIATRIC_LABEL, OBSTETRIC_LABEL}:
         primary = default_primary
@@ -419,17 +323,9 @@ def suggest_specialty(
             if keyword not in ordered_keywords:
                 ordered_keywords.append(keyword)
 
-    displayed = [primary, *secondary[:2]]
-    evidence = {specialty: list(dict.fromkeys(matched_by_specialty.get(specialty, []))) for specialty in displayed}
-    reason = f"{primary}: " + ", ".join(evidence.get(primary) or ["highest supported specialty score"])
+    reason = f"Matched {primary} from clinical keywords"
     if str(severity).upper() == "CRITICAL" and primary == rules.get("critical_primary", "Emergency Medicine"):
         reason = "CRITICAL severity defaults advisory primary to Emergency Medicine"
-        evidence[primary] = list(dict.fromkeys(["CRITICAL severity", *evidence[primary]]))
-    elif primary == default_primary and clinical_primary != primary:
-        reason = f"LOW severity uses General Practice for initial review; {clinical_primary} is supported by the listed evidence."
-
-    if len(ranked) > 1 and non_geriatric_scores[ranked[0]] == non_geriatric_scores[ranked[1]]:
-        review_reasons.append("Top specialty evidence scores are tied; review the recommendation.")
 
     return {
         "primary": primary,
@@ -438,7 +334,4 @@ def suggest_specialty(
         "confidence": _confidence(top_score, total_score, False),
         "reason": reason,
         "fallback": False,
-        "evidence": evidence,
-        "evidence_scores": {key: round(value, 2) for key, value in scores.items()},
-        "review_reasons": review_reasons,
     }

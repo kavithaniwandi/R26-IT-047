@@ -1,0 +1,47 @@
+{
+  "label_classes": [
+    "high",
+    "low",
+    "medium"
+  ],
+  "boundary_tolerance": 0.25,
+  "lsa_components": {
+    "en": 150,
+    "si": 50,
+    "ta": 50
+  },
+  "scaler_feature_names": [
+    "log_text_len",
+    "log_word_count",
+    "avg_word_len",
+    "sentence_count",
+    "avg_sent_len",
+    "exclamation_count",
+    "question_count",
+    "digit_ratio",
+    "upper_ratio",
+    "has_currency",
+    "has_donate_word",
+    "is_sinhala",
+    "is_tamil"
+  ],
+  "model_version": "paper_protocol_grouped_v1",
+  "trained_at": "2026-10-09T09:45:40.440050+00:00",
+  "training_rows": 4491,
+  "corpus_rows_after_thinning": 5627,
+  "test_rows": 1136,
+  "seed": 42,
+  "split": "StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42), first fold as test",
+  "near_duplicate_threshold": 0.8,
+  "non_english_augmented_rows_sampled": 979,
+  "metrics": {
+    "n_corpus": 5627,
+    "n_train": 4491,
+    "n_test": 1136,
+    "accuracy": 0.789612676056338,
+    "balanced_accuracy": 0.7924031037078838,
+    "macro_f1": 0.7955554557639942,
+    "mae": 0.3404375487579127,
+    "r2": 0.7180732143104434
+  }
+}

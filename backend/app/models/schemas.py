@@ -1,4 +1,4 @@
-from typing import Literal, Any
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,7 +16,6 @@ class AppealQualityRequest(BaseModel):
 
 class AppealQualityResponse(BaseModel):
     score: float = Field(..., ge=1.0, le=5.0)
-    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     label: Literal["low", "medium", "high"]
     probabilities: dict[Literal["low", "medium", "high"], float]
 
@@ -24,7 +23,6 @@ class AppealQualityResponse(BaseModel):
 class QualityScoreRequest(BaseModel):
     appeal_text: str = Field(..., min_length=1)
     language: str = "English"
-    length_category: str = "short"
 
     @field_validator("appeal_text")
     @classmethod
@@ -34,28 +32,9 @@ class QualityScoreRequest(BaseModel):
         return value
 
 
-class GuidanceFields(BaseModel):
-    classifier_top_class: str | None = None
-    classifier_confidence: float = 0.0
-    label_agreement: bool = False
-    agreement_note: str | None = None
-    confidence_level: str = "low"
-    top_classes: list[dict[str, Any]] = Field(default_factory=list)
-    suggestions: list[dict[str, Any]] = Field(default_factory=list)
-    gap_statistics_available: bool = False
-    dataset_gap_status: str = "unavailable"
-    suggestions_ms: float = 0.0
-    length_warning: str | None = None
-    word_count: int = 0
-
-
-class QualityScoreResponse(GuidanceFields):
+class QualityScoreResponse(BaseModel):
     score: float = Field(..., ge=1.0, le=5.0)
-    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     status: Literal["low", "medium", "high"]
-    final_label: Literal["low", "medium", "high"]
-    predicted_class: str | None = None
-    class_probs: dict[str, float] = Field(default_factory=dict)
     method: str
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
@@ -74,46 +53,24 @@ class GenerateAppealRequest(BaseModel):
     length_category: str = "short"
 
 
-class GenerateNextAppealVariantRequest(GenerateAppealRequest):
-    style_index: int = Field(..., ge=1, le=2, strict=True)
-
-
 class GenerateAppealResponse(BaseModel):
     appeal_text: str
 
 
-class AppealVariant(GuidanceFields):
-    generation_ms: int = Field(default=0, ge=0)
+class AppealVariant(BaseModel):
     model: str
     temperature: float
     style: str | None = None
     appeal_text: str
     quality_label: str
-    final_label: str
     quality_score: float
-    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
     confidence_display: str
-    predicted_class: str | None = None
-    class_probs: dict[str, float] = Field(default_factory=dict)
-    generator_model: str | None = None
-    generator_status: str = "live"
-    generator_error: str | None = None
-    generation_ms_shared: bool = False
-    scoring_ms: float = 0.0
-    gemini_calls_used: int = 0
-    partial: bool = False
 
 
 class GenerateAppealVariantsResponse(BaseModel):
     variants: list[AppealVariant]
-    recommended: AppealVariant | None = None
-    remaining_improve_uses: int = 0
-    gemini_calls_used: int = 0
-    partial: bool = False
-    generation_error: str | None = None
-    retry_after_seconds: int = 0
 
 
 class SeverityClassifyRequest(BaseModel):
@@ -144,9 +101,6 @@ class SuggestedSpecialty(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0)
     reason: str
     fallback: bool = False
-    evidence: dict[str, list[str]] = Field(default_factory=dict)
-    evidence_scores: dict[str, float] = Field(default_factory=dict)
-    review_reasons: list[str] = Field(default_factory=list)
 
 
 class ComplaintMapping(BaseModel):

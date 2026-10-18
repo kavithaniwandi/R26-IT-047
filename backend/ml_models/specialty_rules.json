@@ -24,35 +24,6 @@
   "default_primary": "General Practice",
   "critical_primary": "Emergency Medicine",
   "secondary_threshold": 1.5,
-  "specific_phrase_preferences": [
-    {
-      "specific": "mild headache",
-      "generic": "headache",
-      "generic_specialty": "Neurological"
-    }
-  ],
-  "red_flag_keywords": {
-    "breathing_difficulty": ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "severe respiratory distress"],
-    "chest_pain": ["chest pain"],
-    "focal_neurologic_deficit": ["focal neurologic deficit", "neurological deficit", "arm weakness", "weakness"],
-    "active_bleeding": ["bleeding", "heavy bleeding", "hemorrhage", "haemorrhage"],
-    "syncope": ["syncope"],
-    "seizure": ["seizure"]
-  },
-  "equivalent_keywords": [
-    ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "severe respiratory distress"],
-    ["hypoxia", "hypoxic"],
-    ["wheeze", "wheezing"],
-    ["palpitation", "palpitations"],
-    ["diarrhoea", "diarrhea"],
-    ["diabetes", "diabetic"],
-    ["forearm deformity", "deformity"],
-    ["infected wound", "wound"],
-    ["heavy bleeding", "bleeding"],
-    ["medication refill", "ran out of medication", "ran out of meds", "needs refill"],
-    ["altered consciousness", "altered mental status", "confusion", "confused", "drowsy"],
-    ["pregnant", "pregnancy", "weeks pregnant"]
-  ],
   "cardiac_chest_pain_pattern": {
     "reason": "Chest pain with ischemic features should remain advisory-cardiac even when breathlessness or hypoxia is also present.",
     "required_terms": ["chest pain"],
@@ -76,7 +47,7 @@
     },
     {
       "specialty": "Respiratory",
-      "keywords": ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "cyanosis", "hypoxia", "hypoxic", "wheeze", "wheezing", "asthma", "cough", "pneumonia"],
+      "keywords": ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "cyanosis", "spo2", "hypoxia", "hypoxic", "wheeze", "wheezing", "asthma", "cough", "pneumonia"],
       "weight": 1.4,
       "red_flags": ["breathing_difficulty"],
       "red_flag_weight": 2.0

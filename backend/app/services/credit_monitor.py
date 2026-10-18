@@ -1,8 +1,6 @@
 import json
-from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from datetime import datetime, timezone
 from pathlib import Path
-from threading import RLock
 
 from app.models.config import settings
 
@@ -10,7 +8,6 @@ from app.models.config import settings
 STATE_FILE = Path(__file__).resolve().with_name("credit_monitor_state.json")
 
 _key_state: dict[str, dict] = {}
-_STATE_LOCK = RLock()
 
 
 def _default_state() -> dict:
@@ -63,7 +60,7 @@ def _gemini_keys_indexed() -> list[tuple[int, str]]:
         (10, getattr(settings, "GEMINI_API_KEY10", "")),
         (11, getattr(settings, "GEMINI_API_KEY11", "")),
     ]
-    return [(index, key) for index, key in keys if key or _key_label(index) in _key_state]
+    return [(index, key) for index, key in keys if key]
 
 
 def _provider_state(provider: str) -> dict:
@@ -72,73 +69,13 @@ def _provider_state(provider: str) -> dict:
     return _key_state[provider]
 
 
-def is_exhausted(provider: str) -> bool:
-    state = _key_state.get(provider, {})
-    if state.get("retry_after"):
-        try:
-            deadline = datetime.fromisoformat(state["retry_after"])
-            if datetime.now(timezone.utc) < deadline:
-                return True
-        except (ValueError, TypeError):
-            pass
-        state.update(retry_after=None, exhausted=False, exhausted_at=None)
-        _save_state()
-    if not state.get("exhausted", False):
-        return False
-    now = datetime.now(timezone.utc)
-    try:
-        exhausted_at = datetime.fromisoformat(state["exhausted_at"])
-        if exhausted_at.tzinfo is None:
-            exhausted_at = exhausted_at.replace(tzinfo=timezone.utc)
-    except (KeyError, TypeError, ValueError):
-        # Legacy records get a finite cooldown instead of remaining dead forever.
-        state["exhausted_at"] = now.isoformat()
-        _save_state()
-        return True
-    try:
-        local = exhausted_at.astimezone(ZoneInfo("America/Los_Angeles"))
-        deadline = (local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        deadline = deadline.astimezone(timezone.utc)
-    except (ZoneInfoNotFoundError, ValueError, OverflowError, OSError):
-        deadline = exhausted_at + timedelta(hours=24)
-    if now < deadline:
-        return True
-    state["exhausted"] = False
-    state["exhausted_at"] = None
-    _save_state()
-    return False
-
-
 def record_success(provider: str) -> None:
     """Record a successful provider generation in persistent state."""
     state = _provider_state(provider)
     state["calls"] += 1
     state["exhausted"] = False
     state["last_success"] = datetime.now(timezone.utc).isoformat()
-    state.update(last_status="200", last_checked=state["last_success"], retry_after=None, exhausted_at=None)
     _save_state()
-
-
-def record_result(provider: str, status: str, cooldown_seconds: float | None = None) -> None:
-    """Persist fixed diagnostics only, never provider bodies or credentials."""
-    with _STATE_LOCK:
-        state = _provider_state(provider)
-        now = datetime.now(timezone.utc)
-        today = now.date().isoformat()
-        if state.get("usage_date") != today:
-            state.update(calls=0, failures=0, attempts_today=0, usage_date=today)
-        state["attempts_today"] = state.get("attempts_today", 0) + 1
-        state.update(last_status=str(status), last_checked=now.isoformat())
-        if str(status) == "200":
-            state["calls"] += 1
-            state.update(last_success=now.isoformat(), exhausted=False, exhausted_at=None, retry_after=None)
-        else:
-            state["failures"] += 1
-            state["last_failure"] = str(status)
-            if cooldown_seconds:
-                state.update(exhausted=True, exhausted_at=now.isoformat(),
-                             retry_after=(now + timedelta(seconds=cooldown_seconds)).isoformat())
-        _save_state()
 
 
 def record_failure(provider: str, reason: str = "") -> None:
@@ -163,7 +100,6 @@ def reset_provider(provider: str) -> None:
     state = _provider_state(provider)
     state["exhausted"] = False
     state["exhausted_at"] = None
-    state["retry_after"] = None
     state["failures"] = 0
     _save_state()
     print(f"[CreditMonitor] {provider} manually reset")
@@ -180,42 +116,31 @@ def reset_all() -> None:
 def get_status() -> dict:
     """Return current provider health and usage state."""
     gemini_keys = _gemini_keys_indexed()
-    for index, _ in gemini_keys:
-        is_exhausted(_key_label(index))
     hf_configured = bool(getattr(settings, "HF_API_KEY", None))
 
     providers = []
     for index, _key in gemini_keys:
         label = _key_label(index)
         state = _key_state.get(label, {})
-        current_usage = state.get("usage_date", datetime.now(timezone.utc).date().isoformat()) == datetime.now(timezone.utc).date().isoformat()
 
         if state.get("exhausted", False):
-            status_label = "Rate limited" if state.get("last_status") == "429" else "Rejected" if state.get("last_status") in ("401", "403") else "Exhausted"
-        elif state.get("last_status") == "200":
-            status_label = "Last request OK"
-        elif state.get("last_status") in ("401", "403", "429"):
-            status_label = "Retry available"
-        elif state.get("last_status"):
-            status_label = "Last request failed"
+            status_label = "Exhausted"
+        elif state.get("calls", 0) > 0:
+            status_label = "Active"
         else:
-            status_label = "Not checked"
+            status_label = "Standby"
 
         providers.append({
             "provider": label.upper(),
             "type": "gemini",
             "configured": True,
-            "calls_today": state.get("calls", 0) if current_usage else 0,
+            "calls_today": state.get("calls", 0),
             "failures": state.get("failures", 0),
             "exhausted": state.get("exhausted", False),
             "status_label": status_label,
             "exhausted_at": state.get("exhausted_at"),
             "last_success": state.get("last_success"),
             "last_failure": state.get("last_failure"),
-            "last_status": state.get("last_status"),
-            "last_checked": state.get("last_checked"),
-            "retry_after": state.get("retry_after"),
-            "attempts_today": state.get("attempts_today", 0) if current_usage else 0,
         })
 
     hf_state = _key_state.get("huggingface-featherless", {})
@@ -249,17 +174,16 @@ def get_status() -> dict:
 
     if gemini_exhausted and hf_exhausted:
         health = "critical"
-        message = "All configured providers have recorded failures; a local template may be used."
+        message = "All providers exhausted - only template fallback available"
     elif gemini_exhausted:
         health = "warning"
-        message = "All Gemini keys are currently marked unavailable; this is recorded status, not a live quota check."
+        message = "All Gemini keys exhausted - running on HuggingFace fallback"
     elif any(_key_state.get(_key_label(index), {}).get("exhausted", False) for index, _key in gemini_keys):
         health = "degraded"
-        message = "Some keys are unavailable; other configured keys can be tried. Status reflects recorded requests."
+        message = "Some Gemini keys exhausted - remaining keys active"
     else:
         health = "healthy"
-        health = "healthy" if any(_key_state.get(_key_label(index), {}).get("last_status") == "200" for index, _ in gemini_keys) else "unknown"
-        message = "Status reflects recorded requests, not a live quota check."
+        message = "All providers operational"
 
     return {
         "health": health,

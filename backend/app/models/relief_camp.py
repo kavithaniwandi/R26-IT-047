@@ -44,23 +44,34 @@ class ReliefCampResponse(BaseModel):
     lastUpdated: datetime
 
 class PopulationPredictionRequest(BaseModel):
-    currentPopulation: int = Field(..., ge=0)
-    maxCapacity: int = Field(..., gt=0)
+    campId: Optional[str] = None
+    currentPopulation: Optional[int] = Field(default=None, ge=0)
+    maxCapacity: Optional[int] = Field(default=None, gt=0)
     popHistory: Optional[List[int]] = Field(default_factory=list)
     rainHistory: Optional[List[float]] = Field(default_factory=list)
     riverLevel: Optional[float] = 5.0
     temperatureC: Optional[float] = None
     humidityPercent: Optional[float] = None
     weatherCode: Optional[int] = None
-    hourOfDay: Optional[int] = 12
+    hourOfDay: Optional[int] = None
     severity: Optional[str] = "High"
+    rainfallMm: Optional[float] = None
+    rainfall3hAvgMm: Optional[float] = None
+    riverLevelChangeM: Optional[float] = None
 
 class PopulationPredictionResponse(BaseModel):
     predictedPopulation: int
-    forecastFor: datetime
-    delta: int
+    currentPopulation: Optional[int] = None
     maxCapacity: int
+    expectedSheltered: Optional[int] = None
+    overflow: Optional[int] = 0
+    status: Optional[str] = "WITHIN_CAPACITY"
+    forecastFor: datetime
+    predictionGeneratedAt: Optional[datetime] = None
+    delta: int
     occupancyPercent: float
-    projectedHourly: List[dict]
+    projectedHourly: List[dict] = Field(default_factory=list)
     note: str
     factors: dict = Field(default_factory=dict)
+    observationsUsed: Optional[List[int]] = Field(default_factory=list)
+    environmentalConditions: Optional[dict] = Field(default_factory=dict)
