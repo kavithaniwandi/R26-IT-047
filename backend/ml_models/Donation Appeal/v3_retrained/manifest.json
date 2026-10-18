@@ -1,0 +1,46 @@
+{
+  "created_utc": "2026-10-16T13:09:59.016112+00:00",
+  "data_file": "Donation_Appeal_MASTER_FINAL_v8_7100.csv",
+  "data_sha256": "5074b1ebedc3f96118a982408b761b03af31b9e0cf4b398f6b190c742b7cedf4",
+  "load_info": {
+    "rows_in_file": 7100,
+    "rows_after_cleaning": 7100,
+    "rows_after_exact_duplicate_removal": 7100,
+    "corpus_rows": 7100
+  },
+  "development_rows": 5687,
+  "test_rows": 1413,
+  "protocol": {
+    "seed": 42,
+    "folds": 5,
+    "near_duplicate_threshold": 0.8,
+    "tolerance_margin": 0.005,
+    "splitter": "StratifiedGroupKFold",
+    "test_set": "first fold, used once, after tolerance selection",
+    "shipped_model_trained_on": "development rows only"
+  },
+  "environment": {
+    "python": "3.10.22",
+    "numpy": "1.26.4",
+    "scikit_learn": "1.7.2",
+    "scipy": "1.15.3",
+    "pandas": "2.3.3",
+    "joblib": "1.6.0"
+  },
+  "artifacts": {
+    "appeal_quality_vectorizer.joblib": "672e154faf8cc442bcd07e40dfbaabf7519ca0af2c4f386aa7e1afd6ae388a82",
+    "appeal_quality_vectorizer_si.joblib": "5a64568e9606858240236a9a4b33e4068b389232435dbbc68d0a6669f569a39c",
+    "appeal_quality_vectorizer_ta.joblib": "7e0e9804306cd70f536e70963edcd93b45b5cb1407cdebe08f078c4d34d4dd00",
+    "appeal_quality_svd_en.joblib": "28a772bc12e1788d13eeb7e7f7c205caeaf33c2e88eed496314daca233e2fdc3",
+    "appeal_quality_svd_si.joblib": "edf750c68744496605977187a8ff514fc694bf7502812637d84f6e15a5ed3f61",
+    "appeal_quality_svd_ta.joblib": "167f4694552c04213bb9c7663f54970334a868bdf1a99b81d2f3c285ca332c79",
+    "appeal_quality_scaler.joblib": "2e162af87d205ef0ae24f6b7a4cadcffc0ab819ca47f158dd441c7fdf06903ef",
+    "appeal_quality_classifier.joblib": "caea567eb1a680e131bb73487c411ed8d6631de1435eb625ab541c536242ab2e",
+    "appeal_quality_label_encoder.joblib": "fb813132fb962dd039264662eb0d7c5e6cf047142aa028dc8931db5c1a44a612",
+    "appeal_quality_regressor.joblib": "b5eab56b037711740371235b9c916de9f335c2437ce2f2c46077f58103116c57",
+    "appeal_quality_isotonic.joblib": "c8134b0a8a5a0016447e531aa9d560afae0d37cf4c54ed49070ed3dfd27732c1",
+    "appeal_quality_config.joblib": "76d849de6dcbe425ae9f22a20c7afb6104a7f58cb6b9d5b6d99bd57f7b077b34"
+  },
+  "selected_boundary_tolerance": 0.5,
+  "test_accuracy": 0.8287331917905166
+}

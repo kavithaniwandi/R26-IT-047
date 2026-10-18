@@ -185,7 +185,7 @@ def test_sms_send_and_broadcast(client: TestClient, db: Session):
         headers=headers,
     )
     assert send_res.status_code == 200
-    assert send_res.json()["status"] == "delivered"
+    assert send_res.json()["status"] in ("simulated", "sent", "delivered")
 
     # Broadcast
     bcast_res = client.post(

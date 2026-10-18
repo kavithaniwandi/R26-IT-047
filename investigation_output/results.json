@@ -1,0 +1,242 @@
+[
+  {
+    "id": "user_scholarship",
+    "test_label": "user-provided",
+    "original_score": 3.0,
+    "original_raw_score": 3.45,
+    "raw_gemini_score": {
+      "quality_label": "medium",
+      "final_label": "medium",
+      "quality_score": 3.0,
+      "raw_quality_score": 3.45,
+      "confidence": 0.641,
+      "confidence_normalised": 0.641,
+      "confidence_display": "64%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.31,
+        "low": 0.049,
+        "medium": 0.641
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.641,
+      "label_agreement": true,
+      "confidence_level": "borderline",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.641
+        },
+        {
+          "class": "high",
+          "probability": 0.31
+        }
+      ],
+      "agreement_note": null
+    },
+    "guard_passed": false,
+    "guard_reason": "changed_negation",
+    "flow_rejection": "facts_guard",
+    "raw_output": "Brilliant students from low-income families are forced to abandon their dreams of a college education because they cannot afford tuition and textbooks. Academic talent is everywhere, but equal opportunity is not, leaving thousands of capable young minds locked out of the future they worked to build. Your gift to our scholarship fund breaks down these financial barriers, directly providing tuition assistance, mentorship, and resources hard-working students need to stay in school and graduate. By investing in their education, you fund a degree and empower the next generation of innovators, leaders, and problem-solvers. Please donate to our scholarship fund."
+  },
+  {
+    "id": "test_row_1600",
+    "test_label": "low",
+    "original_score": 1.97,
+    "original_raw_score": 1.97,
+    "raw_gemini_score": {
+      "quality_label": "low",
+      "final_label": "low",
+      "quality_score": 2.0,
+      "raw_quality_score": 2.42,
+      "confidence": 0.884,
+      "confidence_normalised": 0.884,
+      "confidence_display": "88%",
+      "predicted_class": "low",
+      "class_probs": {
+        "high": 0.033,
+        "low": 0.884,
+        "medium": 0.083
+      },
+      "classifier_top_class": "low",
+      "classifier_confidence": 0.884,
+      "label_agreement": true,
+      "confidence_level": "moderate",
+      "top_classes": [
+        {
+          "class": "low",
+          "probability": 0.884
+        },
+        {
+          "class": "medium",
+          "probability": 0.083
+        }
+      ],
+      "agreement_note": null
+    },
+    "guard_passed": false,
+    "guard_reason": "unsupported_language",
+    "flow_rejection": "facts_guard",
+    "raw_output": "Rodolfo Rodriguez needs your help! He is a 92-year-old man who was brutally attacked on July 4th at around 7pm. My grandfather Rodolfo Rodriguez was attacked. Please support this elderly man."
+  },
+  {
+    "id": "test_row_1602",
+    "test_label": "low",
+    "original_score": 1.97,
+    "original_raw_score": 1.97,
+    "raw_gemini_score": {
+      "quality_label": "low",
+      "final_label": "low",
+      "quality_score": 2.0,
+      "raw_quality_score": 2.97,
+      "confidence": 0.735,
+      "confidence_normalised": 0.735,
+      "confidence_display": "74%",
+      "predicted_class": "low",
+      "class_probs": {
+        "high": 0.125,
+        "low": 0.735,
+        "medium": 0.14
+      },
+      "classifier_top_class": "low",
+      "classifier_confidence": 0.735,
+      "label_agreement": true,
+      "confidence_level": "moderate",
+      "top_classes": [
+        {
+          "class": "low",
+          "probability": 0.735
+        },
+        {
+          "class": "medium",
+          "probability": 0.14
+        }
+      ],
+      "agreement_note": null
+    },
+    "guard_passed": false,
+    "guard_reason": "unsupported_claim_or_changed_relationship",
+    "flow_rejection": "facts_guard",
+    "raw_output": "Jacob Bury needs your help! Jacob Bury Recovery Fund - JAKE IS OKAY, ALERT AND RECOVERING... BUT HE NEEDS OUR SUPPORT. On Tuesday morning, Jacob Bury was in an accident. Jacob Bury is recovering, but Jacob Bury needs support. Please donate to the Jacob Bury Recovery Fund. Your help supports Jacob Bury during recovery. Please support Jacob Bury."
+  },
+  {
+    "id": "test_row_805",
+    "test_label": "medium",
+    "original_score": 3.0,
+    "original_raw_score": 3.09,
+    "raw_gemini_score": {
+      "quality_label": "medium",
+      "final_label": "medium",
+      "quality_score": 3.0,
+      "raw_quality_score": 3.45,
+      "confidence": 0.605,
+      "confidence_normalised": 0.605,
+      "confidence_display": "60%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.327,
+        "low": 0.068,
+        "medium": 0.605
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.605,
+      "label_agreement": true,
+      "confidence_level": "borderline",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.605
+        },
+        {
+          "class": "high",
+          "probability": 0.327
+        }
+      ],
+      "agreement_note": null
+    },
+    "guard_passed": false,
+    "guard_reason": "unsupported_claim_or_changed_relationship",
+    "flow_rejection": "facts_guard",
+    "raw_output": "Harleigh needs help for a dog named Gremlin, an English bull mastiff. Gremlin was obtained from a humane society. Gremlin has diabetes insipidus, a dehydration issue that makes him drink too much and pee a lot. Gremlin also has hookworms and Giardia parasites. Harleigh must take Gremlin to the vet for more detailed tests that are very pricey, but Harleigh cannot pay for these issues alone. In order to fully help Gremlin, Harleigh needs help. Anything would help this dog out. Please support this dog and donate to help Gremlin."
+  },
+  {
+    "id": "test_row_811",
+    "test_label": "medium",
+    "original_score": 3.21,
+    "original_raw_score": 3.21,
+    "raw_gemini_score": {
+      "quality_label": "high",
+      "final_label": "high",
+      "quality_score": 3.61,
+      "raw_quality_score": 3.61,
+      "confidence": 0.525,
+      "confidence_normalised": 0.525,
+      "confidence_display": "52%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.438,
+        "low": 0.037,
+        "medium": 0.525
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.525,
+      "label_agreement": false,
+      "confidence_level": "low",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.525
+        },
+        {
+          "class": "high",
+          "probability": 0.438
+        }
+      ],
+      "agreement_note": "Rating and classifier disagree"
+    },
+    "guard_passed": false,
+    "guard_reason": "unsupported_claim_or_changed_relationship",
+    "flow_rejection": "facts_guard",
+    "raw_output": "John Strumsky would never ask for help himself. His dog, Lincoln, has been hospitalized for the past few days dealing with an obstruction in his small intestine from a small piece of string ingested from an area rug. John has done everything in his power to fight for his dog, including taking loans and additional lines of credit to attempt to cover these totally unexpected costs. By asking for him, we hope to ease some of the burden. Please donate to help, or share to support John and his dog Lincoln."
+  },
+  {
+    "id": "test_row_0",
+    "test_label": "high",
+    "original_score": 4.36,
+    "original_raw_score": 4.36,
+    "raw_gemini_score": {
+      "quality_label": "high",
+      "final_label": "high",
+      "quality_score": 4.05,
+      "raw_quality_score": 4.05,
+      "confidence": 0.518,
+      "confidence_normalised": 0.518,
+      "confidence_display": "52%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.438,
+        "low": 0.044,
+        "medium": 0.518
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.518,
+      "label_agreement": false,
+      "confidence_level": "low",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.518
+        },
+        {
+          "class": "high",
+          "probability": 0.438
+        }
+      ],
+      "agreement_note": "Rating and classifier disagree"
+    },
+    "guard_passed": false,
+    "guard_reason": "changed_quantity",
+    "flow_rejection": "facts_guard",
+    "raw_output": "Elise is raising money for the animal shelter TripleA Marbella & San Pedro. Amigos de Animales Abandonados looks after abandoned animals in our municipality and currently has over 500 animals in care. The charity costs over 600,000 € a year to stay open. \n\nAnimals are malnourished, neglected, abused and unwanted. Money raised will be used to support ongoing projects to make life better for these animals. Elise will walk to raise funds and spread awareness for TripleA. Please share. A small amount goes a long way to help our animals. Please support these animals."
+  }
+]

@@ -1,39 +1,50 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import "./CampSetup.css";
 
 const SESSION_KEY = "severityQueueSession";
 const ACTIVATION_KEY = "campActivationState";
 
-const CAMPS = [
-  { code: "KDW-001", name: "Nawagamuwa Primary School", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "KDW-002", name: "Kothalawala Maha Vidyalaya", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "KDW-003", name: "Ashokaramaya", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "KDW-004", name: "Munidasa Kumaratunga Vidyalaya", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "KDW-005", name: "Bomiriya National School", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "KDW-006", name: "Welivita Community Hall", loc: "Kaduwela · Flood response", district: "Colombo", type: "flood" },
-  { code: "NWL-001", name: "Nawalapitiya Central College", loc: "Pasbage Korale · Landslide response", district: "Kandy", type: "landslide" },
-  { code: "NWL-002", name: "Jayathilaka Stadium", loc: "Pasbage Korale · Landslide response", district: "Kandy", type: "landslide" },
-  { code: "NWL-003", name: "Pallegama Temple", loc: "Pasbage Korale · Landslide response", district: "Kandy", type: "landslide" },
-  { code: "NWL-004", name: "Warakawa Temple", loc: "Pasbage Korale · Landslide response", district: "Kandy", type: "landslide" },
-];
+const campSubtitle = (camp) =>
+  [camp.district, camp.ds_division].filter(Boolean).join(" · ");
 
 const SPECIALTIES = [
   "Emergency Medicine", "Cardiovascular", "Respiratory", "Neurological",
-  "Gastrointestinal", "Trauma & Surgery", "Infection & Systemic",
+  "Gastrointestinal", "Trauma & Surgery", "Orthopedic", "Rheumatology",
+  "Pediatric", "Geriatric", "Infection & Systemic",
   "Renal & Urinary", "Mental & Behavioral", "Obstetric & Gynecologic",
   "Endocrine & Metabolic", "Allergy & Immunology", "General Practice",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const SECONDARY_SKILLS = [
   "Cardiovascular", "Respiratory", "Neurological", "Gastrointestinal",
-  "Trauma & Surgery", "Orthopedic", "Rheumatology", "Infection & Systemic", "Renal & Urinary",
+  "Trauma & Surgery", "Orthopedic", "Rheumatology", "Pediatric", "Geriatric",
+  "Infection & Systemic", "Renal & Urinary",
   "Mental & Behavioral", "Obstetric & Gynecologic", "Endocrine & Metabolic",
   "Allergy & Immunology", "Emergency Medicine",
+  "Dermatology", "ENT", "Ophthalmology",
 ];
 
 const ROLES = ["Medical Administrator", "Senior MO", "Medical Officer", "Resident", "Intern"];
+
+const SHIFT_HOURS = Array.from({ length: 24 }, (_, hour) => {
+  const value = String(hour).padStart(2, "0");
+  const period = hour < 12 ? "AM" : "PM";
+  const displayHour = hour % 12 || 12;
+  return { value, label: `${displayHour} ${period}` };
+});
+
+const SHIFT_MINUTES = ["00", "15", "30", "45"];
+
+const SHIFT_PRESETS = [
+  { label: "Noon", value: "12:00" },
+  { label: "3:00 PM", value: "15:00" },
+  { label: "6:00 PM", value: "18:00" },
+  { label: "9:00 PM", value: "21:00" },
+];
+
 const BLANK_MO = {
   name: "",
   staffId: "",
@@ -47,6 +58,9 @@ const BLANK_MO = {
 export default function CampSetup() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [camps, setCamps] = useState([]);
+  const [campsLoading, setCampsLoading] = useState(true);
+  const [campsError, setCampsError] = useState("");
   const [activation, setActivation] = useState({});
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [moCount, setMoCount] = useState(null);
@@ -54,33 +68,40 @@ export default function CampSetup() {
   const [mos, setMos] = useState([]);
   const [form, setForm] = useState({ ...BLANK_MO });
   const [formError, setFormError] = useState("");
+  const [savingSession, setSavingSession] = useState(false);
+  const sessionSaveLock = useRef(false);
+  const pendingSession = useRef(null);
   const [registrationStarted, setRegistrationStarted] = useState(false);
+  const [shiftHour = "", shiftMinute = ""] = form.shift ? form.shift.split(":") : ["", ""];
 
   useEffect(() => {
-    const raw = localStorage.getItem(ACTIVATION_KEY);
-    if (raw) {
-      setActivation(JSON.parse(raw));
-      return;
-    }
-
-    const defaults = Object.fromEntries(CAMPS.map((camp) => [camp.code, false]));
-    setActivation(defaults);
-    localStorage.setItem(ACTIVATION_KEY, JSON.stringify(defaults));
+    setCampsLoading(true);
+    api.getCamps({ status_filter: "approved" })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setCamps(list);
+        const savedMap = JSON.parse(localStorage.getItem(ACTIVATION_KEY) || "{}");
+        const merged = Object.fromEntries(list.map((c) => [c.id, savedMap[c.id] ?? false]));
+        setActivation(merged);
+        localStorage.setItem(ACTIVATION_KEY, JSON.stringify(merged));
+      })
+      .catch((err) => setCampsError(err?.message || "Failed to load camps."))
+      .finally(() => setCampsLoading(false));
   }, []);
 
-  const handleToggle = (event, campCode) => {
+  const handleToggle = (event, campId) => {
     event.stopPropagation();
     setActivation((previous) => {
-      const nextActive = !previous[campCode];
-      const updated = { ...previous, [campCode]: nextActive };
+      const nextActive = !previous[campId];
+      const updated = { ...previous, [campId]: nextActive };
       localStorage.setItem(ACTIVATION_KEY, JSON.stringify(updated));
 
-      if (selectedCamp?.code === campCode && !nextActive) {
+      if (selectedCamp?.id === campId && !nextActive) {
         setSelectedCamp(null);
       }
 
       if (nextActive) {
-        const camp = CAMPS.find((item) => item.code === campCode);
+        const camp = camps.find((item) => item.id === campId);
         setSelectedCamp(camp || null);
       }
 
@@ -89,12 +110,15 @@ export default function CampSetup() {
   };
 
   const handleCampSelect = (camp) => {
-    if (!activation[camp.code]) return;
+    if (!activation[camp.id]) return;
     setSelectedCamp(camp);
   };
 
   const handleConfirmCamp = () => {
     if (!selectedCamp) return;
+    if (pendingSession.current && pendingSession.current.camp.id !== selectedCamp.id) {
+      pendingSession.current = null;
+    }
     setStep(2);
   };
 
@@ -109,6 +133,18 @@ export default function CampSetup() {
 
   const updateFormField = (field, value) => {
     setForm((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const updateShiftPart = (part, value) => {
+    const nextHour = part === "hour" ? value : shiftHour;
+    const nextMinute = part === "minute" ? value : shiftMinute;
+
+    if (!nextHour && !nextMinute) {
+      updateFormField("shift", "");
+      return;
+    }
+
+    updateFormField("shift", `${nextHour || "00"}:${nextMinute || "00"}`);
   };
 
   const toggleSkill = (skill) => {
@@ -177,7 +213,8 @@ export default function CampSetup() {
     return "";
   };
 
-  const handleSaveMO = () => {
+  const handleSaveMO = async () => {
+    if (sessionSaveLock.current) return;
     const validationError = validateMOForm();
     if (validationError) {
       setFormError(validationError);
@@ -199,25 +236,42 @@ export default function CampSetup() {
     };
 
     const updated = [...mos, saved];
-    setMos(updated);
-
     if (moIndex + 1 >= moCount) {
       const startedAt = new Date().toISOString();
-      const sessionObj = {
-        session_id: `${selectedCamp.code}-${Date.now()}`,
+      const sessionObj = pendingSession.current || {
+        session_id: `${selectedCamp.id}-${crypto.randomUUID()}`,
         startedAt,
-        camp: selectedCamp,
+        camp: {
+          id: selectedCamp.id,
+          name: selectedCamp.name,
+          district: selectedCamp.district,
+          ds_division: selectedCamp.ds_division,
+          gn_division: selectedCamp.gn_division,
+          estimated_capacity: selectedCamp.estimated_capacity,
+        },
         mos: updated,
       };
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
-      api.startTriageSession(sessionObj).catch((error) => {
-        console.warn("[triage] session start:", error);
-      });
-      navigate("/priority-application");
+      pendingSession.current = sessionObj;
+      sessionSaveLock.current = true;
+      setSavingSession(true);
+      try {
+        // Validate browser storage before creating a server session.
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
+        await api.startTriageSession(sessionObj);
+        setMos(updated);
+        navigate("/priority-application");
+      } catch (error) {
+        console.error("[triage] Session save not confirmed:", error);
+        setFormError(`Session start not confirmed: ${error.message}. Retry to continue.`);
+      } finally {
+        sessionSaveLock.current = false;
+        setSavingSession(false);
+      }
       return;
     }
 
+    setMos(updated);
     setMoIndex(moIndex + 1);
     setForm({ ...BLANK_MO });
   };
@@ -256,104 +310,148 @@ export default function CampSetup() {
               Activate the camps that are operational, then select the one this session is
               operating under. Standby camps cannot be selected until activated.
             </p>
-
-            <div className="cs-activation-bar">
-              <span className="cs-activation-count">
-                <span className="cs-activation-dot active" />
-                {activeCount} active
-              </span>
-              <span className="cs-activation-count">
-                <span className="cs-activation-dot standby" />
-                {CAMPS.length - activeCount} standby
-              </span>
-              <span className="cs-activation-hint">
-                Use the toggle on each card to activate or deactivate a camp.
-              </span>
+            <div className="cs-page-actions">
+              <Link className="cs-btn-secondary" to="/camp-analyzer">
+                Open camp analyzer
+              </Link>
             </div>
 
-            <div className="cs-camp-grid">
-              {CAMPS.map((camp) => {
-                const isActive = !!activation[camp.code];
-                const isSelected = selectedCamp?.code === camp.code;
-
-                return (
-                  <div
-                    key={camp.code}
-                    className={`cs-camp-card ${isActive ? "" : "standby"} ${isSelected ? "selected" : ""}`}
-                    onClick={() => handleCampSelect(camp)}
-                  >
-                    <div className="cs-toggle-row">
-                      <span className={`cs-camp-status ${isActive ? "active" : "standby"}`}>
-                        {isActive ? "● Active" : "◌ Standby"}
-                      </span>
-                      <button
-                        type="button"
-                        className={`cs-toggle ${isActive ? "on" : ""}`}
-                        onClick={(event) => handleToggle(event, camp.code)}
-                        title={isActive ? "Deactivate camp" : "Activate camp"}
-                        aria-label={isActive ? "Deactivate camp" : "Activate camp"}
-                        aria-pressed={isActive}
-                      >
-                        <span className="cs-toggle-slider" />
-                      </button>
-                    </div>
-
-                    <div className="cs-camp-code">{camp.code}</div>
-                    <div className="cs-camp-name">{camp.name}</div>
-                    <div className="cs-camp-meta">{camp.loc}</div>
-
-                    {!isActive && (
-                      <div className="cs-standby-notice">
-                        Activate to select this camp
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {!selectedCamp && (
-              <div className="cs-confirm-bar empty">
-                <div className="cs-alert-info">
-                  <span>Next step</span>
-                  <div>
-                    <strong>Select an active camp</strong>
-                    <br />
-                    <span>Activate a camp, then continue to MO registration.</span>
-                  </div>
-                </div>
-                <button className="cs-btn-primary" onClick={handleConfirmCamp} disabled>
-                  Confirm camp &amp; register MOs
-                </button>
+            {campsLoading && (
+              <div className="cs-alert-info">
+                <span>⏳</span>
+                <span>Loading camps…</span>
               </div>
             )}
 
-            {selectedCamp && (
-              <div className="cs-confirm-bar">
-                <div className="cs-alert-info">
-                  <span>ℹ</span>
-                  <div>
-                    <strong>{selectedCamp.name}</strong>
-                    <br />
-                    <span>{selectedCamp.loc}</span>
-                  </div>
-                </div>
-                <button className="cs-btn-primary" onClick={handleConfirmCamp}>
-                  Confirm camp &amp; register MOs →
-                </button>
+            {campsError && (
+              <div className="cs-alert-warn">
+                <span>⚠</span>
+                <span>{campsError}</span>
               </div>
+            )}
+
+            {!campsLoading && !campsError && camps.length === 0 && (
+              <div className="cs-alert-info">
+                <span>ℹ</span>
+                <span>No operational camps found.</span>
+              </div>
+            )}
+
+            {!campsLoading && camps.length > 0 && (
+              <>
+                <div className="cs-activation-bar">
+                  <span className="cs-activation-count">
+                    <span className="cs-activation-dot active" />
+                    {activeCount} active
+                  </span>
+                  <span className="cs-activation-count">
+                    <span className="cs-activation-dot standby" />
+                    {camps.length - activeCount} standby
+                  </span>
+                  <span className="cs-activation-hint">
+                    Use the toggle on each card to activate or deactivate a camp.
+                  </span>
+                </div>
+
+                <div className="cs-camp-grid">
+                  {camps.map((camp) => {
+                    const isActive = !!activation[camp.id];
+                    const isSelected = selectedCamp?.id === camp.id;
+
+                    return (
+                      <div
+                        key={camp.id}
+                        className={`cs-camp-card ${isActive ? "" : "standby"} ${isSelected ? "selected" : ""}`}
+                        onClick={() => handleCampSelect(camp)}
+                      >
+                        <div className="cs-toggle-row">
+                          <span className={`cs-camp-status ${isActive ? "active" : "standby"}`}>
+                            {isActive ? "● Active" : "◌ Standby"}
+                          </span>
+                          <button
+                            type="button"
+                            className={`cs-toggle ${isActive ? "on" : ""}`}
+                            onClick={(event) => handleToggle(event, camp.id)}
+                            title={isActive ? "Deactivate camp" : "Activate camp"}
+                            aria-label={isActive ? "Deactivate camp" : "Activate camp"}
+                            aria-pressed={isActive}
+                          >
+                            <span className="cs-toggle-slider" />
+                          </button>
+                        </div>
+
+                        <div className="cs-camp-code">{camp.district}</div>
+                        <div className="cs-camp-name">{camp.name}</div>
+                        <div className="cs-camp-meta">{campSubtitle(camp)}</div>
+
+                        {!isActive && (
+                          <div className="cs-standby-notice">
+                            Activate to select this camp
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!selectedCamp && (
+                  <div className="cs-confirm-bar empty">
+                    <div className="cs-alert-info">
+                      <span>Next step</span>
+                      <div>
+                        <strong>Select an active camp</strong>
+                        <br />
+                        <span>Activate a camp, then continue to MO registration.</span>
+                      </div>
+                    </div>
+                    <button className="cs-btn-primary" onClick={handleConfirmCamp} disabled>
+                      Confirm camp &amp; register MOs
+                    </button>
+                  </div>
+                )}
+
+                {selectedCamp && (
+                  <div className="cs-confirm-bar">
+                    <div className="cs-alert-info">
+                      <span>ℹ</span>
+                      <div>
+                        <strong>{selectedCamp.name}</strong>
+                        <br />
+                        <span>{campSubtitle(selectedCamp)}</span>
+                      </div>
+                    </div>
+                    <button className="cs-btn-primary" onClick={handleConfirmCamp}>
+                      Confirm camp &amp; register MOs →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}
 
         {step === 2 && (
           <section className="cs-section">
-            <span className="cs-eyebrow">{selectedCamp.code} — {selectedCamp.name}</span>
+            <button
+              className="cs-btn-secondary cs-btn-back"
+              type="button"
+              aria-label="Back to safety camp selection"
+              disabled={savingSession}
+              onClick={() => setStep(1)}
+            >
+              ← Back
+            </button>
+            <span className="cs-eyebrow">{selectedCamp.district} — {selectedCamp.name}</span>
             <h1 className="cs-title">Register medical officers</h1>
             <p className="cs-desc">
               Set the number of MOs on duty, then fill in each profile. Role,
               specialty and skills determine how patient cases are routed.
             </p>
+            <div className="cs-page-actions">
+              <Link className="cs-btn-secondary" to="/camp-analyzer">
+                View analytics
+              </Link>
+            </div>
 
             {!registrationStarted && (
               <div className="cs-card">
@@ -509,11 +607,54 @@ export default function CampSetup() {
 
                 <div className="cs-field">
                   <label>Shift end time</label>
-                  <input
-                    type="time"
-                    value={form.shift}
-                    onChange={(event) => updateFormField("shift", event.target.value)}
-                  />
+                  <div className="cs-shift-control">
+                    <select
+                      aria-label="Shift end hour"
+                      value={shiftHour}
+                      onChange={(event) => updateShiftPart("hour", event.target.value)}
+                    >
+                      <option value="">Hour</option>
+                      {SHIFT_HOURS.map((hour) => (
+                        <option key={hour.value} value={hour.value}>
+                          {hour.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="cs-shift-separator">:</span>
+                    <select
+                      aria-label="Shift end minute"
+                      value={shiftMinute}
+                      onChange={(event) => updateShiftPart("minute", event.target.value)}
+                    >
+                      <option value="">Min</option>
+                      {SHIFT_MINUTES.map((minute) => (
+                        <option key={minute} value={minute}>
+                          {minute}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="cs-shift-presets" aria-label="Common shift end times">
+                    {SHIFT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        className={`cs-shift-preset ${form.shift === preset.value ? "selected" : ""}`}
+                        onClick={() => updateFormField("shift", preset.value)}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                    {form.shift && (
+                      <button
+                        type="button"
+                        className="cs-shift-clear"
+                        onClick={() => updateFormField("shift", "")}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {formError && (
@@ -523,7 +664,7 @@ export default function CampSetup() {
                   </div>
                 )}
 
-                <button className="cs-btn-primary" onClick={handleSaveMO}>
+                <button className="cs-btn-primary" onClick={handleSaveMO} disabled={savingSession}>
                   {moIndex === moCount - 1 ? "Save & open queue →" : "Save & next →"}
                 </button>
               </div>

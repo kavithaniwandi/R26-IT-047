@@ -7,11 +7,11 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env2", extra="ignore")
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
     MODEL_DIR: Path = Path("ml_models")
-    DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal"
+    DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal" / "v3_retrained"
+    APPEAL_MODEL_DIR: Path | None = None
     GEMINI_API_KEY: str | None = None
     GEMINI_API_KEY2: str | None = None
     GEMINI_API_KEY3: str | None = None
@@ -23,10 +23,39 @@ class Settings(BaseSettings):
     GEMINI_API_KEY9: str | None = None
     GEMINI_API_KEY10: str | None = None
     GEMINI_API_KEY11: str | None = None
-    GEMINI_MODEL: str = "gemini-3.6-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_FALLBACK_MODELS: str = "gemini-2.5-flash,gemini-2.5-flash-lite"
+    GENERATOR_MODE: str = "live"
+    GEMINI_MAX_KEYS_PER_REQUEST: int = 3
+    MAX_GEMINI_CALLS_PER_REQUEST: int = 2
+    # Separate first/remaining billable budgets: count success, 429 or quota errors.
+    # 503 overload and connection failures are free; every dispatch counts toward
+    # the shared full-flow hard ceiling, including free failures and JSON retries.
+    # A read timeout after dispatch is conservatively counted as potentially billed.
+    MAX_GEMINI_PROVIDER_ATTEMPTS_PER_FLOW: int = 6
+    GEMINI_JSON_RETRY_ALLOWANCE: int = 1
+    DAILY_IMPROVE_LIMIT: int = 10
+    REQUEST_TIME_BUDGET_S: float = 25.0
+    CONFIDENCE_HIGH: float = 0.9
+    CONFIDENCE_MODERATE: float = 0.7
+    CONFIDENCE_BORDERLINE: float = 0.5
     HF_API_KEY: str | None = None
     MONGODB_URI: str | None = None
     MONGODB_DB_NAME: str = "Research047"
+    INCOMPLETE_VITALS_FLOOR: str = "MEDIUM"
+    COMPLAINT_MAPPING_FLOOR: str = "MEDIUM"
+    COMPLAINT_MAPPING_COVERAGE_THRESHOLD: float = 0.5
+    COMPLAINT_COVERAGE_MODE: str = "legacy"
+    COMPLAINT_APPROVED_SYNONYMS_ENABLED: bool = False
+    COMPLAINT_CONDITIONAL_SYNONYMS_ENABLED: list[str] = []
+    COMPLAINT_DANGER_TERM_FLOOR: str = "HIGH"
+    COMPLAINT_DANGER_TERM_FLOOR_ENABLED: bool = True
+    COMPLAINT_SAFETY_FLOORS_ENABLED: bool = True
+    RETENTION_DAYS: int = 90
+    PEDIATRIC_AGE_CUTOFF: int = 12
+    GERIATRIC_AGE_CUTOFF: int = 65
+    ENABLE_AGE65_ABNORMAL_VITALS: bool = False
+    TRIAGE_DEBUG_VITALS: bool = False
 
     def model_path(self, filename: str) -> Path:
         model_dir = self.MODEL_DIR
@@ -35,7 +64,7 @@ class Settings(BaseSettings):
         return model_dir / filename
 
     def donation_appeal_model_path(self, filename: str) -> Path:
-        model_dir = self.DONATION_APPEAL_MODEL_DIR
+        model_dir = self.APPEAL_MODEL_DIR or self.DONATION_APPEAL_MODEL_DIR
         if not model_dir.is_absolute():
             model_dir = BASE_DIR / model_dir
         return model_dir / filename

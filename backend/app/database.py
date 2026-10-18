@@ -78,6 +78,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_user_donor_profile_columns()
+    _ensure_user_emergency_contacts_column()
     _seed_roles()
     _seed_demo_users()
 
@@ -97,6 +98,14 @@ def _ensure_user_donor_profile_columns() -> None:
         for name, sql_type in columns.items():
             if name not in existing:
                 connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {sql_type}"))
+
+
+def _ensure_user_emergency_contacts_column() -> None:
+    """Additive migration for users created before emergency contacts."""
+    existing = {column["name"] for column in inspect(engine).get_columns("users")}
+    if "emergency_contacts" not in existing:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN emergency_contacts TEXT"))
 
 
 def _seed_roles() -> None:

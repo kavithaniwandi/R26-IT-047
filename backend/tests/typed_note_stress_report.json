@@ -1,0 +1,41 @@
+{
+  "n": 740,
+  "n_high": 211,
+  "templates": {
+    "patient_complains": {
+      "balanced_accuracy": 0.8745783341600042,
+      "macro_f1": 0.8719279802748523,
+      "high_recall": 0.8909952606635071,
+      "high_to_low": 6,
+      "medium_to_high": 41
+    },
+    "lowercase_typos": {
+      "balanced_accuracy": 0.7582013618946276,
+      "macro_f1": 0.7541362363768823,
+      "high_recall": 0.8436018957345972,
+      "high_to_low": 7,
+      "medium_to_high": 38
+    },
+    "shuffled_order": {
+      "balanced_accuracy": 0.8771188674318652,
+      "macro_f1": 0.8746060159428156,
+      "high_recall": 0.8909952606635071,
+      "high_to_low": 6,
+      "medium_to_high": 40
+    },
+    "dropped_words": {
+      "balanced_accuracy": 0.5307787157031764,
+      "macro_f1": 0.46128684134394254,
+      "high_recall": 0.7393364928909952,
+      "high_to_low": 0,
+      "medium_to_high": 40
+    },
+    "age_vitals_embedded": {
+      "balanced_accuracy": 0.5617785294291164,
+      "macro_f1": 0.4509209067857089,
+      "high_recall": 0.8388625592417062,
+      "high_to_low": 0,
+      "medium_to_high": 37
+    }
+  }
+}
