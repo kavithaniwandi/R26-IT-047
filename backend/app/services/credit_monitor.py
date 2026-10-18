@@ -63,7 +63,7 @@ def _gemini_keys_indexed() -> list[tuple[int, str]]:
         (10, getattr(settings, "GEMINI_API_KEY10", "")),
         (11, getattr(settings, "GEMINI_API_KEY11", "")),
     ]
-    return [(index, key) for index, key in keys if key]
+    return [(index, key) for index, key in keys if key or _key_label(index) in _key_state]
 
 
 def _provider_state(provider: str) -> dict:

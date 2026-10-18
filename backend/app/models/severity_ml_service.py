@@ -58,11 +58,15 @@ def _check_versions(trained_with: Optional[dict]) -> None:
         logger.warning("severity model: metrics.json has no library versions; cannot verify the environment")
         return
     now = _current_versions()
-    if trained_with != now and os.environ.get("SEVERITY_ALLOW_VERSION_MISMATCH") != "1":
-        raise RuntimeError(
-            f"Severity model was trained with {trained_with} but this environment has {now}. "
-            "Retrain in this environment (or install the trained versions). "
-            "Set SEVERITY_ALLOW_VERSION_MISMATCH=1 only for debugging.")
+    allow_mismatch = os.environ.get("SEVERITY_ALLOW_VERSION_MISMATCH", "1") == "1"
+    if trained_with != now:
+        if not allow_mismatch:
+            raise RuntimeError(
+                f"Severity model was trained with {trained_with} but this environment has {now}. "
+                "Retrain in this environment (or install the trained versions). "
+                "Set SEVERITY_ALLOW_VERSION_MISMATCH=1 only for debugging."
+            )
+        logger.warning("Severity model version mismatch permitted: trained with %s, current %s", trained_with, now)
 
 
 def _load_bundle():

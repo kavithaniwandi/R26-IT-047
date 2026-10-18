@@ -64,7 +64,22 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 )
 async def component_login(payload: LoginRequest) -> TokenResponse:
     """Preserve the individual component's existing Mongo users and ObjectIds."""
-    user = await users_collection.find_one({"email": str(payload.email)})
+    try:
+        user = await users_collection.find_one({"email": str(payload.email)})
+    except RuntimeError as exc:
+        # MongoDB is not configured — the component database is unavailable.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The component user database (MongoDB) is not configured on this server. "
+                "Use /auth/login for SQLite-backed accounts, or set MONGODB_URI in backend/.env."
+            ),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Component user database is currently unavailable. Please try again later.",
+        ) from exc
 
     password_hash = user.get("password") if user else None
     password_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
@@ -122,11 +137,6 @@ async def me(
             email=mongo_user.get("email"),
             phone=mongo_user.get("phone"),
             address=mongo_user.get("address"),
-            assigned_ds_area=(
-                mongo_user.get("assignedDsArea")
-                or mongo_user.get("assigned_ds_area")
-                or mongo_user.get("dsArea")
-            ),
             role=mongo_user.get("userType", token_data.role),
             is_active=mongo_user.get("isActive", mongo_user.get("is_active", True)),
             created_at=mongo_user.get("createdAt") or mongo_user.get("created_at") or datetime.now(timezone.utc),
@@ -145,7 +155,6 @@ async def me(
         email=user.email,
         phone=user.phone,
         address=user.address,
-        assigned_ds_area=user.assigned_ds_area,
         role=role_name,
         is_active=user.is_active,
         created_at=user.created_at,

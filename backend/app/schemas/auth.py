@@ -64,7 +64,6 @@ class UserOut(BaseModel):
     email: EmailStr
     phone: str | None
     address: str | None
-    assigned_ds_area: str | None = None
     donor_type: str | None = None
     preferred_donation_category: str | None = None
     capacity_level: str | None = None

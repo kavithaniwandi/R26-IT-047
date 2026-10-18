@@ -149,7 +149,6 @@ def _user_to_out(user: User, db: Session) -> UserOut:
         email=user.email,
         phone=user.phone,
         address=user.address,
-        assigned_ds_area=user.assigned_ds_area,
         donor_type=user.donor_type,
         preferred_donation_category=user.preferred_donation_category,
         capacity_level=user.capacity_level,
