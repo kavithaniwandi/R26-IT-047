@@ -64,14 +64,15 @@ export function DonorDonationView({ currentUser, onAddToast }) {
   const [now, setNow] = useState(INITIAL_NOW);
 
   const loadRequests = useCallback(async (scope) => {
-    const [requestData, personalizedData] = await Promise.all([
-      api.getDisasterRequests({ scope }),
-      scope === 'all' ? api.getDisasterRequests({ scope: 'personalized' }) : Promise.resolve([]),
-    ]);
-    const open = (requestData || []).filter(requestIsOpen);
+    const requestData = await api.getDisasterRequests({ scope });
+    let open = (requestData || []).filter(requestIsOpen);
+    if (scope === 'personalized') {
+      open = open.slice(0, 10);
+    }
     setRequests(open);
-    setPersonalizedIds(new Set((personalizedData || []).map((request) => request.id)));
-    setExpanded(new Set(open.map((request) => request.id)));
+    const topScoring = open.filter((r) => (r.compatibilityScore || 0) >= 40);
+    setPersonalizedIds(new Set(topScoring.map((request) => request.id)));
+    setExpanded(new Set());
   }, []);
 
   const loadHistory = useCallback(async () => {
@@ -166,7 +167,7 @@ export function DonorDonationView({ currentUser, onAddToast }) {
     ['personalized', 'For You', Sparkles],
     ['all', 'All Donation Requests', Gift],
     ['pledges', 'My Pledges', Clock3],
-    ['completed', 'Previously Donated', History],
+    ['completed', 'Completed Donations', History],
   ];
 
   const historyRows = activeTab === 'completed' ? completedItems : pledgedItems;
@@ -206,8 +207,12 @@ export function DonorDonationView({ currentUser, onAddToast }) {
         <section style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 12 }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{activeTab === 'personalized' ? 'Specific requests selected for you' : 'All open donation requests'}</h2>
-              <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.8rem' }}>{requests.length} open request{requests.length === 1 ? '' : 's'}</p>
+              <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{activeTab === 'personalized' ? 'Personalized for you · Top 10 best matching requests' : 'All open donation requests'}</h2>
+              <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.8rem' }}>
+                {activeTab === 'personalized'
+                  ? 'Top 10 relief appeals ranked automatically by your AI compatibility score (category, proximity & capacity fit)'
+                  : `${requests.length} open request${requests.length === 1 ? '' : 's'}`}
+              </p>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={loadActiveView}><RefreshCw size={14} /> Refresh</button>
           </div>
@@ -216,15 +221,31 @@ export function DonorDonationView({ currentUser, onAddToast }) {
             const [severityBg, severityText] = severityColors[request.severity] || severityColors.Moderate;
             const selected = selectedForRequest(request);
             const isExpanded = expanded.has(request.id);
-            const personalized = activeTab === 'personalized' || personalizedIds.has(request.id);
+            const isPersonalizedTab = activeTab === 'personalized';
+            const personalized = isPersonalizedTab && (personalizedIds.has(request.id) || (request.compatibilityScore || 0) >= 40);
             const dropOffOffice = getDropOffOffice(request);
+            const showMatchScore = isPersonalizedTab && request.compatibilityScore != null && request.compatibilityScore > 0;
             return (
               <article key={request.id} style={{ ...panel, overflow: 'hidden' }}>
                 <button type="button" onClick={() => toggleExpanded(request.id)} style={{ width: '100%', border: 0, background: 'transparent', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', gap: 14, cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)' }}>
                   <div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <strong style={{ fontSize: '1.02rem' }}>{dropOffOffice}</strong>
-                      {personalized && <span style={{ padding: '3px 8px', borderRadius: 12, background: '#ede9fe', color: '#6d28d9', fontSize: '.65rem', fontWeight: 800 }}>PERSONALIZED</span>}
+                      {showMatchScore && (
+                        <span style={{
+                          padding: '3px 9px',
+                          borderRadius: 12,
+                          background: request.compatibilityScore >= 60 ? '#ede9fe' : request.compatibilityScore >= 40 ? '#ecfdf5' : '#f8fafc',
+                          color: request.compatibilityScore >= 60 ? '#6d28d9' : request.compatibilityScore >= 40 ? '#047857' : '#475569',
+                          fontSize: '.68rem',
+                          fontWeight: 800,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}>
+                          <Sparkles size={11} /> {request.compatibilityScore}% MATCH
+                        </span>
+                      )}
                       <span style={{ padding: '3px 8px', borderRadius: 12, background: severityBg, color: severityText, fontSize: '.65rem', fontWeight: 800 }}>{request.severity?.toUpperCase()}</span>
                     </div>
                     <div style={{ marginTop: 7, color: 'var(--text-muted)', fontSize: '.78rem', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
@@ -237,11 +258,35 @@ export function DonorDonationView({ currentUser, onAddToast }) {
                 </button>
 
                 {isExpanded && <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                  {personalized && (
+                  {showMatchScore ? (
+                    <div style={{ margin: '16px 20px', padding: '12px 16px', borderRadius: 10, background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#4c1d95', fontSize: '.82rem', lineHeight: 1.55 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '.86rem', color: '#6d28d9' }}>
+                          <Sparkles size={15} /> AI Recommendation Match: {request.compatibilityScore}%
+                        </div>
+                        {request.factorScores && (
+                          <div style={{ fontSize: '.74rem', color: '#7c3aed', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            <span>Category Fit: <strong>{request.factorScores.category}%</strong></span>
+                            <span>Proximity: <strong>{request.factorScores.proximity}%</strong></span>
+                            <span>Capacity: <strong>{request.factorScores.capacity}%</strong></span>
+                            {request.factorScores.reliability != null && <span>Reliability: <strong>{request.factorScores.reliability}%</strong></span>}
+                          </div>
+                        )}
+                      </div>
+                      {request.matchReasons && request.matchReasons.length > 0 && (
+                        <div style={{ fontSize: '.76rem', color: '#5b21b6', marginTop: 4 }}>
+                          {request.matchReasons.join(' · ')}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 6, fontSize: '.78rem', color: '#4c1d95' }}>
+                        Deliver pledged donations to the <strong>{dropOffOffice}</strong> within 12 hours so disaster officers can verify and distribute them quickly to affected people at <strong>{request.reliefCamp}</strong>.
+                      </div>
+                    </div>
+                  ) : isPersonalizedTab && personalized ? (
                     <div style={{ margin: '16px 20px', padding: '13px 15px', borderRadius: 10, background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#4c1d95', fontSize: '.82rem', lineHeight: 1.55 }}>
                       A {request.severity?.toLowerCase() || 'priority'} {request.disasterType?.toLowerCase() || 'disaster'} relief request from <strong>{request.reliefCamp}</strong> in the <strong>{request.gnDivision} GN Division</strong> has been selected for you. Please pledge any of the requested supplies you can provide. Deliver pledged donations to the <strong>{dropOffOffice}</strong> within 12 hours so disaster officers can verify and distribute them quickly to affected people.
                     </div>
-                  )}
+                  ) : null}
                   <div className="donor-request-item-grid donor-request-item-head" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase' }}>
                     <span>Requested item</span><span>Needed</span><span>Still available</span><span>Your quantity</span>
                   </div>
@@ -274,7 +319,7 @@ export function DonorDonationView({ currentUser, onAddToast }) {
       {(activeTab === 'pledges' || activeTab === 'completed') && (
         <section style={{ ...panel, overflow: 'hidden' }}>
           <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div><h2 style={{ margin: 0, fontSize: '1.1rem' }}>{activeTab === 'completed' ? 'Previously donated items' : 'Items you pledged'}</h2><p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.77rem' }}>{activeTab === 'completed' ? 'Donations confirmed as received by a disaster officer.' : 'Active pledges and automatically cancelled pledges.'}</p></div>
+            <div><h2 style={{ margin: 0, fontSize: '1.1rem' }}>{activeTab === 'completed' ? 'Completed donations' : 'Items you pledged'}</h2><p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '.77rem' }}>{activeTab === 'completed' ? 'Donations confirmed as received by a disaster officer.' : 'Active pledges and automatically cancelled pledges.'}</p></div>
             <button className="btn btn-secondary btn-sm" onClick={loadActiveView}><RefreshCw size={14} /> Refresh</button>
           </div>
           {loading ? <div style={{ padding: 44, textAlign: 'center', color: 'var(--text-muted)' }}>Loading donation history...</div> : (

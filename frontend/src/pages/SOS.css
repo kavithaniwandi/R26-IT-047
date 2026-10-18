@@ -1,4 +1,3 @@
-/* ── Page shell ── */
 .sos-page {
   min-height: 100vh;
   display: flex;
@@ -14,7 +13,6 @@
   width: 100%;
 }
 
-/* ── Header ── */
 .sos-header {
   text-align: center;
   margin-bottom: 3rem;
@@ -27,8 +25,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.1); }
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .sos-header h1 {
@@ -43,19 +45,17 @@
   color: #7f8c8d;
 }
 
-/* ── Layout grid ── */
 .sos-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
 }
 
-/* ── Alert card (left) ── */
 .sos-alert-section {
   background: white;
   padding: 2.5rem;
   border-radius: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .sos-alert-card h2 {
@@ -67,11 +67,8 @@
 .sos-alert-card > p {
   color: #7f8c8d;
   margin-bottom: 2rem;
-  font-size: 0.95rem;
-  line-height: 1.6;
 }
 
-/* ── Form ── */
 .sos-form {
   display: flex;
   flex-direction: column;
@@ -108,102 +105,6 @@
   border-color: #e74c3c;
 }
 
-/* ── Location row ── */
-.sos-location-row {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.sos-location-row input {
-  flex: 1;
-}
-
-.sos-gps-btn {
-  padding: 0 1rem;
-  background: #2980b9;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.sos-gps-btn:hover:not(:disabled) { background: #1a6fa8; }
-.sos-gps-btn:disabled             { opacity: 0.6; cursor: wait; }
-
-.sos-gps-coords {
-  font-size: 0.8rem;
-  color: #27ae60;
-  font-weight: 600;
-}
-
-.sos-gps-error {
-  font-size: 0.8rem;
-  color: #e74c3c;
-}
-
-/* ── Checkbox row ── */
-.sos-checkbox-row {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.sos-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #2c3e50;
-  cursor: pointer;
-}
-
-/* ── Contacts preview ── */
-.sos-contacts-preview {
-  background: #eaf7fb;
-  border: 1px solid #aed6f1;
-  border-radius: 8px;
-  padding: 0.8rem 1rem;
-}
-
-.sos-contacts-label {
-  font-size: 0.85rem;
-  color: #1a5276;
-  font-weight: 500;
-}
-
-/* ── Phase indicator (progress bar style) ── */
-.sos-phase-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: #fdf6ec;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
-.sos-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(0,0,0,0.15);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── SOS Submit button ── */
 .sos-button {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
@@ -214,153 +115,15 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(231,76,60,0.4);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
   letter-spacing: 1px;
 }
 
-.sos-button:hover:not(:disabled) {
+.sos-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(231,76,60,0.6);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6);
 }
 
-.sos-button:disabled {
-  opacity: 0.65;
-  cursor: wait;
-  transform: none;
-}
-
-/* ── Reset button ── */
-.sos-reset-btn {
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.9rem;
-  background: #ecf0f1;
-  border: 2px solid #bdc3c7;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #2c3e50;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.sos-reset-btn:hover { background: #d5dbdb; }
-
-/* ── Error banner ── */
-.sos-error-banner {
-  background: #fdecea;
-  border: 1px solid #f5c6cb;
-  color: #c0392b;
-  border-radius: 8px;
-  padding: 0.9rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-/* ── Result card ── */
-.sos-result-card {
-  background: linear-gradient(135deg, #e8f8f5, #d1f2eb);
-  border: 2px solid #1abc9c;
-  border-radius: 14px;
-  padding: 1.4rem;
-  margin-bottom: 1.5rem;
-}
-
-.sos-result-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 1rem;
-}
-
-.sos-result-icon { font-size: 1.8rem; }
-
-.sos-result-header strong {
-  display: block;
-  font-size: 1.1rem;
-  color: #1a7a5e;
-}
-
-.sos-priority-tag {
-  font-size: 0.8rem;
-  background: #1abc9c;
-  color: white;
-  border-radius: 99px;
-  padding: 2px 8px;
-  font-weight: 700;
-}
-
-/* ── Dispatch log ── */
-.sos-dispatch-log {
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.sos-dispatch-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #2c3e50;
-  margin: 0 0 4px;
-}
-
-.sos-dispatch-summary {
-  font-size: 0.82rem;
-  color: #7f8c8d;
-  margin: 0 0 10px;
-}
-
-.sos-dispatch-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sos-dispatch-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.83rem;
-}
-
-.sos-dispatch-item.ok   { background: #eafaf1; }
-.sos-dispatch-item.fail { background: #fdecea; }
-
-.dispatch-status-dot {
-  font-weight: 800;
-  font-size: 1rem;
-  min-width: 16px;
-}
-
-.dispatch-name  { font-weight: 700; flex: 1; color: #2c3e50; }
-.dispatch-phone { font-family: monospace; color: #5d6d7e; font-size: 0.78rem; }
-
-.dispatch-status-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 99px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.dispatch-status-label.sent      { background: #d5f5e3; color: #1e8449; }
-.dispatch-status-label.simulated { background: #d6eaf8; color: #1a5276; }
-.dispatch-status-label.failed    { background: #fdecea; color: #c0392b; }
-
-.sos-no-contacts-warn {
-  font-size: 0.85rem;
-  color: #e67e22;
-  margin: 0;
-}
-
-/* ── Info section (right) ── */
 .sos-info-section {
   display: flex;
   flex-direction: column;
@@ -371,7 +134,7 @@
   background: white;
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
@@ -387,8 +150,15 @@
   flex-shrink: 0;
 }
 
-.sos-info-card h3 { margin: 0 0 0.5rem; font-size: 1.2rem; color: #2c3e50; }
-.sos-info-card.urgent h3 { color: white; }
+.sos-info-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.sos-info-card.urgent h3 {
+  color: white;
+}
 
 .emergency-number {
   font-size: 2rem;
@@ -397,57 +167,31 @@
   margin: 0.5rem 0;
 }
 
-.sos-info-card.urgent .emergency-number { color: white; }
-
-.sos-info-card p { margin: 0; color: #7f8c8d; line-height: 1.6; }
-.sos-info-card.urgent p { color: rgba(255,255,255,0.9); }
-
-/* ── How-it-works box ── */
-.sos-how-it-works {
-  background: #fdfaf4;
-  border: 1.5px solid #f39c12;
-  border-radius: 14px;
-  padding: 1.4rem 1.6rem;
+.sos-info-card.urgent .emergency-number {
+  color: white;
 }
 
-.sos-how-it-works h4 {
-  margin: 0 0 0.8rem;
-  font-size: 1rem;
-  color: #c67c00;
-}
-
-.sos-how-it-works ol {
-  padding-left: 1.4rem;
-  margin: 0 0 0.8rem;
-}
-
-.sos-how-it-works li {
-  font-size: 0.87rem;
-  color: #2c3e50;
-  margin-bottom: 5px;
-  line-height: 1.5;
-}
-
-.sos-how-it-works code {
-  font-family: monospace;
-  background: #eee;
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 0.82rem;
-}
-
-.sos-note {
-  font-size: 0.82rem;
-  color: #7f8c8d;
+.sos-info-card p {
   margin: 0;
-  line-height: 1.7;
+  color: #7f8c8d;
+  line-height: 1.6;
 }
 
-/* ── Responsive ── */
+.sos-info-card.urgent p {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 @media (max-width: 768px) {
-  .sos-content { grid-template-columns: 1fr; }
-  .sos-header h1 { font-size: 2rem; }
-  .sos-info-card { flex-direction: column; text-align: center; }
-  .sos-location-row { flex-direction: column; }
-  .sos-gps-btn { padding: 0.7rem 1rem; }
+  .sos-content {
+    grid-template-columns: 1fr;
+  }
+
+  .sos-header h1 {
+    font-size: 2rem;
+  }
+
+  .sos-info-card {
+    flex-direction: column;
+    text-align: center;
+  }
 }

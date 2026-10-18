@@ -35,7 +35,7 @@ const getLatestHourlyEntries = (history, limit = 5) => {
     .filter((entry) =>
       entry?.timestamp
       && Number.isFinite(Number(entry.population))
-      && ['manual', 'image_analysis'].includes(entry.source)
+      && (!entry.source || ['manual', 'image_analysis', 'verified', 'unknown'].includes(entry.source))
     )
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .forEach((entry) => {
@@ -138,7 +138,9 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
   };
 
   useEffect(() => {
+    setPredictionResult(null);
     loadData();
+    handleEnvironmentSync(false);
   }, [campId]);
 
   // --- MANUAL UPDATE ---
@@ -293,10 +295,10 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
 
   const handlePredictProgression = async () => {
     if (!camp) return;
-    if (popHistory.length < 5) {
+    if (latestFiveObservations.length < 5) {
       if (onAddToast) {
         onAddToast(
-          `Collect ${5 - popHistory.length} more hourly population observation${5 - popHistory.length === 1 ? '' : 's'} before forecasting.`,
+          `Collect ${5 - latestFiveObservations.length} more hourly population observation${5 - latestFiveObservations.length === 1 ? '' : 's'} before forecasting.`,
           'warning',
           'More Observations Required'
         );
@@ -313,9 +315,10 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          currentPopulation: Number(popHistory[0] || camp.currentPopulation),
+          campId: camp.id,
+          currentPopulation: Number(latestFiveObservations[4]?.population ?? camp.currentPopulation),
           maxCapacity: Number(camp.maxCapacityPersons),
-          popHistory: popHistory.slice(0, 5),
+          popHistory: latestFiveObservations.map((e) => Number(e.population)),
           rainHistory: liveInputs?.rainHistory || rainHistory,
           riverLevel: Number(liveInputs?.riverLevel ?? riverLevel),
           temperatureC: liveInputs?.temperatureC ?? environmentData?.weather?.temperatureC,
@@ -326,11 +329,37 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         }),
       });
 
-      if (!res.ok) throw new Error('Forecast service rejected the request');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || 'Forecast service rejected the request');
+      }
       const data = await res.json();
       setPredictionResult(data);
+      // Immediately update top Predicted card with ML forecast demand
+      setCamp((prev) => ({
+        ...prev,
+        predictedPopulation: data.predictedPopulation,
+      }));
+
+      if (data.status === 'OVERFLOW_RISK' || data.overflow > 0) {
+        if (onAddToast) {
+          onAddToast(
+            `Predicted next-hour demand of ${data.predictedPopulation} exceeds camp capacity (${camp.maxCapacityPersons}) by ${data.overflow} people!`,
+            'warning',
+            'Overflow Risk Detected'
+          );
+        }
+      } else {
+        if (onAddToast) {
+          onAddToast(
+            `Forecast complete: ${data.predictedPopulation} people predicted for next hour.`,
+            'success',
+            'Forecast Generated'
+          );
+        }
+      }
     } catch (err) {
-      if (onAddToast) onAddToast('Error running next-hour prediction', 'error', 'Prediction Failed');
+      if (onAddToast) onAddToast(err.message || 'Error running next-hour prediction', 'error', 'Prediction Failed');
     } finally {
       setPredicting(false);
     }
@@ -425,13 +454,19 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
 
   const latestFiveObservations = getLatestHourlyEntries(camp?.hourlyHistory, 5).reverse();
   const hasForecastHistory = latestFiveObservations.length === 5;
+  const hasEnvironmentalInputs = Boolean(
+    (environmentData?.weather?.available && environmentData?.river?.available) ||
+    (Number.isFinite(Number(riverLevel)) && rainHistory?.length > 0)
+  );
   const observationSlots = [
     ...Array(Math.max(0, 5 - latestFiveObservations.length)).fill(null),
     ...latestFiveObservations,
   ];
   const predictedFor = new Date(
     predictionResult?.forecastFor
-      || new Date(camp?.lastUpdated || 0).getTime() + 60 * 60 * 1000
+      || (latestFiveObservations.length > 0
+          ? new Date(latestFiveObservations[latestFiveObservations.length - 1].timestamp).getTime() + 60 * 60 * 1000
+          : new Date(camp?.lastUpdated || 0).getTime() + 60 * 60 * 1000)
   );
 
   if (loading) {
@@ -454,6 +489,9 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       </div>
     );
   }
+
+  const isOverflow = (predictionResult?.overflow > 0) || (camp.predictedPopulation > camp.maxCapacityPersons);
+  const overflowCount = predictionResult?.overflow ?? Math.max(0, (camp.predictedPopulation || 0) - camp.maxCapacityPersons);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -496,9 +534,30 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
             <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Sheltered</span>
             <strong style={{ fontSize: '1.6rem', color: 'var(--text-primary)' }}>{camp.currentPopulation}</strong>
           </div>
-          <div style={{ background: 'var(--accent-blue-subtle)', border: '1px solid hsla(217, 91%, 60%, 0.35)', borderRadius: 'var(--radius-lg)', padding: '12px 18px', textAlign: 'center', minWidth: '110px' }}>
-            <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--accent-blue)', fontWeight: '700', textTransform: 'uppercase' }}>Predicted</span>
-            <strong style={{ fontSize: '1.6rem', color: 'var(--accent-blue)' }}>{camp.predictedPopulation || camp.currentPopulation}</strong>
+          <div style={{
+            background: isOverflow ? 'hsla(0, 84%, 60%, 0.12)' : 'var(--accent-blue-subtle)',
+            border: isOverflow ? '1px solid hsla(0, 84%, 60%, 0.45)' : '1px solid hsla(217, 91%, 60%, 0.35)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '12px 18px',
+            textAlign: 'center',
+            minWidth: '110px'
+          }}>
+            <span style={{
+              display: 'block',
+              fontSize: '0.68rem',
+              color: isOverflow ? 'var(--accent-rose)' : 'var(--accent-blue)',
+              fontWeight: '700',
+              textTransform: 'uppercase'
+            }}>Predicted</span>
+            <strong style={{
+              fontSize: '1.6rem',
+              color: isOverflow ? 'var(--accent-rose)' : 'var(--accent-blue)'
+            }}>{camp.predictedPopulation || camp.currentPopulation}</strong>
+            {isOverflow && (
+              <span style={{ display: 'block', fontSize: '0.62rem', color: 'var(--accent-rose)', fontWeight: '700' }}>
+                +{overflowCount} Overflow
+              </span>
+            )}
           </div>
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '12px 18px', textAlign: 'center', minWidth: '110px' }}>
             <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Max Capacity</span>
@@ -648,7 +707,12 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                 <div className="population-forecast-status">{weatherStatus}</div>
               )}
 
-              <div className="population-hour-grid">
+              <div
+                className={`population-hour-grid ${predictionResult ? 'has-prediction' : ''}`}
+                style={{
+                  gridTemplateColumns: predictionResult ? 'repeat(6, minmax(145px, 1fr))' : 'repeat(5, minmax(145px, 1fr))'
+                }}
+              >
                 {observationSlots.map((entry, index) => (
                   <div className={`population-hour-card ${entry ? '' : 'empty'}`} key={entry?.timestamp || `empty-${index}`}>
                     <span className="population-hour-card__step">Hour {index + 1}</span>
@@ -675,23 +739,31 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                   </div>
                 ))}
 
-                <div className="population-hour-card population-hour-card--prediction">
-                  <span className="population-hour-card__step">Next Hour</span>
-                  <div className="population-hour-card__date">
-                    <CalendarDays size={13} />
-                    {predictedFor.toLocaleDateString('en-GB', {
-                      timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
-                    })}
+                {predictionResult && (
+                  <div className={`population-hour-card population-hour-card--prediction ${((predictionResult.overflow > 0) || (predictionResult.predictedPopulation > camp.maxCapacityPersons)) ? 'population-hour-card--overflow' : ''}`}>
+                    <span className="population-hour-card__step">Next Hour</span>
+                    <div className="population-hour-card__date">
+                      <CalendarDays size={13} />
+                      {predictedFor.toLocaleDateString('en-GB', {
+                        timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
+                      })}
+                    </div>
+                    <div className="population-hour-card__time">
+                      <Clock size={13} />
+                      {predictedFor.toLocaleTimeString('en-US', {
+                        timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </div>
+                    <strong>{predictionResult.predictedPopulation}</strong>
+                    {predictionResult.overflow > 0 ? (
+                      <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: '700' }}>
+                        ⚠️ Overflow: +{predictionResult.overflow} people
+                      </span>
+                    ) : (
+                      <small>{predictionResult.delta >= 0 ? '+' : ''}{predictionResult.delta} expected (within capacity)</small>
+                    )}
                   </div>
-                  <div className="population-hour-card__time">
-                    <Clock size={13} />
-                    {predictedFor.toLocaleTimeString('en-US', {
-                      timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </div>
-                  <strong>{predictionResult?.predictedPopulation ?? '—'}</strong>
-                  <small>{predictionResult ? `${predictionResult.delta >= 0 ? '+' : ''}${predictionResult.delta} expected` : 'Run forecast'}</small>
-                </div>
+                )}
               </div>
 
               <div className="population-environment-grid">
@@ -720,7 +792,11 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
               </div>
 
               <div className="population-forecast-actions">
-                <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting || syncingEnvironment || !hasForecastHistory}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handlePredictProgression}
+                  disabled={predicting || syncingEnvironment || !hasForecastHistory || !hasEnvironmentalInputs}
+                >
                   <TrendingUp size={14} />
                   <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
                 </button>
@@ -737,14 +813,41 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
                 </div>
               )}
 
-              {predictionResult && (
-                <div className="population-forecast-explanation">
-                  <strong>Forecast inputs</strong>
-                  <span>Hourly growth: {predictionResult.factors?.averageHourlyGrowth ?? 0} people/hour</span>
-                  <span>Recent rain: {predictionResult.factors?.recentRainfallMm ?? 0} mm</span>
-                  <span>River level: {predictionResult.factors?.riverLevelM ?? riverLevel} m</span>
-                  <p>{predictionResult.note}</p>
+              {hasForecastHistory && !hasEnvironmentalInputs && (
+                <div className="population-forecast-history-warning" style={{ background: '#fef3c7', borderColor: '#fcd34d', color: '#92400e' }}>
+                  Live environmental conditions not synchronized. Click "Sync Live Conditions" above to retrieve live weather and river gauge data.
                 </div>
+              )}
+
+              {predictionResult && (
+                <>
+                  {predictionResult.overflow > 0 && (
+                    <div className="population-forecast-overflow-alert">
+                      <AlertTriangle size={18} />
+                      <div>
+                        <strong>OVERFLOW RISK WARNING:</strong> Predicted demand of {predictionResult.predictedPopulation} exceeds maximum camp capacity of {predictionResult.maxCapacity} by {predictionResult.overflow} people. Safe accommodated capacity is {predictionResult.expectedSheltered}.
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="population-forecast-explanation">
+                    <strong>Model Forecast Details:</strong>
+                    <span>Status: {predictionResult.status || (predictionResult.overflow > 0 ? 'OVERFLOW_RISK' : 'WITHIN_CAPACITY')}</span>
+                    <span>Expected Sheltered: {predictionResult.expectedSheltered ?? Math.min(predictionResult.predictedPopulation, predictionResult.maxCapacity)}</span>
+                    {predictionResult.overflow > 0 && (
+                      <span style={{ background: '#fee2e2', color: '#dc2626' }}>Overflow: +{predictionResult.overflow}</span>
+                    )}
+                    <span>1h Trend: {predictionResult.factors?.populationChange1h >= 0 ? '+' : ''}{predictionResult.factors?.populationChange1h ?? 0}</span>
+                    <span>3h Trend: {predictionResult.factors?.populationChange3h >= 0 ? '+' : ''}{predictionResult.factors?.populationChange3h ?? 0}</span>
+                    <span>Rain (current): {predictionResult.environmentalConditions?.rainfallMm ?? predictionResult.factors?.rainfallMm ?? 0} mm</span>
+                    <span>Rain (3h avg): {predictionResult.environmentalConditions?.rainfall3hAvgMm ?? predictionResult.factors?.rainfall3hAvgMm ?? predictionResult.factors?.recentRainfallMm ?? 0} mm</span>
+                    <span>River Level: {predictionResult.environmentalConditions?.riverLevelM ?? predictionResult.factors?.riverLevelM ?? riverLevel} m</span>
+                    <span>River Δ: {predictionResult.environmentalConditions?.riverLevelChangeM ?? predictionResult.factors?.riverLevelChangeM ?? 0} m/h</span>
+                    <span>Temp: {predictionResult.environmentalConditions?.temperatureC ?? predictionResult.factors?.temperatureC ?? 0}°C</span>
+                    <span>Humidity: {predictionResult.environmentalConditions?.humidityPercent ?? predictionResult.factors?.humidityPercent ?? 0}%</span>
+                    <p>{predictionResult.note}</p>
+                  </div>
+                </>
               )}
             </div>
           </div>

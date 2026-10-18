@@ -2,72 +2,56 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import CreditStatusBar from "../components/CreditStatusBar";
 import "./Donation_Appeal.css";
-import AppealScorecard from "../components/AppealScorecard";
-import LENGTH_CONFIG from "../config/appealLengths.json";
 
 
-const API_BASE_URL = "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const MIN_APPEAL_LENGTH = 10;
 const MAX_APPEAL_LENGTH = 10_000;
+const LOW_CONFIDENCE_THRESHOLD = 0.50;
 
 const REQUIRED_FIELDS = [
   ["location", "Location"],
-  ["verified_need", "Specific need"],
+  ["verified_need", "Verified Need"],
   ["campaign_goal", "Campaign Goal"],
 ];
 
 
-async function appealRequest(path, payload) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+async function generateAppealVariants(formData) {
+  const response = await fetch(`${API_BASE_URL}/api/generate-appeal-variants`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(formData),
   });
-  const data = await response.json().catch(() => null);
+
   if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail
-      : data?.detail ? JSON.stringify(data.detail) : "Appeal request failed.";
-    const message = `HTTP ${response.status}: ${detail}`;
-    if (response.status === 422) throw new ValidationError(message);
-    throw new Error(message);
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || "Failed to generate appeal variants.");
   }
-  if (!data || typeof data !== "object") throw new Error(`HTTP ${response.status}: Invalid response body.`);
-  return data;
-}
 
-function responseVariants(data) {
-  return Array.isArray(data?.variants) ? data.variants.filter(item => typeof item?.appeal_text === "string" && item.appeal_text.trim()) : [];
-}
-
-const LABEL_RANK = { low: 0, medium: 1, high: 2 };
-
-function orderVariants(items, category) {
-  const band = LENGTH_CONFIG[category] || LENGTH_CONFIG.short;
-  const inside = item => { const words = item.appeal_text.trim().split(/\s+/).filter(Boolean).length; return words >= band.minimum && words <= band.maximum; };
-  return [...items].sort((a, b) => Number(inside(b)) - Number(inside(a))
-    || Number(b.label_agreement === true) - Number(a.label_agreement === true)
-    || (LABEL_RANK[b.final_label] ?? -1) - (LABEL_RANK[a.final_label] ?? -1)
-    || Number(b.classifier_confidence ?? b.confidence ?? 0) - Number(a.classifier_confidence ?? a.confidence ?? 0)
-    || Number(b.quality_score) - Number(a.quality_score));
-}
-
-function AppealLengthWarning({ result }) {
-  if (!result?.length_warning) return null;
-  return <div className="appeal-length-warning" role="note">
-    <p>{String(result.length_warning)}</p>
-  </div>;
-}
-
-function partialGenerationMessage(data) {
-  let message = "Some variants are unavailable. The available appeal is kept below.";
-  if (data.generation_error) message += ` ${data.generation_error}`;
-  if (data.retry_after_seconds > 0) message += ` Try Generate Appeal again in about ${data.retry_after_seconds} seconds.`;
-  return message;
+  const data = await response.json();
+  return data.variants || [];
 }
 
 
-async function evaluateAppeal(appealText, language, campaign = {}) {
+async function generateRemainingVariants(formData) {
+  const response = await fetch(`${API_BASE_URL}/api/generate-appeal-variants/remaining`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(formData),
+  });
+
+  if (!response.ok) {
+    console.warn("Remaining variants failed to load.");
+    return [];
+  }
+
+  const data = await response.json();
+  return data.variants || [];
+}
+
+
+async function evaluateAppeal(appealText, language) {
   const trimmed = (appealText || "").trim();
   if (!trimmed) {
     throw new ValidationError("Appeal text is empty and cannot be evaluated.");
@@ -83,7 +67,28 @@ async function evaluateAppeal(appealText, language, campaign = {}) {
     );
   }
 
-  return appealRequest("/api/quality/evaluate", { ...campaign, appeal_text: trimmed, language });
+  const response = await fetch(`${API_BASE_URL}/api/quality/evaluate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      appeal_text: trimmed,
+      language,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    if (response.status === 422) {
+      throw new ValidationError(
+        data?.detail || "The appeal text did not pass quality scoring validation."
+      );
+    }
+    throw new Error(data?.detail || "Failed to evaluate appeal quality.");
+  }
+
+  return response.json();
 }
 
 
@@ -123,7 +128,7 @@ function Donation_Appeal() {
     campaign_type: "flood_relief",
     location: "",
     verified_need: "",
-    campaign_goal: "Support affected families and help the community in need",
+    campaign_goal: "",
     tone: "hopeful",
     channel: "facebook",
     length_category: "short",
@@ -139,11 +144,23 @@ function Donation_Appeal() {
   const [evaluateError, setEvaluateError] = useState("");
   const [evaluateErrorIsValidation, setEvaluateErrorIsValidation] = useState(false);
 
-  const [finalizing, setFinalizing] = useState(false);
-  const [partialMessage, setPartialMessage] = useState("");
-  const [copyMessage, setCopyMessage] = useState("");
-  const [generatedRequest, setGeneratedRequest] = useState({});
   const activeVariant = variants[activeVariantIndex] || null;
+  const activeQuality = activeVariant
+    ? {
+        score: Number(activeVariant.quality_score),
+        status: activeVariant.quality_label,
+        method: activeVariant.quality_method || activeVariant.method || "ml_model",
+        confidence: Number(activeVariant.confidence || 0),
+        confidenceNormalised: Number(
+          activeVariant.confidence_normalised ?? activeVariant.confidence ?? 0
+        ),
+        confidenceDisplay: activeVariant.confidence_display,
+        lowConfidence: activeVariant.low_confidence ?? (
+          Number(activeVariant.confidence_normalised ?? activeVariant.confidence ?? 0) < LOW_CONFIDENCE_THRESHOLD
+        ),
+      }
+    : null;
+
   const getMissingRequiredFields = () =>
     REQUIRED_FIELDS.filter(([field]) => !formData[field]?.trim()).map(([, label]) => label);
 
@@ -174,10 +191,6 @@ function Donation_Appeal() {
     if (!validateForm()) return;
 
     const requestData = { ...formData };
-    setGeneratedRequest(requestData);
-    setFinalizing(true);
-    setPartialMessage("");
-    setCopyMessage("");
 
     setLoading(true);
     setGenerateError("");
@@ -190,73 +203,65 @@ function Donation_Appeal() {
     setGeneratedLanguage(requestData.language);
 
     try {
-      const first = await appealRequest("/api/generate-appeal-variants", requestData);
-      const firstVariants = responseVariants(first);
+      const firstVariants = await generateAppealVariants(requestData);
 
       if (!firstVariants.length) {
         throw new Error("No appeal variants were generated.");
       }
 
       setVariants(firstVariants);
-      if (first.partial) setPartialMessage(partialGenerationMessage(first));
       setGeneratedAppeal(firstVariants[0].appeal_text);
       setLoading(false);
 
-      await handleSelectVariant(firstVariants[0], requestData.language, 0, requestData);
+      await handleSelectVariant(firstVariants[0], requestData.language, 0);
 
       setLoadingRemaining(true);
-      appealRequest("/api/generate-appeal-variants/remaining", requestData)
-        .then((data) => {
-          const remainingVariants = responseVariants(data);
-          if (data.partial || !remainingVariants.length) setPartialMessage(partialGenerationMessage(data));
-          else setPartialMessage("");
+      generateRemainingVariants(requestData)
+        .then((remainingVariants) => {
           if (remainingVariants.length > 0) {
-            const unique = new Map(firstVariants.map(variant => [`${variant.style || ""}:${variant.appeal_text.trim()}`, variant]));
-            for (const variant of remainingVariants) unique.set(`${variant.style || ""}:${variant.appeal_text.trim()}`, variant);
-            const ordered = orderVariants([...unique.values()], requestData.length_category);
-            setVariants(ordered);
-            setActiveVariantIndex(0);
-            setGeneratedAppeal(ordered[0].appeal_text);
+            setVariants((previousVariants) => {
+              const existingTexts = new Set(
+                previousVariants.map((variant) => variant.appeal_text.trim())
+              );
+              const newVariants = remainingVariants.filter(
+                (variant) => !existingTexts.has(variant.appeal_text.trim())
+              );
+              return [...previousVariants, ...newVariants];
+            });
           }
         })
         .catch((err) => {
-          setPartialMessage(`More variants unavailable. ${err.message}`);
+          console.warn("Background variant loading failed:", err.message);
         })
         .finally(() => {
           setLoadingRemaining(false);
-          setFinalizing(false);
         });
     } catch (err) {
       setGenerateError(err.message || "Failed to generate appeal.");
       setLoading(false);
-      setFinalizing(false);
     }
   };
 
-  const handleSelectVariant = async (variant, language = generatedLanguage, variantIndex = activeVariantIndex, campaign = generatedRequest) => {
+  const handleSelectVariant = async (variant, language = generatedLanguage, variantIndex = activeVariantIndex) => {
     setGeneratedAppeal(variant.appeal_text);
     setEvaluateError("");
     setEvaluateErrorIsValidation(false);
     setEvaluating(true);
 
     try {
-      const quality = await evaluateAppeal(variant.appeal_text, language, campaign);
+      const quality = await evaluateAppeal(variant.appeal_text, language);
       setVariants((previousVariants) =>
         previousVariants.map((item, index) =>
           index === variantIndex
             ? {
                 ...item,
-                ...quality,
                 quality_label: quality.status,
-                final_label: quality.final_label ?? quality.status,
                 quality_score: quality.score,
                 confidence: quality.confidence,
                 confidence_normalised: quality.confidence_normalised,
                 confidence_display: quality.confidence_display,
                 low_confidence: quality.low_confidence ?? false,
                 quality_method: quality.method,
-                predicted_class: quality.predicted_class ?? null,
-                class_probs: quality.class_probs ?? {},
               }
             : item
         )
@@ -278,29 +283,48 @@ function Donation_Appeal() {
     await handleSelectVariant(variants[wrappedIndex], generatedLanguage, wrappedIndex);
   };
 
-  const handleCopy = async (variant = activeVariant) => {
-    if (!variant) return;
+  const handleCopy = async () => {
+    if (!activeVariant) return;
+
     try {
-      await navigator.clipboard.writeText(variant.appeal_text);
-      logCopyEvent(variant, generatedLanguage).catch(() => {});
-      setCopyMessage("Appeal copied to clipboard");
+      await navigator.clipboard.writeText(activeVariant.appeal_text);
+      logCopyEvent(activeVariant, generatedLanguage).catch(() => {});
+      alert("Appeal copied to clipboard");
     } catch {
-      // Preserve the existing copy fallback when Clipboard API access is unavailable.
       const textArea = document.createElement("textarea");
-      textArea.value = variant.appeal_text;
+      textArea.value = activeVariant.appeal_text;
       document.body.appendChild(textArea);
       textArea.select();
-      try {
-        if (!document.execCommand("copy")) throw new Error("Copy unavailable");
-        logCopyEvent(variant, generatedLanguage).catch(() => {});
-        setCopyMessage("Appeal copied to clipboard");
-      } catch {
-        setCopyMessage("Copy unavailable; select the appeal text to copy it manually.");
-      } finally {
-        textArea.remove();
-      }
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      logCopyEvent(activeVariant, generatedLanguage).catch(() => {});
+      alert("Appeal copied to clipboard");
     }
   };
+
+  const getStatus = (score, status) => {
+    if (status) return status;
+    if (!score && score !== 0) return "";
+    if (score < 3.0) return "Needs improvement";
+    if (score < 4.0) return "Acceptable";
+    return "Good";
+  };
+
+  const getConfidence = () => {
+    if (activeQuality?.confidenceDisplay) {
+      return activeQuality.confidenceDisplay;
+    }
+
+    if (activeQuality?.confidenceNormalised || activeQuality?.confidenceNormalised === 0) {
+      return `${Math.round(activeQuality.confidenceNormalised * 100)}%`;
+    }
+
+    return "";
+  };
+
+  const confidenceRatio = activeQuality
+    ? (activeQuality.confidenceNormalised ?? activeQuality.confidence ?? 0)
+    : 0;
 
   return (
     <div className="donation-appeal-page">
@@ -374,7 +398,7 @@ function Donation_Appeal() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="verified_need">Specific need</label>
+              <label htmlFor="verified_need">Verified Need</label>
               <input
                 id="verified_need"
                 type="text"
@@ -415,7 +439,7 @@ function Donation_Appeal() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="channel">Channel</label>
+              <label htmlFor="channel">Channel ffff</label>
               <select
                 id="channel"
                 name="channel"
@@ -439,7 +463,10 @@ function Donation_Appeal() {
                 value={formData.length_category}
                 onChange={handleChange}
               >
-                {Object.entries(LENGTH_CONFIG).filter(([, band]) => band.visible !== false).map(([key, band]) => <option key={key} value={key}>{band.name} (about {band.minimum}-{band.maximum} words)</option>)}
+                <option value="very_short">Very short (1 sentence)</option>
+                <option value="short">Short (1-2 sentences)</option>
+                <option value="medium">Medium (3-4 sentences)</option>
+                <option value="long">Long (5+ sentences)</option>
               </select>
             </div>
 
@@ -447,7 +474,7 @@ function Donation_Appeal() {
               className="generate-button"
               type="button"
               onClick={handleGenerate}
-              disabled={loading || loadingRemaining || finalizing || evaluating || !isFormComplete}
+              disabled={loading || !isFormComplete}
             >
               {loading ? "Generating..." : "Generate Appeal"}
             </button>
@@ -460,9 +487,6 @@ function Donation_Appeal() {
           </section>
 
           <div className="appeal-output-layout">
-            {finalizing && <p className="appeal-final-progress" role="status">Choosing your final appeal after all available variants are checked...</p>}
-            {partialMessage && <p className="appeal-partial-note" role="status">{partialMessage}</p>}
-            {copyMessage && <p role="status">{copyMessage}</p>}
             <section className="appeal-results">
               <h2>Generated Appeal</h2>
 
@@ -510,26 +534,28 @@ function Donation_Appeal() {
                   </div>
 
                   <div className="variant-card">
-                    {activeVariant?.generator_status === "fallback" && (
-                      <div className="fallback-banner" role="alert">
-                        <span className="fallback-banner-icon">⚠</span>
-                        <div>
-                          <strong>Generation unavailable — template used</strong>
-                          <p>This is a local template, not a live Gemini response. Check it before publishing.</p>
-                          <p>
-                            {activeVariant.generator_error
-                              ? activeVariant.generator_error
-                              : "All generation providers failed. Edit this placeholder before publishing."}
-                          </p>
-                        </div>
+                    <div className="variant-card-header">
+                      <span className={`quality-badge ${activeQuality?.status || ""}`}>
+                        ● {activeQuality?.status}
+                      </span>
+                      <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                        {activeVariantIndex === 0 && (
+                          <span className="best-match-badge">★ Best Match</span>
+                        )}
+                        <span className="score-chip">
+                          {activeQuality?.score.toFixed(2)}
+                        </span>
+                        <span className="score-chip">
+                          {getConfidence()}
+                        </span>
                       </div>
-                    )}
+                    </div>
                     <p>{activeVariant.appeal_text}</p>
-                    {activeVariant.generator_status !== "fallback" && <AppealScorecard result={activeVariant} />}
-                    {evaluating && <p role="status">Evaluating selected appeal...</p>}
-                    {evaluateError && <div className={`appeal-error-box ${evaluateErrorIsValidation ? "validation" : "api"}`} role="alert">{evaluateError}</div>}
-                    <AppealLengthWarning result={activeVariant} />
-                    {activeVariant.style && <div className="variant-meta"><span>{activeVariant.style}</span></div>}
+                    <div className="variant-meta">
+                      <span>{activeVariant.model}</span>
+                      {activeVariant.style && <span>{activeVariant.style}</span>}
+                      <span>T {activeVariant.temperature}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -543,7 +569,7 @@ function Donation_Appeal() {
                   )}
 
                   <div className="result-actions">
-                    <button type="button" onClick={() => handleCopy()}>
+                    <button type="button" onClick={handleCopy}>
                       Copy Text
                     </button>
                   </div>
@@ -551,7 +577,102 @@ function Donation_Appeal() {
               )}
             </section>
 
+            <section className="quality-results">
+              <h2>Quality Evaluation</h2>
 
+              {!activeQuality && !evaluating && (
+                <p className="result-placeholder">
+                  Generate or switch an appeal variant to view its quality details.
+                </p>
+              )}
+
+              {evaluating && (
+                <p className="result-placeholder">
+                  Evaluating selected appeal...
+                </p>
+              )}
+
+              {evaluateError && !evaluating && (
+                <div
+                  className={`appeal-error-box ${evaluateErrorIsValidation ? "validation" : "api"}`}
+                  role="alert"
+                >
+                  <strong>
+                    {evaluateErrorIsValidation ? "Validation issue" : "Evaluation failed"}
+                  </strong>
+                  <p>{evaluateError}</p>
+                </div>
+              )}
+
+              {activeQuality && (
+                <div className="quality-box">
+                  {activeQuality.lowConfidence && (
+                    <div className="low-confidence-banner" role="alert">
+                      <span className="low-confidence-icon">!</span>
+                      <div>
+                        <strong>Low confidence score</strong>
+                        <p>
+                          The model is uncertain about this appeal's quality rating.
+                          Consider reviewing it manually before publishing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="score-hero">
+                    <div>
+                      <span className="score-hero-number">
+                        {activeQuality.score.toFixed(2)}
+                      </span>
+                      <span className="score-hero-denom"> / 5</span>
+                    </div>
+                    <div className="score-hero-label">Appeal Quality Score</div>
+                    <div className="score-progress">
+                      <div
+                        className="score-progress-fill"
+                        style={{ width: `${(activeQuality.score / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="quality-row">
+                    <span>Status</span>
+                    <strong className={`status-pill ${activeQuality.status || ""}`}>
+                      {getStatus(activeQuality.score, activeQuality.status)}
+                    </strong>
+                  </div>
+
+                  <div className="quality-row">
+                    <span>Method</span>
+                    <strong className="status-pill method">
+                      {activeQuality.method}
+                    </strong>
+                  </div>
+
+                  <div className="quality-row">
+                    <span>Confidence</span>
+                    <div className="confidence-row">
+                      <div className="confidence-bar">
+                        <div
+                          className="confidence-fill"
+                          style={{ width: `${Math.round(confidenceRatio * 100)}%` }}
+                        />
+                      </div>
+                      <strong className={activeQuality.lowConfidence ? "confidence-low" : ""}>
+                        {getConfidence()}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {activeQuality.lowConfidence && (
+                    <div className="quality-row">
+                      <span>Review recommended</span>
+                      <strong className="status-pill warning">Yes</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
           </div>
         </div>
       </main>

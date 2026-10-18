@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import {
@@ -8,12 +8,13 @@ import {
   specialtyUnmatchedWarningText,
   useSuggestedSpecialtyRoutingFlag,
 } from "../utils/triageRouting";
-import { visibleMatchedRules } from "../utils/triageMappingDisplay";
+import { complaintMappingNotice, visibleMatchedRules } from "../utils/triageMappingDisplay";
 import { buildVitalsPayload, priorityVitalFields } from "../utils/vitalsPayload";
 import "./PriorityApplication.css";
 
-import { readTriageSession, readPendingPatients, pendingPatientKey, SESSION_KEY, STORAGE_KEY } from "../utils/triagePersistence";
-const API_BASE_URL = "";
+const SESSION_KEY = "severityQueueSession";
+const STORAGE_KEY = "priorityApplications";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const RED_FLAGS = [
   "breathing_difficulty",
@@ -70,27 +71,20 @@ export default function PriorityApplication() {
   const [overrideReason, setOverrideReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [pendingEntry, setPendingEntry] = useState(null);
-  const saveLock = useRef(false);
-  const inputVersion = useRef(0);
 
   useEffect(() => {
-    try {
-      const activeSession = readTriageSession();
-      if (!activeSession) { navigate("/camp-setup"); return; }
-      setSession(activeSession);
-      const pending = readPendingPatients(activeSession.session_id)[0];
-      if (pending) setPendingEntry(pending);
-    } catch (err) {
-      setError(`Unable to restore registration: ${err.message}`);
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) {
+      navigate("/camp-setup");
+      return;
     }
+    setSession(JSON.parse(raw));
   }, [navigate]);
 
   useEffect(() => {
     if (!severityResult || !extractResult || !overrideSeverity) return;
 
-    const currentSession = session;
+    const currentSession = JSON.parse(localStorage.getItem(SESSION_KEY));
     const routed = chooseRoutedMO(
       currentSession.mos,
       overrideSeverity,
@@ -100,19 +94,9 @@ export default function PriorityApplication() {
     );
     setAssignedMO(routed.mo);
     setRoutingAuditLabel(routed.auditLabel);
-  }, [extractResult, overrideSeverity, severityResult, session, useSuggestedSpecialtyRouting]);
-
-  const invalidateClassification = () => {
-    inputVersion.current += 1;
-    setSeverityResult(null);
-    setExtractResult(null);
-    setAssignedMO(null);
-    setOverrideSeverity("");
-    setOverrideReason("");
-  };
+  }, [extractResult, overrideSeverity, severityResult, useSuggestedSpecialtyRouting]);
 
   const handleFlagToggle = (flag) => {
-    invalidateClassification();
     setCheckedFlags((previous) =>
       previous.includes(flag)
         ? previous.filter((item) => item !== flag)
@@ -121,7 +105,6 @@ export default function PriorityApplication() {
   };
 
   const updateFormField = (field, value) => {
-    invalidateClassification();
     setForm((previous) => ({ ...previous, [field]: value }));
   };
 
@@ -170,7 +153,6 @@ export default function PriorityApplication() {
       return;
     }
 
-    const classifiedVersion = inputVersion.current;
     setLoading(true);
     setError("");
     setSeverityResult(null);
@@ -262,9 +244,6 @@ export default function PriorityApplication() {
         useSuggestedSpecialtyRouting
       );
 
-      if (inputVersion.current !== classifiedVersion) {
-        throw new Error("The form changed during classification. Please classify again.");
-      }
       setSeverityResult(classifyData);
       setAssignedMO(routed.mo);
       setRoutingAuditLabel(routed.auditLabel);
@@ -282,54 +261,8 @@ export default function PriorityApplication() {
     }
   };
 
-  const persistEntry = async (entry) => {
-    if (saveLock.current) return;
-    entry = { ...entry, should_queue: true };
-    saveLock.current = true;
-    setSaving(true);
-    setError("");
-    try {
-      // Keep the exact payload and ID until acknowledgement, including across reloads.
-      setPendingEntry(entry);
-      localStorage.setItem(pendingPatientKey(entry.session_id, entry.id), JSON.stringify(entry));
-      try {
-        await api.saveTriagePatient(entry);
-      } catch (saveError) {
-        // Repair an older browser-only session, but never reopen an ended session.
-        const active = readTriageSession();
-        if (saveError.status !== 409 || active?.session_id !== entry.session_id) throw saveError;
-        await api.startTriageSession(active);
-        await api.saveTriagePatient(entry);
-      }
-      // Server data is authoritative; failure to refresh a browser cache must not resend.
-      try {
-        localStorage.removeItem(pendingPatientKey(entry.session_id, entry.id));
-        const legacy = localStorage.getItem(pendingPatientKey(entry.session_id));
-        if (legacy && JSON.parse(legacy)?.id === entry.id) localStorage.removeItem(pendingPatientKey(entry.session_id));
-        const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([
-          entry, ...(Array.isArray(cached) ? cached : []).filter((p) => p.id !== entry.id || (p.session_id && p.session_id !== entry.session_id)),
-        ]));
-      } catch (cacheError) {
-        console.warn("[triage] Saved on server; browser cache update failed:", cacheError);
-      }
-      setPendingEntry(null);
-      navigate("/priority-queue");
-    } catch (err) {
-      console.error("[triage] Patient save not confirmed:", err);
-      setError(`Save not confirmed: ${err.message}. Your pending complaint is kept here. Retry before leaving.`);
-    } finally {
-      saveLock.current = false;
-      setSaving(false);
-    }
-  };
-
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
-    if (saveLock.current) return;
-    if (pendingEntry) { await persistEntry(pendingEntry); return; }
-    const validationError = validatePatientForm();
-    if (validationError) { setError(validationError); return; }
     if (!severityResult) {
       setError("Classify severity before submitting.");
       return;
@@ -344,100 +277,115 @@ export default function PriorityApplication() {
       return;
     }
 
-    try {
-      const currentSession = readTriageSession();
-      if (!currentSession || currentSession.session_id !== session.session_id) {
-        throw new Error("The active session changed. Reload before submitting.");
-      }
-      const conditionGroup = extractResult?.conditionGroup || "General Practice";
-      const specialty = extractResult?.specialty || "General Practice";
-
-      const routed = chooseRoutedMO(
-        currentSession.mos,
-        finalSeverity,
-        specialty,
-        severityResult.suggested_specialty,
-        useSuggestedSpecialtyRouting
-      );
-      const routedMO = routed.mo;
-
-      const patientId = `PT-${crypto.randomUUID()}`;
-      const entry = {
-        id: patientId,
-        session_id: currentSession.session_id,
-        should_queue: true,
-        clinical_note: form.clinicalNote.trim(),
-        vitals: buildVitalsPayload(form),
-        submittedAt: new Date().toISOString(),
-        title: severityResult.queue_title,
-        description: severityResult.queue_description,
-        recommended_action: severityResult.recommended_action,
-        queue_reason: severityResult.queue_reason,
-        queue_reason_text: severityResult.queue_reason_text,
-        display_note: hasOverride
-          ? `Clinician override applied: ${severityResult.severity} changed to ${finalSeverity}.`
-          : severityResult.display_note,
-        source: session?.camp?.type?.toUpperCase() || "TRIAGE",
-        severity: finalSeverity,
-        ai_severity: severityResult.severity,
-        scores: severityResult.scores,
-        risk_score: severityResult.risk_score,
-        priority_score: severityResult.priority_score,
-        method: severityResult.method,
-        symptoms: form.symptoms,
-        complaint_text: form.symptoms.trim(),
-        age: form.age,
-        red_flags: checkedFlags,
-        condition_group: conditionGroup,
-        specialty,
-        suggested_specialty: severityResult.suggested_specialty,
-        extracted_symptoms: extractResult?.extractedSymptoms || [],
-        camp: session?.camp || null,
-        assigned_mo_id: routedMO?.id || null,
-        assigned_mo_name: routedMO?.name || null,
-        routing_source: routed.source,
-        routing_audit_label: routed.auditLabel,
-        routed_specialty: routed.specialty,
-        specialty_unmatched: isSpecialtyUnmatched(
-          currentSession.mos || [],
-          severityResult.suggested_specialty
-        ),
-        clinician_override: hasOverride
-          ? {
-              from: severityResult.severity,
-              to: finalSeverity,
-              reason: overrideReason,
-              created_at: new Date().toISOString(),
-            }
-          : null,
-        critical_trigger: severityResult.critical_trigger,
-        matched_rules: severityResult.matched_rules,
-        incomplete_vitals: severityResult.incomplete_vitals,
-        incomplete_vitals_reason: severityResult.incomplete_vitals_reason,
-        vitals_warnings: severityResult.vitals_warnings || [],
-        interpreted_as: severityResult.interpreted_as,
-        mapped: severityResult.mapped,
-        mapping_confidence: severityResult.mapping_confidence,
-        mapped_complaints: severityResult.mapped_complaints,
-        complaint_mapping: severityResult.complaint_mapping,
-        mapped_terms: severityResult.complaint_mapping?.mapped_terms || [],
-        unmapped_terms: severityResult.complaint_mapping?.unmapped_terms || [],
-        complaint_mapping_reason_code: severityResult.complaint_mapping?.reason_code || null,
-        high_acuity_terms: severityResult.high_acuity_terms,
-        model_symptoms: severityResult.model_symptoms,
-        original_symptoms_text: severityResult.original_symptoms_text || form.symptoms.trim(),
-        mapping_review_reason: severityResult.mapping_review_reason,
-      };
-
-      await persistEntry(entry);
-    } catch (err) {
-      setError(`Unable to submit: ${err.message}`);
+    if (!severityResult.should_queue && !hasOverride) {
+      setError(severityResult.queue_description);
+      return;
     }
+
+    const currentSession = JSON.parse(localStorage.getItem(SESSION_KEY));
+    const conditionGroup = extractResult?.conditionGroup || "General Practice";
+    const specialty = extractResult?.specialty || "General Practice";
+
+    const routed = chooseRoutedMO(
+      currentSession.mos,
+      finalSeverity,
+      specialty,
+      severityResult.suggested_specialty,
+      useSuggestedSpecialtyRouting
+    );
+    const routedMO = routed.mo;
+
+    if (routedMO) {
+      currentSession.mos = currentSession.mos.map((mo) =>
+        mo.id === routedMO.id
+          ? { ...mo, queueDepth: (mo.queueDepth || 0) + 1 }
+          : mo
+      );
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentSession));
+    }
+
+    const currentApplications = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const patientId = `PT-${String(currentApplications.length + 1).padStart(4, "0")}`;
+      const entry = {
+      id: patientId,
+      submittedAt: new Date().toISOString(),
+      title: severityResult.queue_title,
+      description: severityResult.queue_description,
+      recommended_action: severityResult.recommended_action,
+      queue_reason: severityResult.queue_reason,
+      queue_reason_text: severityResult.queue_reason_text,
+      display_note: hasOverride
+        ? `Clinician override applied: ${severityResult.severity} changed to ${finalSeverity}.`
+        : severityResult.display_note,
+      source: session?.camp?.type?.toUpperCase() || "TRIAGE",
+      severity: finalSeverity,
+      ai_severity: severityResult.severity,
+      scores: severityResult.scores,
+      risk_score: severityResult.risk_score,
+      priority_score: severityResult.priority_score,
+      method: severityResult.method,
+      symptoms: form.symptoms,
+      complaint_text: form.symptoms.trim(),
+      age: form.age,
+      red_flags: checkedFlags,
+      condition_group: conditionGroup,
+      specialty,
+      suggested_specialty: severityResult.suggested_specialty,
+      extracted_symptoms: extractResult?.extractedSymptoms || [],
+      camp: session?.camp || null,
+      assigned_mo_id: routedMO?.id || null,
+      assigned_mo_name: routedMO?.name || null,
+      routing_source: routed.source,
+      routing_audit_label: routed.auditLabel,
+      routed_specialty: routed.specialty,
+      specialty_unmatched: isSpecialtyUnmatched(
+        currentSession.mos || [],
+        severityResult.suggested_specialty
+      ),
+      clinician_override: hasOverride
+        ? {
+            from: severityResult.severity,
+            to: finalSeverity,
+            reason: overrideReason,
+            created_at: new Date().toISOString(),
+          }
+        : null,
+      critical_trigger: severityResult.critical_trigger,
+      matched_rules: severityResult.matched_rules,
+      incomplete_vitals: severityResult.incomplete_vitals,
+      incomplete_vitals_reason: severityResult.incomplete_vitals_reason,
+      vitals_warnings: severityResult.vitals_warnings || [],
+      interpreted_as: severityResult.interpreted_as,
+      mapped: severityResult.mapped,
+      mapping_confidence: severityResult.mapping_confidence,
+      mapped_complaints: severityResult.mapped_complaints,
+      complaint_mapping: severityResult.complaint_mapping,
+      mapped_terms: severityResult.complaint_mapping?.mapped_terms || [],
+      unmapped_terms: severityResult.complaint_mapping?.unmapped_terms || [],
+      complaint_mapping_reason_code: severityResult.complaint_mapping?.reason_code || null,
+      high_acuity_terms: severityResult.high_acuity_terms,
+      model_symptoms: severityResult.model_symptoms,
+      original_symptoms_text: severityResult.original_symptoms_text || form.symptoms.trim(),
+      mapping_review_reason: severityResult.mapping_review_reason,
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...currentApplications]));
+    api.saveTriagePatient({
+      ...entry,
+      session_id: currentSession.session_id,
+    }).catch((error) => {
+      console.warn("[triage] patient save:", error);
+    });
+    navigate("/priority-queue");
   };
 
-  if (!session) return <div role="alert">{error || "Loading session..."}</div>;
+  if (!session) return null;
 
   const suggestedSpecialty = severityResult?.suggested_specialty;
+  const mappingNotice = complaintMappingNotice(
+    severityResult?.complaint_mapping,
+    suggestedSpecialty
+  );
   const recommendedMO = findRecommendedMO(session?.mos || [], suggestedSpecialty, overrideSeverity || severityResult?.severity);
   const specialtyUnmatchedWarning = specialtyUnmatchedWarningText(
     session?.mos || [],
@@ -458,15 +406,6 @@ export default function PriorityApplication() {
     <div className="priority-application-page">
       <main className="priority-application-container">
         <section className="priority-application-header">
-          <button
-            className="priority-application-back"
-            type="button"
-            aria-label="Back to MO Queue"
-            disabled={saving}
-            onClick={() => navigate("/priority-queue")}
-          >
-            ← Back
-          </button>
           <span>{session.camp.code} - {session.camp.name}</span>
           <h1>Patient Intake</h1>
           <p>
@@ -476,18 +415,7 @@ export default function PriorityApplication() {
         </section>
 
         <section className="priority-application-panel">
-          {error && <div role="alert" className="priority-application-error">{error}</div>}
-          {pendingEntry && (
-            <div role="status">
-              <p>A complaint is awaiting save confirmation. Retry sends the same record without creating a duplicate.</p>
-              <p>{pendingEntry.complaint_text}</p>
-              <button type="button" disabled={saving} onClick={() => persistEntry(pendingEntry)}>
-                {saving ? "Saving..." : "Retry pending complaint"}
-              </button>
-            </div>
-          )}
           <form className="priority-application-form" onSubmit={handleSubmit}>
-            <fieldset disabled={saving || Boolean(pendingEntry)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div className="priority-application-group">
               <label htmlFor="age">Patient Age</label>
               <input
@@ -604,7 +532,7 @@ export default function PriorityApplication() {
               {loading ? "Classifying..." : "Classify and Assign"}
             </button>
 
-
+            {error && <div className="priority-application-error">{error}</div>}
 
             {severityResult && (
               <div
@@ -626,7 +554,7 @@ export default function PriorityApplication() {
                     ["Priority Score", severityResult.priority_score],
                     ["Risk Score", `${severityResult.risk_score} / 100`],
                     ["Method", severityResult.method],
-                    ["Queue Decision", "Add to queue"],
+                    ["Queue Decision", severityResult.should_queue ? "Add to queue" : "Do not queue"],
                   ].map(([label, value]) => (
                     <div key={label} className="priority-result-metric">
                       <span>{label}</span>
@@ -652,6 +580,35 @@ export default function PriorityApplication() {
                     ))}
                   </div>
                 )}
+
+                {mappingNotice ? (
+                  <div
+                    className={`priority-mapping-notice ${
+                      mappingNotice.tone === "warning" ? "warning" : "info"
+                    }`}
+                  >
+                    <p>{mappingNotice.message}</p>
+                    {mappingNotice.mappedTerms.length > 0 && (
+                      <p>Mapped: {mappingNotice.mappedTerms.join(", ")}</p>
+                    )}
+                    {mappingNotice.specialtyRecognized && (
+                      <p>Specialty recognised from clinical keywords.</p>
+                    )}
+                    {mappingNotice.unmappedTerms.length > 0 && (
+                      <details>
+                        <summary>What wasn't understood</summary>
+                        <p>{mappingNotice.unmappedTerms.join(", ")}</p>
+                      </details>
+                    )}
+                  </div>
+                ) : severityResult.mapped ? (
+                  <p className="priority-result-rules">
+                    Interpreted as: {[
+                      ...(severityResult.interpreted_as?.mapped_phrases || []),
+                      ...(severityResult.interpreted_as?.high_acuity_terms || []),
+                    ].join(", ")}
+                  </p>
+                ) : null}
 
                 <div className="priority-ai-review-note">
                   This classification is AI-assisted. The assigned MO should review and override
@@ -754,18 +711,12 @@ export default function PriorityApplication() {
                       <details className="priority-specialty-details">
                         <summary>Why this suggestion?</summary>
                         <p>{suggestedSpecialty.reason}</p>
-                        {Object.entries(suggestedSpecialty.evidence || {}).map(([specialty, evidence]) => (
-                          evidence.length > 0 && <p key={specialty}>{specialty}: {evidence.join(", ")}</p>
-                        ))}
                         {(suggestedSpecialty.matched_keywords || []).length > 0 && (
                           <p>
                             Matched: {suggestedSpecialty.matched_keywords.join(", ")}
                           </p>
                         )}
                       </details>
-                      {(suggestedSpecialty.review_reasons || []).map((reason) => (
-                        <p key={reason} className="priority-specialty-unmatched">{reason}</p>
-                      ))}
                       <p className="priority-specialty-note">
                         Suggestion only. The assigned MO can reassign.
                       </p>
@@ -790,11 +741,10 @@ export default function PriorityApplication() {
             )}
 
             {severityResult && (
-              <button className="priority-application-submit" type="submit" disabled={saving || loading}>
-                {saving ? "Saving..." : "Save and Submit to Queue"}
+              <button className="priority-application-submit" type="submit">
+                Submit to Queue
               </button>
             )}
-            </fieldset>
           </form>
         </section>
       </main>

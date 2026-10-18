@@ -13,37 +13,6 @@
   margin-bottom: 2rem;
 }
 
-.priority-application-back {
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  margin-bottom: 12px;
-  padding: 0 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #334155;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.priority-application-back:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-.priority-application-back:focus-visible {
-  outline: 3px solid #93c5fd;
-  outline-offset: 3px;
-}
-
-.priority-application-back:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-
 .priority-application-header span {
   color: #1565c0;
   display: block;

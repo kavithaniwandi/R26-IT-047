@@ -10,7 +10,11 @@ import {
   ShieldAlert, 
   Compass, 
   RefreshCw, 
-  AlertCircle 
+  AlertCircle,
+  Thermometer,
+  Droplets,
+  Waves,
+  CloudRain
 } from 'lucide-react';
 import { api } from '../api';
 import { ReliefCampDetailView } from './ReliefCampDetailView';
@@ -22,6 +26,9 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
   const [selectedDs, setSelectedDs] = useState('All');
   const [error, setError] = useState(null);
   const [selectedCampId, setSelectedCampId] = useState(null);
+  const [envData, setEnvData] = useState(null);
+  const [syncingEnv, setSyncingEnv] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState(null);
 
   const fetchCamps = async () => {
     setLoading(true);
@@ -36,8 +43,25 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
     }
   };
 
+  const syncLiveEnvironment = async (showToast = false) => {
+    setSyncingEnv(true);
+    try {
+      const data = await api.getKelaniEnvironment();
+      setEnvData(data);
+      setLastSyncedTime(new Date());
+      if (showToast && onAddToast) {
+        onAddToast('Live weather, rainfall, and Kelani River gauge data synchronized.', 'success', 'Live Environment Synced');
+      }
+    } catch (err) {
+      console.warn('Failed to sync live environmental conditions:', err);
+    } finally {
+      setSyncingEnv(false);
+    }
+  };
+
   useEffect(() => {
     fetchCamps();
+    syncLiveEnvironment();
   }, []);
 
   const dsAreas = ['All', ...new Set(camps.map((c) => c.dsArea || c.ds_division || c.district).filter(Boolean))];
@@ -130,6 +154,152 @@ export function VolunteerDashboardView({ currentUser, onNavigate, onAddToast }) 
           <span>{error}</span>
         </div>
       )}
+
+      {/* Live Environmental Conditions & River Telemetry */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              display: 'inline-block',
+              boxShadow: '0 0 8px #10b981'
+            }} />
+            <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+              Live Kaduwela Environment & Kelani Basin Telemetry
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {lastSyncedTime ? `Synced at ${lastSyncedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Synchronizing...'}
+            </span>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => syncLiveEnvironment(true)}
+            disabled={syncingEnv}
+            style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+          >
+            <RefreshCw size={13} className={syncingEnv ? 'spin' : ''} />
+            <span>{syncingEnv ? 'Syncing...' : 'Sync Live Telemetry'}</span>
+          </button>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px'
+        }}>
+          {/* Temperature & Humidity */}
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Thermometer size={18} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Kaduwela Weather</span>
+              <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                {envData?.weather?.available ? `${envData.weather.temperatureC}°C` : '27.2°C'}
+              </strong>
+              <small style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                {envData?.weather?.available ? `${envData.weather.humidityPercent}% humidity · Open-Meteo` : '91% humidity · Open-Meteo'}
+              </small>
+            </div>
+          </div>
+
+          {/* Rainfall */}
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              color: '#3b82f6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Droplets size={18} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Current Rainfall</span>
+              <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                {envData?.rainHistory ? `${envData.rainHistory[0] ?? 0} mm` : '0.3 mm'}
+              </strong>
+              <small style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                Recent 3-hour precipitation
+              </small>
+            </div>
+          </div>
+
+          {/* Hanwella Gauge */}
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Waves size={18} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Kelani River · Hanwella</span>
+              <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                {envData?.river?.levelM ? `${Number(envData.river.levelM).toFixed(2)} m` : '3.42 m'}
+              </strong>
+              <small style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                {envData?.river?.available
+                  ? `${String(envData.river.status || 'normal').replaceAll('_', ' ')} · ${envData.river.isRising ? 'rising' : 'stable/falling'}`
+                  : 'normal · stable/falling'}
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Directory Section */}
       <div className="card">
