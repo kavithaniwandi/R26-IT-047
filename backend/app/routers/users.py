@@ -22,6 +22,13 @@ router = APIRouter(prefix="/users", tags=["User Administration"])
 
 class RoleChangeRequest(BaseModel):
     role: RoleEnum
+    assigned_ds_area: Optional[str] = Field(None, min_length=2, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_officer_area(self):
+        if self.role == RoleEnum.disaster_officer and not self.assigned_ds_area:
+            raise ValueError("A disaster officer must be assigned to a DS area")
+        return self
 
 class StatusChangeRequest(BaseModel):
     is_active: bool
@@ -32,6 +39,7 @@ class AdminCreateUserRequest(BaseModel):
     password: str = Field(..., min_length=6)
     phone: Optional[str] = None
     address: Optional[str] = None
+    assigned_ds_area: Optional[str] = Field(None, min_length=2, max_length=120)
     role: RoleEnum = RoleEnum.victim
     donor_type: Optional[Literal["Business", "Hospital", "Individual", "NGO", "Organization", "Pharmacy"]] = None
     preferred_donation_category: Optional[Literal["Blankets", "Dry Rations", "Medical", "Multiple", "Tarpaulins", "Water"]] = None
@@ -53,6 +61,8 @@ class AdminCreateUserRequest(BaseModel):
                 missing.append("address or latitude/longitude")
             if missing:
                 raise ValueError(f"Donor profile requires: {', '.join(missing)}")
+        if self.role == RoleEnum.disaster_officer and not self.assigned_ds_area:
+            raise ValueError("A disaster officer must be assigned to a DS area")
         return self
 
 
@@ -71,6 +81,7 @@ def _to_user_out(user: User, role_name: str) -> UserOut:
         email=user.email,
         phone=user.phone,
         address=user.address,
+        assigned_ds_area=user.assigned_ds_area,
         donor_type=user.donor_type,
         preferred_donation_category=user.preferred_donation_category,
         capacity_level=user.capacity_level,
@@ -129,6 +140,7 @@ def admin_create_user(payload: AdminCreateUserRequest, db: Session = Depends(get
         hashed_password=hashed,
         phone=payload.phone,
         address=payload.address,
+        assigned_ds_area=payload.assigned_ds_area,
         donor_type=payload.donor_type,
         preferred_donation_category=payload.preferred_donation_category,
         capacity_level=payload.capacity_level,
@@ -155,6 +167,11 @@ def change_user_role(user_id: int, payload: RoleChangeRequest, db: Session = Dep
         raise HTTPException(status_code=400, detail="Invalid role specified.")
         
     user.role_id = role_obj.id
+    user.assigned_ds_area = (
+        payload.assigned_ds_area
+        if payload.role == RoleEnum.disaster_officer
+        else None
+    )
     db.commit()
     db.refresh(user)
     

@@ -8,6 +8,8 @@ from app.models.disaster_donation_request import (
     DisasterDonationRequestCreate,
     RequestItem,
 )
+from app.models.role import Role, RoleEnum
+from app.models.user import User
 from app.routers import disaster_officer
 
 
@@ -140,6 +142,65 @@ async def test_volunteer_list_is_filtered_by_authenticated_creator(monkeypatch):
 
     assert result == []
     assert collection.find_query == {"createdBy": "volunteer-7"}
+
+
+@pytest.mark.asyncio
+async def test_disaster_officer_list_is_forced_to_assigned_ds_area(monkeypatch, db):
+    role = db.query(Role).filter(Role.name == RoleEnum.disaster_officer).first()
+    officer = User(
+        full_name="Kaduwela Disaster Officer",
+        email="kaduwela-officer@example.lk",
+        hashed_password="test-only",
+        role_id=role.id,
+        assigned_ds_area="Kaduwela",
+        is_active=True,
+    )
+    db.add(officer)
+    db.flush()
+
+    collection = _Collection()
+    monkeypatch.setattr(disaster_officer, "disaster_requests_collection", collection)
+
+    async def _expire_none():
+        return 0
+
+    monkeypatch.setattr(disaster_officer, "expire_stale_pledges", _expire_none)
+
+    result = await disaster_officer.get_all_disaster_requests(
+        dsArea="Nawalapitiya",
+        _current_user=_token(str(officer.id), "disaster_officer"),
+        db=db,
+    )
+
+    assert result == []
+    assert collection.find_query == {"dsArea": "Kaduwela"}
+
+
+@pytest.mark.asyncio
+async def test_disaster_officer_without_area_is_denied(monkeypatch, db):
+    role = db.query(Role).filter(Role.name == RoleEnum.disaster_officer).first()
+    officer = User(
+        full_name="Unassigned Disaster Officer",
+        email="unassigned-officer@example.lk",
+        hashed_password="test-only",
+        role_id=role.id,
+        is_active=True,
+    )
+    db.add(officer)
+    db.flush()
+
+    async def _expire_none():
+        return 0
+
+    monkeypatch.setattr(disaster_officer, "expire_stale_pledges", _expire_none)
+
+    with pytest.raises(disaster_officer.HTTPException) as error:
+        await disaster_officer.get_all_disaster_requests(
+            _current_user=_token(str(officer.id), "disaster_officer"),
+            db=db,
+        )
+
+    assert error.value.status_code == 403
 
 
 @pytest.mark.asyncio

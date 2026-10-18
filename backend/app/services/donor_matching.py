@@ -1,33 +1,27 @@
-"""Inference for the trained donor-request compatibility pipeline.
+"""Explainable donor-request matching for live relief operations.
 
-The serialized sklearn Pipeline is the source of truth for column order,
-one-hot encoding and the Linear Regression model.  This module only prepares
-live donor/request records for that pipeline; it never fits or replaces the
-supplied estimator.
+The score combines profile fit, proximity, capacity, completed-delivery
+reliability, and donation recency. It is a ranking aid, not a response
+probability. A learned ranker can replace it after real outreach outcomes have
+been collected at sufficient scale.
 """
 from __future__ import annotations
 
-import csv
 import math
-import warnings
-from collections import UserList
-from functools import lru_cache
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Iterable, Mapping, Optional
 
-import joblib
 import numpy as np
 
 from app.models.disaster_donation_request import whole_required_quantity
-import pandas as pd
-from sklearn.exceptions import InconsistentVersionWarning
-
-
-MODEL_DIR = Path(__file__).resolve().parents[2] / "ml_models"
-MODEL_PATH = MODEL_DIR / "donor_matching_pipeline.joblib"
-EVALUATION_PATH = MODEL_DIR / "donor_model_comparison.csv"
-
-MODEL_NAME = "Linear Regression"
+HYBRID_SCORE_NAME = "Explainable Hybrid Match Score"
+HYBRID_WEIGHTS = {
+    "category": 0.30,
+    "proximity": 0.25,
+    "capacity": 0.20,
+    "reliability": 0.15,
+    "recency": 0.10,
+}
 EXPECTED_FEATURES = [
     "donor_type",
     "preferred_category",
@@ -48,68 +42,13 @@ DONATION_CATEGORIES = {"Blankets", "Dry Rations", "Medical", "Multiple", "Tarpau
 CAPACITY_LEVELS = {"Low", "Medium", "High"}
 
 
-class DonorModelUnavailable(RuntimeError):
-    """Raised when the supplied model artifact cannot be loaded safely."""
-
-
-@lru_cache(maxsize=1)
-def load_pipeline():
-    if not MODEL_PATH.exists():
-        raise DonorModelUnavailable(f"Donor matching model is missing: {MODEL_PATH.name}")
-    try:
-        # The supplied artifact was produced by sklearn 1.6.1. The rest of this
-        # repository's artifacts require 1.7.2, where this private pickle-only
-        # list class was removed. Re-introducing the data container allows the
-        # original fitted pipeline to load without changing any estimator state.
-        import sklearn.compose._column_transformer as column_transformer
-
-        if not hasattr(column_transformer, "_RemainderColsList"):
-            class _RemainderColsList(UserList):
-                def __init__(self, columns, **state):
-                    super().__init__(columns)
-                    self.__dict__.update(state)
-
-            _RemainderColsList.__module__ = column_transformer.__name__
-            setattr(column_transformer, "_RemainderColsList", _RemainderColsList)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", InconsistentVersionWarning)
-            pipeline = joblib.load(MODEL_PATH)
-    except Exception as exc:  # pragma: no cover - exact joblib/sklearn error varies
-        raise DonorModelUnavailable(
-            "The donor matching pipeline could not be loaded with the backend dependencies."
-        ) from exc
-
-    artifact_features = list(getattr(pipeline, "feature_names_in_", []))
-    if artifact_features != EXPECTED_FEATURES:
-        raise DonorModelUnavailable(
-            f"Unexpected donor model features: {artifact_features or 'not recorded'}"
-        )
-    return pipeline
-
-
-@lru_cache(maxsize=1)
 def model_information() -> dict:
-    rows: list[dict] = []
-    if EVALUATION_PATH.exists():
-        with EVALUATION_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
-            for row in csv.DictReader(handle):
-                rows.append({
-                    "model": row["Model"],
-                    "r2": float(row["R2"]),
-                    "mae": float(row["MAE"]),
-                    "rmse": float(row["RMSE"]),
-                })
-    selected = next((row for row in rows if row["model"] == MODEL_NAME), None)
-    if selected is None:
-        raise DonorModelUnavailable("Linear Regression metrics are missing from the evaluation file")
     return {
-        "selectedModel": MODEL_NAME,
-        "target": "priority_score",
-        "scoreMeaning": "Synthetic donor-request compatibility, not response probability",
-        "features": EXPECTED_FEATURES,
-        "metrics": selected,
-        "comparison": sorted(rows, key=lambda row: row["r2"], reverse=True),
+        "selectedModel": HYBRID_SCORE_NAME,
+        "method": "weighted_rule_based",
+        "scoreMeaning": "Explainable donor-request match score, not response probability",
+        "weights": {name: round(weight * 100) for name, weight in HYBRID_WEIGHTS.items()},
+        "futureModel": "CatBoostRanker after sufficient real outreach outcomes are collected",
     }
 
 
@@ -318,30 +257,83 @@ def prepare_candidate_rows(donor: Mapping, requests: Iterable[Mapping]) -> tuple
     }
 
 
-def predict_compatibility(donor: Mapping, requests: Iterable[Mapping]) -> tuple[Optional[float], dict]:
+def _history_factors(history: Iterable[Mapping]) -> tuple[float, float, int, list[str]]:
+    records = list(history)
+    resolved = [record for record in records if record.get("status") in {"received", "cancelled", "expired"}]
+    received = [record for record in resolved if record.get("status") == "received"]
+    reliability = len(received) / len(resolved) if resolved else 0.5
+
+    received_dates = []
+    for record in received:
+        value = record.get("acceptedAt") or record.get("donatedAt")
+        if isinstance(value, datetime):
+            received_dates.append(value if value.tzinfo else value.replace(tzinfo=timezone.utc))
+    if not received_dates:
+        recency = 0.5
+    else:
+        age_days = max(0, (datetime.now(timezone.utc) - max(received_dates)).days)
+        if age_days <= 30:
+            recency = 1.0
+        elif age_days <= 90:
+            recency = 0.8
+        elif age_days <= 180:
+            recency = 0.6
+        elif age_days <= 365:
+            recency = 0.4
+        else:
+            recency = 0.2
+
+    warnings_out = []
+    if not resolved:
+        warnings_out.append("No completed donation history; neutral reliability and recency were used")
+    return reliability, recency, len(received), warnings_out
+
+
+def predict_compatibility(
+    donor: Mapping,
+    requests: Iterable[Mapping],
+    donation_history: Optional[Iterable[Mapping]] = None,
+) -> tuple[Optional[float], dict]:
     rows, details = prepare_candidate_rows(donor, requests)
     if not rows:
         return None, details
 
-    frame = pd.DataFrame(rows, columns=EXPECTED_FEATURES)
-    predictions = np.clip(load_pipeline().predict(frame), 0.0, 1.0)
     weights = np.asarray([max(float(row["required_quantity"]), 1.0) for row in rows], dtype=float)
-    score = float(np.average(predictions, weights=weights))
+    category = float(np.average([row["category_match_score"] for row in rows], weights=weights))
+    capacity = float(np.average([row["capacity_match_score"] for row in rows], weights=weights))
+    proximity = float(rows[0]["proximity_score"])
+    history_records = list(donation_history or [])
+    reliability, recency, received_count, warnings_out = _history_factors(history_records)
+
+    if details["distanceSource"] == "registered-address estimate":
+        warnings_out.append("Distance is a broad address fallback; add coordinates for precise proximity")
+
+    factors = {
+        "category": category,
+        "proximity": proximity,
+        "capacity": capacity,
+        "reliability": reliability,
+        "recency": recency,
+    }
+    score = sum(factors[name] * weight for name, weight in HYBRID_WEIGHTS.items())
+    has_coordinates = details["distanceSource"] == "registered coordinates"
+    resolved_count = sum(
+        1 for record in history_records
+        if record.get("status") in {"received", "cancelled", "expired"}
+    )
+    confidence = "High" if has_coordinates and resolved_count >= 5 else "Medium" if has_coordinates or resolved_count >= 2 else "Low"
     details.update({
         "priorityScore": round(score, 6),
         "compatibilityScore": round(score * 100, 1),
-        "categoryScores": [
-            {
-                "category": row["required_category"],
-                "requiredQuantity": row["required_quantity"],
-                "score": round(float(prediction), 6),
-            }
-            for row, prediction in zip(rows, predictions)
-        ],
-        "categoryMatchScore": round(max(row["category_match_score"] for row in rows), 3),
-        "capacityMatchScore": round(float(np.average(
-            [row["capacity_match_score"] for row in rows], weights=weights
-        )), 3),
-        "proximityScore": rows[0]["proximity_score"],
+        "scoringMethod": HYBRID_SCORE_NAME,
+        "categoryMatchScore": round(category, 3),
+        "capacityMatchScore": round(capacity, 3),
+        "proximityScore": round(proximity, 3),
+        "reliabilityScore": round(reliability, 3),
+        "recencyScore": round(recency, 3),
+        "factorScores": {name: round(value * 100, 1) for name, value in factors.items()},
+        "confidence": confidence,
+        "dataQualityWarnings": warnings_out,
+        "receivedHistoryCount": received_count,
     })
     return score, details

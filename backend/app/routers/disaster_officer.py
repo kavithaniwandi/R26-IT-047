@@ -4,7 +4,7 @@ app/routers/disaster_officer.py
 Disaster Officer endpoints powered directly by MongoDB Atlas collections.
 """
 from __future__ import annotations
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from pydantic import BaseModel
@@ -21,7 +21,6 @@ from app.models.disaster_donation_request import (
 )
 from app.services.pledge_expiry import expire_stale_pledges
 from app.services.donor_matching import (
-    DonorModelUnavailable,
     model_information,
     predict_compatibility,
 )
@@ -88,6 +87,7 @@ class DisasterRequestGroupOut(BaseModel):
 
 class OfficerPledgeItemOut(BaseModel):
     donationId: str
+    pledgeBatchId: Optional[str] = None
     requestId: str
     donorName: str
     donorPhone: Optional[str] = None
@@ -112,7 +112,7 @@ class DonorMatchOut(BaseModel):
     score: float
     compatibilityScore: float
     priorityScore: float
-    modelName: str = "Linear Regression"
+    modelName: str = "Explainable Hybrid Match Score"
     donorType: str
     preferredCategory: str
     capacityLevel: str
@@ -121,6 +121,11 @@ class DonorMatchOut(BaseModel):
     categoryMatchScore: float
     capacityMatchScore: float
     proximityScore: float
+    reliabilityScore: float
+    recencyScore: float
+    factorScores: Dict[str, float]
+    confidence: str
+    dataQualityWarnings: List[str]
     proximityTier: str
     historyCount: int
     receivedDonationCount: int
@@ -277,6 +282,51 @@ def _sql_donor_alias_ids(db: Session, donor_id: str) -> List[str]:
     ] or [donor_id]
 
 
+async def _assigned_officer_ds_area(
+    token: TokenPayload,
+    db: Session,
+) -> Optional[str]:
+    """Return the authenticated officer's server-side DS assignment.
+
+    Admin and authority users intentionally return ``None`` because their
+    existing cross-area oversight access is unchanged.
+    """
+    if token.role != "disaster_officer":
+        return None
+
+    assigned_area = None
+    if token.sub.isdigit():
+        officer = db.query(User).filter(User.id == int(token.sub)).first()
+        assigned_area = officer.assigned_ds_area if officer else None
+    elif ObjectId.is_valid(token.sub):
+        officer = await users_collection.find_one({"_id": ObjectId(token.sub)})
+        if officer:
+            assigned_area = (
+                officer.get("assignedDsArea")
+                or officer.get("assigned_ds_area")
+                or officer.get("dsArea")
+            )
+
+    assigned_area = (assigned_area or "").strip()
+    if not assigned_area:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This disaster officer account has no assigned DS area.",
+        )
+    return assigned_area
+
+
+async def _apply_officer_scope(
+    query: dict,
+    token: TokenPayload,
+    db: Session,
+) -> dict:
+    assigned_area = await _assigned_officer_ds_area(token, db)
+    if assigned_area:
+        query["dsArea"] = assigned_area
+    return query
+
+
 # ── Route Endpoints ──────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[DisasterRequestGroupOut])
@@ -306,6 +356,7 @@ async def get_all_disaster_requests(
         query["dsArea"] = dsArea
     if status_filter:
         query["status"] = status_filter
+    await _apply_officer_scope(query, _current_user, db)
     cursor = disaster_requests_collection.find(query).sort("createdAt", -1)
     docs = await cursor.to_list(length=200)
     for document in docs:
@@ -410,7 +461,7 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             1 for donation in donor_history
             if _normalise(donation.get("itemName")) in target_items
         )
-        _priority_score, prediction = predict_compatibility(donor, request_docs)
+        _priority_score, prediction = predict_compatibility(donor, request_docs, donor_history)
         if not prediction.get("eligible"):
             ineligible_count += 1
             continue
@@ -423,9 +474,9 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             f"Distance input: {distance_km:g} km from {distance_source}",
         ]
         if donor_history:
-            reasons.append(f"History (not a model feature): {len(donor_history)} pledge(s), {received_count} received")
+            reasons.append(f"Reliability uses {len(donor_history)} pledge(s), {received_count} received")
         else:
-            reasons.append("No historical response feature is used by this synthetic compatibility model")
+            reasons.append("New donor: neutral history factors applied")
         if relevant_count:
             reasons.append(f"{relevant_count} prior donation item match(es), shown for context only")
 
@@ -442,6 +493,11 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
             categoryMatchScore=prediction["categoryMatchScore"],
             capacityMatchScore=prediction["capacityMatchScore"],
             proximityScore=prediction["proximityScore"],
+            reliabilityScore=prediction["reliabilityScore"],
+            recencyScore=prediction["recencyScore"],
+            factorScores=prediction["factorScores"],
+            confidence=prediction["confidence"],
+            dataQualityWarnings=prediction["dataQualityWarnings"],
             proximityTier=proximity_tier,
             historyCount=len(donor_history), receivedDonationCount=received_count,
             relevantDonationCount=relevant_count, reasons=reasons,
@@ -455,14 +511,7 @@ async def _rank_registered_donors(db: Session, request_docs: List[dict]) -> tupl
 async def get_donor_matching_model_info(
     _current_user: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
 ):
-    try:
-        load_info = model_information()
-        # Force artifact loading here so the health response reflects runtime compatibility.
-        from app.services.donor_matching import load_pipeline
-        load_pipeline()
-        return load_info
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return model_information()
 
 
 @router.post("/donor-insights/donor-matches", response_model=ConsolidatedDonorMatchesOut)
@@ -474,9 +523,9 @@ async def get_consolidated_donor_matches(
     ids = list(dict.fromkeys(payload.requestIds))
     if not ids or any(not ObjectId.is_valid(value) for value in ids):
         raise HTTPException(status_code=400, detail="Select valid GN-level request records")
-    documents = await disaster_requests_collection.find(
-        {"_id": {"$in": [ObjectId(value) for value in ids]}}
-    ).to_list(length=200)
+    query = {"_id": {"$in": [ObjectId(value) for value in ids]}}
+    await _apply_officer_scope(query, _current_user, db)
+    documents = await disaster_requests_collection.find(query).to_list(length=200)
     if len(documents) != len(ids):
         raise HTTPException(status_code=404, detail="One or more donation request records were not found")
     group_keys = {
@@ -485,16 +534,13 @@ async def get_consolidated_donor_matches(
     }
     if len(group_keys) != 1:
         raise HTTPException(status_code=400, detail="Requests must belong to one GN division and disaster type")
-    try:
-        matches, ineligible_count = await _rank_registered_donors(db, documents)
-        return ConsolidatedDonorMatchesOut(
-            matches=matches,
-            eligibleDonorCount=len(matches),
-            ineligibleDonorCount=ineligible_count,
-            model=model_information(),
-        )
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    matches, ineligible_count = await _rank_registered_donors(db, documents)
+    return ConsolidatedDonorMatchesOut(
+        matches=matches,
+        eligibleDonorCount=len(matches),
+        ineligibleDonorCount=ineligible_count,
+        model=model_information(),
+    )
 
 
 @router.get("/{req_id}/donor-matches", response_model=List[DonorMatchOut])
@@ -505,14 +551,13 @@ async def get_ranked_donor_matches(
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
-    request_doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, _current_user, db)
+    request_doc = await disaster_requests_collection.find_one(query)
     if not request_doc:
         raise HTTPException(status_code=404, detail="Disaster request not found")
-    try:
-        matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
-        return matches
-    except DonorModelUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
+    return matches
 
 
 @router.post("/{req_id}/outreach", response_model=DonorOutreachResult)
@@ -520,6 +565,7 @@ async def send_personalized_donor_outreach(
     req_id: str,
     payload: DonorOutreachCreate,
     token_payload: TokenPayload = Depends(require_role(["admin", "disaster_officer"])),
+    db: Session = Depends(get_db),
 ):
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
@@ -528,14 +574,56 @@ async def send_personalized_donor_outreach(
         raise HTTPException(status_code=400, detail="Select at least one donor")
 
     now = datetime.now(timezone.utc)
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
+    request_doc = await disaster_requests_collection.find_one(query)
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+
+    ranked_matches, _ineligible_count = await _rank_registered_donors(db, [request_doc])
+    selected_ids = set(donor_ids)
+    ranking_snapshots = [
+        {
+            "donorId": match.donorId,
+            "score": match.score,
+            "factorScores": match.factorScores,
+            "confidence": match.confidence,
+            "donorType": match.donorType,
+            "preferredCategory": match.preferredCategory,
+            "capacityLevel": match.capacityLevel,
+            "distanceKm": match.distanceKm,
+            "historyCount": match.historyCount,
+            "receivedDonationCount": match.receivedDonationCount,
+        }
+        for match in ranked_matches
+        if match.donorId in selected_ids
+    ]
+    request_snapshot = {
+        "disasterType": request_doc.get("disasterType"),
+        "severity": request_doc.get("severity"),
+        "dsArea": request_doc.get("dsArea"),
+        "gnDivision": request_doc.get("gnDivision"),
+        "peopleCount": request_doc.get("people_count", 0),
+        "items": [
+            {
+                "itemName": item.get("itemName"),
+                "requiredCategory": item.get("requiredCategory") or item.get("category"),
+                "remainingQuantity": item.get("remainingQuantity"),
+            }
+            for item in request_doc.get("items", [])
+        ],
+    }
     result = await disaster_requests_collection.update_one(
-        {"_id": ObjectId(req_id)},
+        query,
         {
             "$addToSet": {"targetedDonorIds": {"$each": donor_ids}},
             "$set": {"lastOutreachAt": now},
             "$push": {"outreachHistory": {
                 "officerId": token_payload.sub, "donorIds": donor_ids,
-                "sentAt": now, "channel": "in_app",
+                "sentAt": now, "channel": "in_app", "schemaVersion": 2,
+                "scoringMethod": model_information()["selectedModel"],
+                "requestSnapshot": request_snapshot,
+                "rankingSnapshots": ranking_snapshots,
             }},
         },
     )
@@ -554,9 +642,12 @@ async def get_officer_pending_pledges(
     _current_user: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer"])
     ),
+    db: Session = Depends(get_db),
 ):
     await expire_stale_pledges()
-    cursor = disaster_requests_collection.find({"donations.status": "pledged"})
+    query = {"donations.status": "pledged"}
+    await _apply_officer_scope(query, _current_user, db)
+    cursor = disaster_requests_collection.find(query)
     docs = await cursor.to_list(length=200)
 
     pledges_out = []
@@ -572,6 +663,7 @@ async def get_officer_pending_pledges(
                 pledges_out.append(
                     OfficerPledgeItemOut(
                         donationId=don_id,
+                        pledgeBatchId=don.get("pledgeBatchId"),
                         requestId=req_id,
                         donorName=don.get("donorName", "Verified Donor"),
                         donorPhone=don.get("donorPhone") or "+94 77 123 4567",
@@ -603,6 +695,7 @@ async def get_disaster_request(
     query = {"_id": ObjectId(req_id)}
     if _current_user.role == "volunteer":
         query["createdBy"] = _current_user.sub
+    await _apply_officer_scope(query, _current_user, db)
     document = await disaster_requests_collection.find_one(query)
     if not document:
         raise HTTPException(status_code=404, detail="Disaster request not found")
@@ -626,12 +719,15 @@ async def accept_donation_at_ds_office(
     token_payload: TokenPayload = Depends(
         require_role(["admin", "authority", "disaster_officer"])
     ),
+    db: Session = Depends(get_db),
 ):
     await expire_stale_pledges()
     if not ObjectId.is_valid(req_id):
         raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
 
-    doc = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
+    doc = await disaster_requests_collection.find_one(query)
     if not doc:
         raise HTTPException(status_code=404, detail="Disaster request not found")
 
@@ -689,6 +785,98 @@ async def accept_donation_at_ds_office(
     )
 
     updated_document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    return format_mongo_doc(updated_document)
+
+
+@router.patch("/{req_id}/pledge-batches/{batch_id}/accept")
+async def accept_pledge_batch_at_ds_office(
+    req_id: str,
+    batch_id: str,
+    token_payload: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
+    db: Session = Depends(get_db),
+):
+    """Confirm every pending item submitted as part of one donor pledge."""
+    await expire_stale_pledges()
+    if not ObjectId.is_valid(req_id):
+        raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
+
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
+    doc = await disaster_requests_collection.find_one(query)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+
+    donations = doc.get("donations", [])
+    batch_donations = [
+        donation for donation in donations
+        if donation.get("pledgeBatchId") == batch_id
+    ]
+    if not batch_donations:
+        raise HTTPException(status_code=404, detail="Pledge batch not found in request")
+    if any(donation.get("status") == "cancelled" for donation in batch_donations):
+        raise HTTPException(
+            status_code=400,
+            detail="This pledge expired and can no longer be received",
+        )
+
+    pending_donations = [
+        donation for donation in batch_donations
+        if donation.get("status") == "pledged"
+    ]
+    if not pending_donations:
+        raise HTTPException(status_code=400, detail="This pledge has already been received")
+
+    now = datetime.now(timezone.utc)
+    items = doc.get("items", [])
+    for donation in pending_donations:
+        donation["status"] = "received"
+        donation["acceptedAt"] = now
+        donation["acceptedByOfficerId"] = str(token_payload.sub)
+
+        for item in items:
+            same_item_id = (
+                donation.get("itemId")
+                and item.get("itemId") == donation.get("itemId")
+            )
+            same_item_name = (
+                item.get("itemName", "").casefold()
+                == donation.get("itemName", "").casefold()
+            )
+            if same_item_id or same_item_name:
+                transfer_quantity = float(donation.get("quantity", 0))
+                item["pledgedQuantity"] = max(
+                    0.0,
+                    float(item.get("pledgedQuantity", 0)) - transfer_quantity,
+                )
+                item["donatedQuantity"] = (
+                    float(item.get("donatedQuantity", 0)) + transfer_quantity
+                )
+                needed_quantity = float(
+                    whole_required_quantity(item.get("neededQuantity", 0))
+                )
+                item["remainingQuantity"] = max(
+                    0.0,
+                    needed_quantity - item["donatedQuantity"],
+                )
+                if item["donatedQuantity"] >= needed_quantity:
+                    item["status"] = "fulfilled"
+                break
+
+    request_status = (
+        "fulfilled"
+        if items and all(item.get("status") == "fulfilled" for item in items)
+        else "remaining"
+    )
+    await disaster_requests_collection.update_one(
+        {"_id": ObjectId(req_id)},
+        {"$set": {"donations": donations, "items": items, "status": request_status}},
+    )
+
+    updated_document = await disaster_requests_collection.find_one(
+        {"_id": ObjectId(req_id)}
+    )
     return format_mongo_doc(updated_document)
 
 

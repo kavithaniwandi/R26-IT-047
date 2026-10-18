@@ -81,7 +81,7 @@ export const api = {
   },
   createUser: (payload) => apiRequest('/users', { method: 'POST', body: JSON.stringify(payload) }),
   updateDonorProfile: (userId, payload) => apiRequest(`/users/${userId}/donor-profile`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  changeUserRole: (userId, role) => apiRequest(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  changeUserRole: (userId, role, assignedDsArea = null) => apiRequest(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role, assigned_ds_area: assignedDsArea }) }),
   toggleUserStatus: (userId, is_active) => apiRequest(`/users/${userId}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
 
   // SOS
@@ -187,6 +187,7 @@ export const api = {
   pledgeDisasterRequest: (requestId, pledges) => apiRequest(`/disaster-donation-requests/${requestId}/pledge`, { method: 'POST', body: JSON.stringify({ pledges }) }),
   getOfficerPledges: () => apiRequest('/disaster-donation-requests/officer/pledges'),
   acceptDisasterPledge: (requestId, donationId) => apiRequest(`/disaster-donation-requests/${requestId}/donations/${donationId}/accept`, { method: 'PATCH' }),
+  acceptDisasterPledgeBatch: (requestId, batchId) => apiRequest(`/disaster-donation-requests/${requestId}/pledge-batches/${batchId}/accept`, { method: 'PATCH' }),
   getDonationCatalog: () => apiRequest('/donation-items'),
   getDivisions: () => apiRequest('/divisions'),
   getDSAreas: () => apiRequest('/divisions/ds-areas'),

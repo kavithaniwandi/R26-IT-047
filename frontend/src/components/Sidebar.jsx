@@ -22,7 +22,7 @@ import {
   Building2,
   Target
 } from 'lucide-react';
-import { PORTAL_CONFIG } from '../portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG } from '../portalConfig';
 
 export function Sidebar({ 
   currentPortal, 
@@ -40,9 +40,9 @@ export function Sidebar({
     { id: 'authority', label: 'Medical Authority', icon: Activity, color: 'blue', port: PORTAL_CONFIG.authority.port },
     { id: 'volunteer', label: 'Volunteer Dispatch', icon: Truck, color: 'amber', port: PORTAL_CONFIG.volunteer.port },
     { id: 'volunteer_dash', label: 'Volunteer Dashboard', icon: LayoutDashboard, color: 'amber', port: PORTAL_CONFIG.volunteer_dash.port },
-    { id: 'disaster_officer', label: 'Disaster Officer', icon: Shield, color: 'blue', port: PORTAL_CONFIG.disaster_officer.port },
+    { id: 'disaster_officer', label: 'Disaster Officer Dashboard', icon: Shield, color: 'blue', port: PORTAL_CONFIG.disaster_officer.port },
     { id: 'donor_matching', label: 'Donor Matching', icon: Target, color: 'violet', port: PORTAL_CONFIG.donor_matching.port },
-    { id: 'donor', label: 'Donor Donation', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
+    { id: 'donor', label: 'Donor Dashboard', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'disaster_donation', label: 'Disaster Donation', icon: Gift, color: 'emerald', port: PORTAL_CONFIG.disaster_donation.port },
     {
       id: 'relief-camps',
@@ -56,7 +56,7 @@ export function Sidebar({
   ];
 
   const visiblePortals = user?.role === 'admin'
-    ? portals
+    ? portals.filter((portal) => !ADMIN_HIDDEN_PORTAL_IDS.has(portal.id))
     : portals.filter((portal) => (
         portal.id !== 'volunteer' &&
         PORTAL_CONFIG[portal.id]?.defaultRole === user?.role

@@ -28,6 +28,18 @@ const quantityKey = (requestId, item) => `${requestId}:${item.itemId || item.ite
 
 const formatQuantity = (value) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
+const getDropOffOffice = (request) => {
+  const location = `${request?.dsArea || ''} ${request?.gnDivision || ''}`.toLowerCase();
+
+  if (location.includes('nawalapitiya') || location.includes('ambagamuwa')) {
+    return 'Ambagamuwa Korale Divisional Secretariat Office';
+  }
+  if (location.includes('kaduwela')) {
+    return 'Kaduwela Divisional Secretariat Office';
+  }
+  return `${request?.dsArea || 'Relevant'} Divisional Secretariat Office`;
+};
+
 function timeRemaining(expiresAt, now) {
   if (!expiresAt) return 'Legacy pledge';
   const milliseconds = new Date(expiresAt).getTime() - now;
@@ -130,7 +142,7 @@ export function DonorDonationView({ currentUser, onAddToast }) {
     try {
       await api.pledgeDisasterRequest(confirmation.request.id, confirmation.pledges);
       const itemCount = confirmation.pledges.length;
-      const message = `Pledge confirmed for ${itemCount} item type${itemCount === 1 ? '' : 's'}. Deliver them to the ${confirmation.request.dsArea} Divisional Secretariat Office within 12 hours.`;
+      const message = `Pledge confirmed for ${itemCount} item type${itemCount === 1 ? '' : 's'}. Deliver them to the ${getDropOffOffice(confirmation.request)} within 12 hours.`;
       setSuccess(message);
       onAddToast?.(message, 'success', 'Pledge Confirmed');
       setQuantities({});
@@ -205,12 +217,13 @@ export function DonorDonationView({ currentUser, onAddToast }) {
             const selected = selectedForRequest(request);
             const isExpanded = expanded.has(request.id);
             const personalized = activeTab === 'personalized' || personalizedIds.has(request.id);
+            const dropOffOffice = getDropOffOffice(request);
             return (
               <article key={request.id} style={{ ...panel, overflow: 'hidden' }}>
                 <button type="button" onClick={() => toggleExpanded(request.id)} style={{ width: '100%', border: 0, background: 'transparent', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', gap: 14, cursor: 'pointer', textAlign: 'left', color: 'var(--text-primary)' }}>
                   <div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: '1.02rem' }}>{request.dsArea} Divisional Secretariat Office</strong>
+                      <strong style={{ fontSize: '1.02rem' }}>{dropOffOffice}</strong>
                       {personalized && <span style={{ padding: '3px 8px', borderRadius: 12, background: '#ede9fe', color: '#6d28d9', fontSize: '.65rem', fontWeight: 800 }}>PERSONALIZED</span>}
                       <span style={{ padding: '3px 8px', borderRadius: 12, background: severityBg, color: severityText, fontSize: '.65rem', fontWeight: 800 }}>{request.severity?.toUpperCase()}</span>
                     </div>
@@ -224,6 +237,11 @@ export function DonorDonationView({ currentUser, onAddToast }) {
                 </button>
 
                 {isExpanded && <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                  {personalized && (
+                    <div style={{ margin: '16px 20px', padding: '13px 15px', borderRadius: 10, background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#4c1d95', fontSize: '.82rem', lineHeight: 1.55 }}>
+                      A {request.severity?.toLowerCase() || 'priority'} {request.disasterType?.toLowerCase() || 'disaster'} relief request from <strong>{request.reliefCamp}</strong> in the <strong>{request.gnDivision} GN Division</strong> has been selected for you. Please pledge any of the requested supplies you can provide. Deliver pledged donations to the <strong>{dropOffOffice}</strong> within 12 hours so disaster officers can verify and distribute them quickly to affected people.
+                    </div>
+                  )}
                   <div className="donor-request-item-grid donor-request-item-head" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase' }}>
                     <span>Requested item</span><span>Needed</span><span>Still available</span><span>Your quantity</span>
                   </div>
@@ -277,7 +295,7 @@ export function DonorDonationView({ currentUser, onAddToast }) {
 
       {confirmation && <div className="modal-overlay" onClick={() => !submitting && setConfirmation(null)}>
         <div className="modal-content" onClick={(event) => event.stopPropagation()}>
-          <div className="modal-header"><div><h2 className="modal-title">Confirm your donation pledge</h2><p className="card-subtitle">Drop off at {confirmation.request.dsArea} Divisional Secretariat Office</p></div><button className="modal-close-btn" disabled={submitting} onClick={() => setConfirmation(null)}><X size={20} /></button></div>
+          <div className="modal-header"><div><h2 className="modal-title">Confirm your donation pledge</h2><p className="card-subtitle">Drop off at {getDropOffOffice(confirmation.request)}</p></div><button className="modal-close-btn" disabled={submitting} onClick={() => setConfirmation(null)}><X size={20} /></button></div>
           <div style={{ padding: 14, borderRadius: 10, background: '#fff7ed', color: '#9a3412', fontSize: '.8rem', marginBottom: 15 }}><Clock3 size={16} style={{ verticalAlign: -3, marginRight: 7 }} />You must deliver these items within 12 hours. The pledge will be cancelled automatically if an officer has not confirmed receipt by then.</div>
           <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>{confirmation.pledges.map((pledge) => <div key={pledge.itemId || pledge.itemName} style={{ display: 'flex', justifyContent: 'space-between', padding: 11, borderRadius: 9, background: 'var(--bg-secondary)' }}><strong>{pledge.itemName}</strong><span>{pledge.quantity} {pledge.unit}</span></div>)}</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9 }}><button className="btn btn-secondary" disabled={submitting} onClick={() => setConfirmation(null)}>Go Back</button><button className="btn btn-success" disabled={submitting} onClick={submitPledge}><ShieldCheck size={16} />{submitting ? 'Confirming...' : 'Confirm Pledge'}</button></div>
