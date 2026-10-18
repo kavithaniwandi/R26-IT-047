@@ -15,7 +15,7 @@ venv/
 env/
 
 # Local SQLite DB (not needed in Docker — MySQL is used)
-*.db
+
 *.sqlite3
 
 # Environment files
