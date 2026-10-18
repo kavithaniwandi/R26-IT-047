@@ -1,0 +1,4 @@
+.appeal-scorecard { width: 100%; box-sizing: border-box; padding: 1rem; border: 1px solid #d7e2ee; border-radius: 8px; background: #f8fafc; color: #0f172a; line-height: 1.5; }
+.appeal-scorecard-main { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.appeal-scorecard-label { text-transform: capitalize; font-size: 1rem; }
+.appeal-scorecard-score { font-size: 2.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }

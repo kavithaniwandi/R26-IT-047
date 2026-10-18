@@ -1,0 +1,2049 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "dataset_sha256": "5074b1ebedc3f96118a982408b761b03af31b9e0cf4b398f6b190c742b7cedf4",
+    "training_source_sha256": "f04a8bf93faa105937cc530f42224259358b8e572ba9c56df9ed8d5ef73be96a",
+    "development_rows": 5687,
+    "held_out_rows_excluded": 1413,
+    "development_indices_sha256": "f62cd2c36c757cb637349f537be9c1a93f3346aafc1aa55656bbf843603892ea",
+    "protocol": {
+      "seed": 42,
+      "folds": 5,
+      "near_duplicate_threshold": 0.8,
+      "tolerance_margin": 0.005,
+      "splitter": "StratifiedGroupKFold",
+      "test_set": "first fold, used once, after tolerance selection",
+      "shipped_model_trained_on": "development rows only"
+    }
+  },
+  "environment": {
+    "python": "3.10.10",
+    "numpy": "1.26.4",
+    "pandas": "2.2.3",
+    "scikit_learn": "1.7.2",
+    "scipy": "1.15.3"
+  },
+  "selection": {
+    "min_class_rows": 30,
+    "min_high_minus_low": 0.15,
+    "require_monotonic_low_medium_high": true,
+    "selection_scope": "per language; English must pass all-development and human-written views",
+    "english_human_sources": [
+      "MDCC_HUMAN_WRITTEN",
+      "GOFUNDME_PUBLIC_RESEARCH_CORPUS_HUMAN_WRITTEN",
+      "PROSOCIAL_HUMAN_WRITTEN",
+      "WEB_SOURCED_HUMAN_WRITTEN"
+    ],
+    "interpretation": "Descriptive lexical associations, not causal gains or factual verification; correlated near-duplicate rows are not independent samples."
+  },
+  "checks": [
+    {
+      "check": "fund_use",
+      "rule": {
+        "description": "Explicit statement linking donations/funds to buying, providing or a stated use.",
+        "patterns": {
+          "English": "\\b(?:donations?|funds?|contributions?|money|proceeds)\\b.{0,65}\\b(?:provid\\w*|buy\\w*|purchas\\w*|used?\\s+(?:for|to)|go\\s+towards?|cover\\w*|fund\\w*)\\b|\\b(?:used?\\s+(?:for|to)|go\\s+towards?)\\b",
+          "Sinhala": "(?:පරිත්‍යාග|අරමුදල්|ආධාර|මුදල්).{0,70}(?:මිලදී|ලබා ද|සපය|භාවිත|වැය)",
+          "Tamil": "(?:நன்கொடை|நிதி|பங்களிப்|பணம்).{0,70}(?:வாங்க|வழங்க|பயன்படு|செலவ|உதவ)"
+        }
+      },
+      "enabled_languages": [
+        "English"
+      ],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 38,
+              "total": 1130,
+              "share": 0.033628318584070796
+            },
+            "medium": {
+              "matched": 207,
+              "total": 1278,
+              "share": 0.1619718309859155
+            },
+            "high": {
+              "matched": 291,
+              "total": 1278,
+              "share": 0.22769953051643194
+            }
+          },
+          "high_minus_low": 0.19407121193236115,
+          "selected": true,
+          "reason": "passes both views",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 38,
+                  "total": 1130,
+                  "share": 0.033628318584070796
+                },
+                "medium": {
+                  "matched": 207,
+                  "total": 1278,
+                  "share": 0.1619718309859155
+                },
+                "high": {
+                  "matched": 291,
+                  "total": 1278,
+                  "share": 0.22769953051643194
+                }
+              },
+              "high_minus_low": 0.19407121193236115,
+              "selected": true,
+              "reason": "retained"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 24,
+                  "total": 458,
+                  "share": 0.05240174672489083
+                },
+                "medium": {
+                  "matched": 201,
+                  "total": 1124,
+                  "share": 0.17882562277580072
+                },
+                "high": {
+                  "matched": 291,
+                  "total": 1278,
+                  "share": 0.22769953051643194
+                }
+              },
+              "high_minus_low": 0.1752977837915411,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": true
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 2,
+              "total": 383,
+              "share": 0.005221932114882507
+            },
+            "high": {
+              "matched": 118,
+              "total": 338,
+              "share": 0.34911242603550297
+            }
+          },
+          "high_minus_low": 0.34911242603550297,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 2,
+                  "total": 383,
+                  "share": 0.005221932114882507
+                },
+                "high": {
+                  "matched": 118,
+                  "total": 338,
+                  "share": 0.34911242603550297
+                }
+              },
+              "high_minus_low": 0.34911242603550297,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 36,
+              "total": 282,
+              "share": 0.1276595744680851
+            },
+            "medium": {
+              "matched": 34,
+              "total": 378,
+              "share": 0.08994708994708994
+            },
+            "high": {
+              "matched": 137,
+              "total": 341,
+              "share": 0.40175953079178883
+            }
+          },
+          "high_minus_low": 0.27409995632370376,
+          "selected": false,
+          "reason": "not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 36,
+                  "total": 282,
+                  "share": 0.1276595744680851
+                },
+                "medium": {
+                  "matched": 34,
+                  "total": 378,
+                  "share": 0.08994708994708994
+                },
+                "high": {
+                  "matched": 137,
+                  "total": 341,
+                  "share": 0.40175953079178883
+                }
+              },
+              "high_minus_low": 0.27409995632370376,
+              "selected": false,
+              "reason": "not monotonic"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "human_detail",
+      "rule": {
+        "description": "Affected beneficiary group plus an explicit affected/displaced/loss/need expression; not a measure of emotional quality.",
+        "all_patterns": {
+          "English": [
+            "\\b(?:families|households?|children|parents?|elderly|residents?|people|patients?|community)\\b",
+            "\\b(?:affected|displaced|lost|loss|flood\\w*|disaster|without|need\\w*|struggl\\w*)\\b"
+          ],
+          "Sinhala": [
+            "පවුල්|දරුවන්|ළමුන්|ජනතාව|පුද්ගල|ප්‍රජාව",
+            "විපත|අවතැන්|අහිමි|අවශ්‍ය|ගංවතුර|පීඩාව"
+          ],
+          "Tamil": [
+            "குடும்ப|குழந்தை|மக்கள்|நபர்|சமூக",
+            "பாதிக்க|இடம்பெயர்|இழந்|தேவை|வெள்ள|பேரிடர்"
+          ]
+        }
+      },
+      "enabled_languages": [
+        "English"
+      ],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 48,
+              "total": 1130,
+              "share": 0.04247787610619469
+            },
+            "medium": {
+              "matched": 250,
+              "total": 1278,
+              "share": 0.19561815336463223
+            },
+            "high": {
+              "matched": 550,
+              "total": 1278,
+              "share": 0.4303599374021909
+            }
+          },
+          "high_minus_low": 0.3878820612959962,
+          "selected": true,
+          "reason": "passes both views",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 48,
+                  "total": 1130,
+                  "share": 0.04247787610619469
+                },
+                "medium": {
+                  "matched": 250,
+                  "total": 1278,
+                  "share": 0.19561815336463223
+                },
+                "high": {
+                  "matched": 550,
+                  "total": 1278,
+                  "share": 0.4303599374021909
+                }
+              },
+              "high_minus_low": 0.3878820612959962,
+              "selected": true,
+              "reason": "retained"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 23,
+                  "total": 458,
+                  "share": 0.05021834061135371
+                },
+                "medium": {
+                  "matched": 242,
+                  "total": 1124,
+                  "share": 0.21530249110320285
+                },
+                "high": {
+                  "matched": 550,
+                  "total": 1278,
+                  "share": 0.4303599374021909
+                }
+              },
+              "high_minus_low": 0.3801415967908372,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": true
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 25,
+              "total": 383,
+              "share": 0.06527415143603134
+            },
+            "high": {
+              "matched": 13,
+              "total": 338,
+              "share": 0.038461538461538464
+            }
+          },
+          "high_minus_low": 0.038461538461538464,
+          "selected": false,
+          "reason": "high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 25,
+                  "total": 383,
+                  "share": 0.06527415143603134
+                },
+                "high": {
+                  "matched": 13,
+                  "total": 338,
+                  "share": 0.038461538461538464
+                }
+              },
+              "high_minus_low": 0.038461538461538464,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 20,
+              "total": 282,
+              "share": 0.07092198581560284
+            },
+            "medium": {
+              "matched": 116,
+              "total": 378,
+              "share": 0.30687830687830686
+            },
+            "high": {
+              "matched": 46,
+              "total": 341,
+              "share": 0.1348973607038123
+            }
+          },
+          "high_minus_low": 0.06397537488820947,
+          "selected": false,
+          "reason": "high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 20,
+                  "total": 282,
+                  "share": 0.07092198581560284
+                },
+                "medium": {
+                  "matched": 116,
+                  "total": 378,
+                  "share": 0.30687830687830686
+                },
+                "high": {
+                  "matched": 46,
+                  "total": 341,
+                  "share": 0.1348973607038123
+                }
+              },
+              "high_minus_low": 0.06397537488820947,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "specific_call_to_action",
+      "rule": {
+        "description": "Donation/contribution imperative and a named relief item or service in the text.",
+        "all_patterns": {
+          "English": [
+            "\\b(?:donate|contribute|give|send|provide|bring|support)\\b",
+            "\\b(?:water|tents?|food|rations?|medicine|medical|shelter|clothes|clothing|blankets?|supplies|kits?|meals?|hygiene|bottles?)\\b"
+          ],
+          "Sinhala": [
+            "පරිත්‍යාග කරන්න|දායක වන්න|ලබා දෙන්න|සහය වන්න|ආධාර කරන්න",
+            "ජලය|වතුර|කූඩාරම්|ආහාර|ඖෂධ|ඇඳුම්|සනීපාරක්ෂක|බෝතල්"
+          ],
+          "Tamil": [
+            "நன்கொடை|வழங்குங்கள்|பங்களியுங்கள்|உதவுங்கள்|அனுப்புங்கள்",
+            "தண்ணீர்|நீர்|கூடார|உணவு|மருந்து|உடை|போர்வை|சுகாதார|பாட்டில்"
+          ]
+        }
+      },
+      "enabled_languages": [
+        "English"
+      ],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 7,
+              "total": 1130,
+              "share": 0.006194690265486726
+            },
+            "medium": {
+              "matched": 162,
+              "total": 1278,
+              "share": 0.1267605633802817
+            },
+            "high": {
+              "matched": 354,
+              "total": 1278,
+              "share": 0.27699530516431925
+            }
+          },
+          "high_minus_low": 0.2708006148988325,
+          "selected": true,
+          "reason": "passes both views",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 7,
+                  "total": 1130,
+                  "share": 0.006194690265486726
+                },
+                "medium": {
+                  "matched": 162,
+                  "total": 1278,
+                  "share": 0.1267605633802817
+                },
+                "high": {
+                  "matched": 354,
+                  "total": 1278,
+                  "share": 0.27699530516431925
+                }
+              },
+              "high_minus_low": 0.2708006148988325,
+              "selected": true,
+              "reason": "retained"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 6,
+                  "total": 458,
+                  "share": 0.013100436681222707
+                },
+                "medium": {
+                  "matched": 162,
+                  "total": 1124,
+                  "share": 0.14412811387900357
+                },
+                "high": {
+                  "matched": 354,
+                  "total": 1278,
+                  "share": 0.27699530516431925
+                }
+              },
+              "high_minus_low": 0.26389486848309657,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": true
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 4,
+              "total": 338,
+              "share": 0.011834319526627219
+            }
+          },
+          "high_minus_low": 0.011834319526627219,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 4,
+                  "total": 338,
+                  "share": 0.011834319526627219
+                }
+              },
+              "high_minus_low": 0.011834319526627219,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 44,
+              "total": 378,
+              "share": 0.1164021164021164
+            },
+            "high": {
+              "matched": 53,
+              "total": 341,
+              "share": 0.15542521994134897
+            }
+          },
+          "high_minus_low": 0.15542521994134897,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 44,
+                  "total": 378,
+                  "share": 0.1164021164021164
+                },
+                "high": {
+                  "matched": 53,
+                  "total": 341,
+                  "share": 0.15542521994134897
+                }
+              },
+              "high_minus_low": 0.15542521994134897,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "length_band",
+      "rule": {
+        "description": "60 to 250 whitespace-delimited words, inclusive; band fixed before measuring.",
+        "word_count": {
+          "min": 60,
+          "max": 250
+        }
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 35,
+              "total": 1130,
+              "share": 0.030973451327433628
+            },
+            "medium": {
+              "matched": 599,
+              "total": 1278,
+              "share": 0.46870109546165883
+            },
+            "high": {
+              "matched": 596,
+              "total": 1278,
+              "share": 0.46635367762128327
+            }
+          },
+          "high_minus_low": 0.43538022629384965,
+          "selected": false,
+          "reason": "all_development: not monotonic; human_written: not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 35,
+                  "total": 1130,
+                  "share": 0.030973451327433628
+                },
+                "medium": {
+                  "matched": 599,
+                  "total": 1278,
+                  "share": 0.46870109546165883
+                },
+                "high": {
+                  "matched": 596,
+                  "total": 1278,
+                  "share": 0.46635367762128327
+                }
+              },
+              "high_minus_low": 0.43538022629384965,
+              "selected": false,
+              "reason": "not monotonic"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 33,
+                  "total": 458,
+                  "share": 0.07205240174672489
+                },
+                "medium": {
+                  "matched": 587,
+                  "total": 1124,
+                  "share": 0.5222419928825622
+                },
+                "high": {
+                  "matched": 596,
+                  "total": 1278,
+                  "share": 0.46635367762128327
+                }
+              },
+              "high_minus_low": 0.3943012758745584,
+              "selected": false,
+              "reason": "not monotonic"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 72,
+              "total": 338,
+              "share": 0.21301775147928995
+            }
+          },
+          "high_minus_low": 0.21301775147928995,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 72,
+                  "total": 338,
+                  "share": 0.21301775147928995
+                }
+              },
+              "high_minus_low": 0.21301775147928995,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 378,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 341,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 378,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 341,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "length_at_least_60",
+      "rule": {
+        "description": "At least 60 whitespace-delimited words; no upper bound.",
+        "word_count": {
+          "min": 60,
+          "max": null
+        },
+        "post_hoc_revision": true,
+        "revision_reason": "User-requested one-sided revision after the 60-250 band failed English monotonicity; removes the upper-bound confound. Not an independent confirmatory finding."
+      },
+      "enabled_languages": [
+        "English"
+      ],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 54,
+              "total": 1130,
+              "share": 0.047787610619469026
+            },
+            "medium": {
+              "matched": 920,
+              "total": 1278,
+              "share": 0.7198748043818466
+            },
+            "high": {
+              "matched": 1243,
+              "total": 1278,
+              "share": 0.9726134585289515
+            }
+          },
+          "high_minus_low": 0.9248258479094825,
+          "selected": true,
+          "reason": "passes both views",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 54,
+                  "total": 1130,
+                  "share": 0.047787610619469026
+                },
+                "medium": {
+                  "matched": 920,
+                  "total": 1278,
+                  "share": 0.7198748043818466
+                },
+                "high": {
+                  "matched": 1243,
+                  "total": 1278,
+                  "share": 0.9726134585289515
+                }
+              },
+              "high_minus_low": 0.9248258479094825,
+              "selected": true,
+              "reason": "retained"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 52,
+                  "total": 458,
+                  "share": 0.11353711790393013
+                },
+                "medium": {
+                  "matched": 908,
+                  "total": 1124,
+                  "share": 0.8078291814946619
+                },
+                "high": {
+                  "matched": 1243,
+                  "total": 1278,
+                  "share": 0.9726134585289515
+                }
+              },
+              "high_minus_low": 0.8590763406250214,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": true
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 72,
+              "total": 338,
+              "share": 0.21301775147928995
+            }
+          },
+          "high_minus_low": 0.21301775147928995,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 72,
+                  "total": 338,
+                  "share": 0.21301775147928995
+                }
+              },
+              "high_minus_low": 0.21301775147928995,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 378,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 341,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 378,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 341,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "amount_mentioned",
+      "rule": {
+        "description": "Explicit currency marker next to a number; independent of has_currency. No bare-number match.",
+        "common_pattern": "(?:(?<!\\w)(?:LKR|USD|Rs\\.?|රු\\.?|ரூ\\.?)\\s*\\d[\\d,]*(?:\\.\\d+)?|[$€£]\\s*\\d[\\d,]*(?:\\.\\d+)?|\\d[\\d,]*(?:\\.\\d+)?\\s*(?:rupees|dollars|රුපියල්|ரூபாய்)(?!\\w))"
+      },
+      "enabled_languages": [
+        "English"
+      ],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 13,
+              "total": 1130,
+              "share": 0.011504424778761062
+            },
+            "medium": {
+              "matched": 144,
+              "total": 1278,
+              "share": 0.11267605633802817
+            },
+            "high": {
+              "matched": 264,
+              "total": 1278,
+              "share": 0.20657276995305165
+            }
+          },
+          "high_minus_low": 0.19506834517429059,
+          "selected": true,
+          "reason": "passes both views",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 13,
+                  "total": 1130,
+                  "share": 0.011504424778761062
+                },
+                "medium": {
+                  "matched": 144,
+                  "total": 1278,
+                  "share": 0.11267605633802817
+                },
+                "high": {
+                  "matched": 264,
+                  "total": 1278,
+                  "share": 0.20657276995305165
+                }
+              },
+              "high_minus_low": 0.19506834517429059,
+              "selected": true,
+              "reason": "retained"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 9,
+                  "total": 458,
+                  "share": 0.019650655021834062
+                },
+                "medium": {
+                  "matched": 142,
+                  "total": 1124,
+                  "share": 0.12633451957295375
+                },
+                "high": {
+                  "matched": 264,
+                  "total": 1278,
+                  "share": 0.20657276995305165
+                }
+              },
+              "high_minus_low": 0.1869221149312176,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": true
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 113,
+              "total": 338,
+              "share": 0.3343195266272189
+            }
+          },
+          "high_minus_low": 0.3343195266272189,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 113,
+                  "total": 338,
+                  "share": 0.3343195266272189
+                }
+              },
+              "high_minus_low": 0.3343195266272189,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 378,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 113,
+              "total": 341,
+              "share": 0.3313782991202346
+            }
+          },
+          "high_minus_low": 0.3313782991202346,
+          "selected": true,
+          "reason": "retained",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 378,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 113,
+                  "total": 341,
+                  "share": 0.3313782991202346
+                }
+              },
+              "high_minus_low": 0.3313782991202346,
+              "selected": true,
+              "reason": "retained"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    }
+  ],
+  "dropped_checks": [
+    {
+      "check": "deadline",
+      "rule": {
+        "description": "Explicit by/before/within time expression; generic 'today' alone is not a deadline.",
+        "patterns": {
+          "English": "\\b(?:by|before|until)\\s+(?:the\\s+)?(?:\\d|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|noon|midnight|end\\s+of)|\\bwithin\\s+\\d+\\s*(?:hours?|days?|weeks?)\\b",
+          "Sinhala": "(?:\\d+\\s*(?:දින|පැය|සති)|(?:අද|හෙට|සඳුදා|සිකුරාදා)).{0,25}(?:පෙර|ඇතුළත|වන විට)|(?:පෙර|ඇතුළත).{0,15}\\d+",
+          "Tamil": "(?:\\d+\\s*(?:நாட்|மணி|வார)|இன்று|நாளை).{0,25}(?:முன்|க்குள்)|(?:முன்|க்குள்).{0,15}\\d+"
+        }
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 1,
+              "total": 1130,
+              "share": 0.0008849557522123894
+            },
+            "medium": {
+              "matched": 32,
+              "total": 1278,
+              "share": 0.025039123630672927
+            },
+            "high": {
+              "matched": 50,
+              "total": 1278,
+              "share": 0.03912363067292645
+            }
+          },
+          "high_minus_low": 0.03823867492071406,
+          "selected": false,
+          "reason": "all_development: high-low below 15 percentage points; human_written: high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 1,
+                  "total": 1130,
+                  "share": 0.0008849557522123894
+                },
+                "medium": {
+                  "matched": 32,
+                  "total": 1278,
+                  "share": 0.025039123630672927
+                },
+                "high": {
+                  "matched": 50,
+                  "total": 1278,
+                  "share": 0.03912363067292645
+                }
+              },
+              "high_minus_low": 0.03823867492071406,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 1,
+                  "total": 458,
+                  "share": 0.002183406113537118
+                },
+                "medium": {
+                  "matched": 31,
+                  "total": 1124,
+                  "share": 0.027580071174377226
+                },
+                "high": {
+                  "matched": 50,
+                  "total": 1278,
+                  "share": 0.03912363067292645
+                }
+              },
+              "high_minus_low": 0.036940224559389334,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 338,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 338,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 378,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 341,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 378,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 341,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "contact_or_verified_organization",
+      "rule": {
+        "description": "Email/phone/contact instruction or an explicit verified/registered organization claim; does not verify that claim.",
+        "common_pattern": "[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}|(?<!\\w)\\+?\\d[\\d ()-]{6,}\\d(?!\\w)",
+        "patterns": {
+          "English": "\\b(?:contact|call|email|whatsapp|hotline)\\b|\\b(?:verified|registered|recognized|recognised|accredited)\\s+(?:local\\s+)?(?:organi[sz]ation|charity|foundation|group)\\b|\\bred\\s+cross\\b",
+          "Sinhala": "අමතන්න|සම්බන්ධ වන්න|දුරකථන|විද්‍යුත් තැපැල්|(?:ලියාපදිංචි|තහවුරු කළ).{0,20}(?:සංවිධාන|පදනම)",
+          "Tamil": "தொடர்பு|அழைக்க|தொலைபேசி|மின்னஞ்சல்|(?:பதிவு செய்யப்பட்ட|சரிபார்க்கப்பட்ட).{0,25}(?:அமைப்பு|நிறுவனம்)"
+        }
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 12,
+              "total": 1130,
+              "share": 0.010619469026548672
+            },
+            "medium": {
+              "matched": 89,
+              "total": 1278,
+              "share": 0.06964006259780908
+            },
+            "high": {
+              "matched": 139,
+              "total": 1278,
+              "share": 0.10876369327073553
+            }
+          },
+          "high_minus_low": 0.09814422424418685,
+          "selected": false,
+          "reason": "all_development: high-low below 15 percentage points; human_written: high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 12,
+                  "total": 1130,
+                  "share": 0.010619469026548672
+                },
+                "medium": {
+                  "matched": 89,
+                  "total": 1278,
+                  "share": 0.06964006259780908
+                },
+                "high": {
+                  "matched": 139,
+                  "total": 1278,
+                  "share": 0.10876369327073553
+                }
+              },
+              "high_minus_low": 0.09814422424418685,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 10,
+                  "total": 458,
+                  "share": 0.021834061135371178
+                },
+                "medium": {
+                  "matched": 89,
+                  "total": 1124,
+                  "share": 0.0791814946619217
+                },
+                "high": {
+                  "matched": 139,
+                  "total": 1278,
+                  "share": 0.10876369327073553
+                }
+              },
+              "high_minus_low": 0.08692963213536435,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 338,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 338,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 4,
+              "total": 378,
+              "share": 0.010582010582010581
+            },
+            "high": {
+              "matched": 37,
+              "total": 341,
+              "share": 0.10850439882697947
+            }
+          },
+          "high_minus_low": 0.10850439882697947,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 4,
+                  "total": 378,
+                  "share": 0.010582010582010581
+                },
+                "high": {
+                  "matched": 37,
+                  "total": 341,
+                  "share": 0.10850439882697947
+                }
+              },
+              "high_minus_low": 0.10850439882697947,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "concrete_people_or_items",
+      "rule": {
+        "description": "Numeric quantity directly followed by a people, household or relief-item unit.",
+        "patterns": {
+          "English": "\\b\\d[\\d,]*(?:\\.\\d+)?\\s*(?:affected\\s+|displaced\\s+)?(?:people|persons?|families|households?|children|individuals?|patients?|tents?|bottles?|water\\s+bottles?|food\\s+packs?|meals?|kits?|packs?|blankets?|litres?|liters?|kg|kilograms?)\\b",
+          "Sinhala": "\\d[\\d,]*\\s*(?:දෙනෙකු|දෙනෙක්|පුද්ගල|පවුල්|ළමුන්|ළමයි|දරුවන්|කූඩාරම්|බෝතල්|ආහාර|කිලෝ)|(?:පවුල්|පුද්ගලයින්|දරුවන්|කූඩාරම්|බෝතල්)\\s*\\d+",
+          "Tamil": "\\d[\\d,]*\\s*(?:பேர்|நபர்|குடும்ப|குழந்தை|கூடார|பாட்டில்|உணவு|லிட்டர்|கிலோ)|(?:குடும்பங்கள்|நபர்கள்|கூடாரங்கள்)\\s*\\d+"
+        }
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 3,
+              "total": 1130,
+              "share": 0.002654867256637168
+            },
+            "medium": {
+              "matched": 19,
+              "total": 1278,
+              "share": 0.01486697965571205
+            },
+            "high": {
+              "matched": 49,
+              "total": 1278,
+              "share": 0.03834115805946792
+            }
+          },
+          "high_minus_low": 0.03568629080283075,
+          "selected": false,
+          "reason": "all_development: high-low below 15 percentage points; human_written: high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 3,
+                  "total": 1130,
+                  "share": 0.002654867256637168
+                },
+                "medium": {
+                  "matched": 19,
+                  "total": 1278,
+                  "share": 0.01486697965571205
+                },
+                "high": {
+                  "matched": 49,
+                  "total": 1278,
+                  "share": 0.03834115805946792
+                }
+              },
+              "high_minus_low": 0.03568629080283075,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 2,
+                  "total": 458,
+                  "share": 0.004366812227074236
+                },
+                "medium": {
+                  "matched": 18,
+                  "total": 1124,
+                  "share": 0.01601423487544484
+                },
+                "high": {
+                  "matched": 49,
+                  "total": 1278,
+                  "share": 0.03834115805946792
+                }
+              },
+              "high_minus_low": 0.033974345832393685,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 279,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 383,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 0,
+              "total": 338,
+              "share": 0.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 279,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 383,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 0,
+                  "total": 338,
+                  "share": 0.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 0,
+              "total": 282,
+              "share": 0.0
+            },
+            "medium": {
+              "matched": 0,
+              "total": 378,
+              "share": 0.0
+            },
+            "high": {
+              "matched": 6,
+              "total": 341,
+              "share": 0.017595307917888565
+            }
+          },
+          "high_minus_low": 0.017595307917888565,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 0,
+                  "total": 282,
+                  "share": 0.0
+                },
+                "medium": {
+                  "matched": 0,
+                  "total": 378,
+                  "share": 0.0
+                },
+                "high": {
+                  "matched": 6,
+                  "total": 341,
+                  "share": 0.017595307917888565
+                }
+              },
+              "high_minus_low": 0.017595307917888565,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "urgency",
+      "rule": {
+        "description": "Urgency wording; descriptive evidence must not encourage inventing urgency.",
+        "patterns": {
+          "English": "\\b(?:urgent\\w*|immediate\\w*|critical\\w*|emergency|today|now|without\\s+delay|as\\s+soon\\s+as\\s+possible)\\b",
+          "Sinhala": "හදිසි|වහාම|කඩිනම්|අදම|දැන්ම|ඉක්මනින්",
+          "Tamil": "அவசர|உடனடி|உடனே|இன்றே|இப்போதே|விரைவாக"
+        }
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 727,
+              "total": 1130,
+              "share": 0.643362831858407
+            },
+            "medium": {
+              "matched": 405,
+              "total": 1278,
+              "share": 0.31690140845070425
+            },
+            "high": {
+              "matched": 600,
+              "total": 1278,
+              "share": 0.4694835680751174
+            }
+          },
+          "high_minus_low": -0.17387926378328966,
+          "selected": false,
+          "reason": "all_development: high-low below 15 percentage points; not monotonic; human_written: high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 727,
+                  "total": 1130,
+                  "share": 0.643362831858407
+                },
+                "medium": {
+                  "matched": 405,
+                  "total": 1278,
+                  "share": 0.31690140845070425
+                },
+                "high": {
+                  "matched": 600,
+                  "total": 1278,
+                  "share": 0.4694835680751174
+                }
+              },
+              "high_minus_low": -0.17387926378328966,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 334,
+                  "total": 458,
+                  "share": 0.7292576419213974
+                },
+                "medium": {
+                  "matched": 389,
+                  "total": 1124,
+                  "share": 0.34608540925266906
+                },
+                "high": {
+                  "matched": 600,
+                  "total": 1278,
+                  "share": 0.4694835680751174
+                }
+              },
+              "high_minus_low": -0.25977407384628004,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 23,
+              "total": 279,
+              "share": 0.08243727598566308
+            },
+            "medium": {
+              "matched": 32,
+              "total": 383,
+              "share": 0.0835509138381201
+            },
+            "high": {
+              "matched": 57,
+              "total": 338,
+              "share": 0.16863905325443787
+            }
+          },
+          "high_minus_low": 0.08620177726877479,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 23,
+                  "total": 279,
+                  "share": 0.08243727598566308
+                },
+                "medium": {
+                  "matched": 32,
+                  "total": 383,
+                  "share": 0.0835509138381201
+                },
+                "high": {
+                  "matched": 57,
+                  "total": 338,
+                  "share": 0.16863905325443787
+                }
+              },
+              "high_minus_low": 0.08620177726877479,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 45,
+              "total": 282,
+              "share": 0.1595744680851064
+            },
+            "medium": {
+              "matched": 28,
+              "total": 378,
+              "share": 0.07407407407407407
+            },
+            "high": {
+              "matched": 30,
+              "total": 341,
+              "share": 0.08797653958944282
+            }
+          },
+          "high_minus_low": -0.07159792849566357,
+          "selected": false,
+          "reason": "high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 45,
+                  "total": 282,
+                  "share": 0.1595744680851064
+                },
+                "medium": {
+                  "matched": 28,
+                  "total": 378,
+                  "share": 0.07407407407407407
+                },
+                "high": {
+                  "matched": 30,
+                  "total": 341,
+                  "share": 0.08797653958944282
+                }
+              },
+              "high_minus_low": -0.07159792849566357,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    },
+    {
+      "check": "length_under_60",
+      "rule": {
+        "description": "Under 60 whitespace-delimited words; complement reported under unchanged criteria.",
+        "word_count": {
+          "min": 0,
+          "max": 59
+        },
+        "post_hoc_revision": true,
+        "revision_reason": "User-requested complementary report for the post-hoc at-least-60 check."
+      },
+      "enabled_languages": [],
+      "per_language": {
+        "English": {
+          "classes": {
+            "low": {
+              "matched": 1076,
+              "total": 1130,
+              "share": 0.952212389380531
+            },
+            "medium": {
+              "matched": 358,
+              "total": 1278,
+              "share": 0.28012519561815336
+            },
+            "high": {
+              "matched": 35,
+              "total": 1278,
+              "share": 0.027386541471048513
+            }
+          },
+          "high_minus_low": -0.9248258479094825,
+          "selected": false,
+          "reason": "all_development: high-low below 15 percentage points; not monotonic; human_written: high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 1076,
+                  "total": 1130,
+                  "share": 0.952212389380531
+                },
+                "medium": {
+                  "matched": 358,
+                  "total": 1278,
+                  "share": 0.28012519561815336
+                },
+                "high": {
+                  "matched": 35,
+                  "total": 1278,
+                  "share": 0.027386541471048513
+                }
+              },
+              "high_minus_low": -0.9248258479094825,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            },
+            "human_written": {
+              "classes": {
+                "low": {
+                  "matched": 406,
+                  "total": 458,
+                  "share": 0.8864628820960698
+                },
+                "medium": {
+                  "matched": 216,
+                  "total": 1124,
+                  "share": 0.19217081850533807
+                },
+                "high": {
+                  "matched": 35,
+                  "total": 1278,
+                  "share": 0.027386541471048513
+                }
+              },
+              "high_minus_low": -0.8590763406250214,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "English all-development and human-written views",
+          "surfaced": false
+        },
+        "Sinhala": {
+          "classes": {
+            "low": {
+              "matched": 279,
+              "total": 279,
+              "share": 1.0
+            },
+            "medium": {
+              "matched": 383,
+              "total": 383,
+              "share": 1.0
+            },
+            "high": {
+              "matched": 266,
+              "total": 338,
+              "share": 0.7869822485207101
+            }
+          },
+          "high_minus_low": -0.21301775147928992,
+          "selected": false,
+          "reason": "high-low below 15 percentage points; not monotonic",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 279,
+                  "total": 279,
+                  "share": 1.0
+                },
+                "medium": {
+                  "matched": 383,
+                  "total": 383,
+                  "share": 1.0
+                },
+                "high": {
+                  "matched": 266,
+                  "total": 338,
+                  "share": 0.7869822485207101
+                }
+              },
+              "high_minus_low": -0.21301775147928992,
+              "selected": false,
+              "reason": "high-low below 15 percentage points; not monotonic"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        },
+        "Tamil": {
+          "classes": {
+            "low": {
+              "matched": 282,
+              "total": 282,
+              "share": 1.0
+            },
+            "medium": {
+              "matched": 378,
+              "total": 378,
+              "share": 1.0
+            },
+            "high": {
+              "matched": 341,
+              "total": 341,
+              "share": 1.0
+            }
+          },
+          "high_minus_low": 0.0,
+          "selected": false,
+          "reason": "high-low below 15 percentage points",
+          "views": {
+            "all_development": {
+              "classes": {
+                "low": {
+                  "matched": 282,
+                  "total": 282,
+                  "share": 1.0
+                },
+                "medium": {
+                  "matched": 378,
+                  "total": 378,
+                  "share": 1.0
+                },
+                "high": {
+                  "matched": 341,
+                  "total": 341,
+                  "share": 1.0
+                }
+              },
+              "high_minus_low": 0.0,
+              "selected": false,
+              "reason": "high-low below 15 percentage points"
+            }
+          },
+          "evidence_note": "not surfaced: likely augmentation artifact",
+          "surfaced": false
+        }
+      }
+    }
+  ]
+}

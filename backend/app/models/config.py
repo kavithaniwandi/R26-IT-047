@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
     MODEL_DIR: Path = Path("ml_models")
-    DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal"
+    DONATION_APPEAL_MODEL_DIR: Path = Path("ml_models") / "Donation Appeal" / "v3_retrained"
     APPEAL_MODEL_DIR: Path | None = None
     GEMINI_API_KEY: str | None = None
     GEMINI_API_KEY2: str | None = None
@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     GEMINI_FALLBACK_MODELS: str = "gemini-2.5-flash,gemini-2.5-flash-lite"
     GENERATOR_MODE: str = "live"
     GEMINI_MAX_KEYS_PER_REQUEST: int = 3
+    MAX_GEMINI_CALLS_PER_REQUEST: int = 2
+    # Separate first/remaining billable budgets: count success, 429 or quota errors.
+    # 503 overload and connection failures are free; every dispatch counts toward
+    # the shared full-flow hard ceiling, including free failures and JSON retries.
+    # A read timeout after dispatch is conservatively counted as potentially billed.
+    MAX_GEMINI_PROVIDER_ATTEMPTS_PER_FLOW: int = 6
+    GEMINI_JSON_RETRY_ALLOWANCE: int = 1
+    DAILY_IMPROVE_LIMIT: int = 10
+    REQUEST_TIME_BUDGET_S: float = 25.0
+    CONFIDENCE_HIGH: float = 0.9
+    CONFIDENCE_MODERATE: float = 0.7
+    CONFIDENCE_BORDERLINE: float = 0.5
     HF_API_KEY: str | None = None
     MONGODB_URI: str | None = None
     MONGODB_DB_NAME: str = "Research047"

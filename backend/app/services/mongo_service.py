@@ -27,6 +27,10 @@ _component_client: Any = None
 _component_db: Any = None
 
 
+class TriageSessionStateError(RuntimeError):
+    """A patient cannot be added to a missing or closed session."""
+
+
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -44,6 +48,9 @@ async def connect_mongo() -> None:
 def get_mongo_collection(name: str):
     """Return a lazily-created collection for the individual component."""
     global _client, _db
+
+    if _db is not None:
+        return _db[name]
 
     if not settings.MONGODB_URI:
         raise RuntimeError("MongoDB is not configured. Set MONGODB_URI in backend/.env.")
@@ -186,10 +193,8 @@ async def log_appeal_analysis(
 
 async def save_triage_session(session_data: dict[str, Any]) -> str | None:
     """Create a new triage session document in triage_sessions."""
-    if _db is None:
-        return None
-
     try:
+        collection = get_mongo_collection("triage_sessions")
         document = {
             "session_id": session_data.get("session_id"),
             "started_at": _utc_now(),
@@ -197,8 +202,18 @@ async def save_triage_session(session_data: dict[str, Any]) -> str | None:
             "mos": session_data.get("mos", []),
             "status": "active",
         }
-        result = await _db.triage_sessions.insert_one(document)
-        return str(result.inserted_id)
+        result = await collection.update_one(
+            {"_id": f"triage-session:{document['session_id']}"},
+            {"$setOnInsert": document}, upsert=True,
+        )
+        if not result.acknowledged:
+            raise RuntimeError("Session write was not acknowledged.")
+        saved = await collection.find_one({"_id": f"triage-session:{document['session_id']}"})
+        if not saved or saved.get("status") != "active":
+            raise TriageSessionStateError("This session has ended. Start a new session.")
+        return f"triage-session:{document['session_id']}"
+    except TriageSessionStateError:
+        raise
     except Exception as exc:
         print(f"[mongo] save_triage_session failed: {exc}")
         return None
@@ -206,10 +221,8 @@ async def save_triage_session(session_data: dict[str, Any]) -> str | None:
 
 async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
     """Store one patient classification record in triage_patients."""
-    if _db is None:
-        return None
-
     try:
+        collection = get_mongo_collection("triage_patients")
         document = {
             "session_id": patient_data.get("session_id"),
             "patient_id": patient_data.get("id"),
@@ -223,6 +236,12 @@ async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
             "symptoms": patient_data.get("symptoms"),
             "complaint_text": patient_data.get("complaint_text") or patient_data.get("symptoms"),
             "age": patient_data.get("age"),
+            "clinical_note": patient_data.get("clinical_note"),
+            "vitals": patient_data.get("vitals", {}),
+            "scores": patient_data.get("scores"),
+            "should_queue": True,
+            "title": patient_data.get("title"),
+            "description": patient_data.get("description"),
             "red_flags": patient_data.get("red_flags", []),
             "condition_group": patient_data.get("condition_group"),
             "specialty": patient_data.get("specialty"),
@@ -241,6 +260,9 @@ async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
             "critical_trigger": patient_data.get("critical_trigger"),
             "matched_rules": patient_data.get("matched_rules", []),
             "vitals_warnings": patient_data.get("vitals_warnings", []),
+            "incomplete_vitals": patient_data.get("incomplete_vitals"),
+            "incomplete_vitals_reason": patient_data.get("incomplete_vitals_reason"),
+            "interpreted_as": patient_data.get("interpreted_as"),
             "mapped": patient_data.get("mapped"),
             "mapping_confidence": patient_data.get("mapping_confidence"),
             "mapping_review_reason": patient_data.get("mapping_review_reason"),
@@ -255,8 +277,27 @@ async def save_triage_patient(patient_data: dict[str, Any]) -> str | None:
             "display_note": patient_data.get("display_note"),
             "recommended_action": patient_data.get("recommended_action"),
         }
-        result = await _db.triage_patients.insert_one(document)
-        return str(result.inserted_id)
+        # MongoDB's built-in unique _id makes retries safe, including concurrent requests.
+        from json import dumps
+        document_id = "triage-patient:" + dumps(
+            [document["session_id"], document["patient_id"]], separators=(",", ":")
+        )
+        # A lost acknowledgement can be retried even after the session was closed.
+        if await collection.find_one({"_id": document_id}):
+            return document_id
+        session = await get_mongo_collection("triage_sessions").find_one(
+            {"session_id": document["session_id"]}
+        )
+        if not session or session.get("status") != "active":
+            raise TriageSessionStateError("The session is missing or closed. Return to camp setup.")
+        result = await collection.update_one(
+            {"_id": document_id}, {"$setOnInsert": document}, upsert=True,
+        )
+        if not result.acknowledged:
+            raise RuntimeError("Patient write was not acknowledged.")
+        return document_id
+    except TriageSessionStateError:
+        raise
     except Exception as exc:
         print(f"[mongo] save_triage_patient failed: {exc}")
         return None
@@ -269,10 +310,8 @@ async def archive_triage_session(
     summary: dict[str, Any],
 ) -> str | None:
     """Archive a completed triage session and mark the active session ended."""
-    if _db is None:
-        return None
-
     try:
+        collection = get_mongo_collection("triage_archives")
         ended_at = _utc_now()
         document = {
             "session_id": session_id,
@@ -283,14 +322,21 @@ async def archive_triage_session(
             "patients": patients,
             "summary": summary,
         }
-        result = await _db.triage_archives.insert_one(document)
+        document_id = f"triage-archive:{session_id}"
+        result = await collection.update_one(
+            {"_id": document_id}, {"$set": document}, upsert=True,
+        )
+        if not result.acknowledged:
+            raise RuntimeError("Archive write was not acknowledged.")
 
-        await _db.triage_sessions.update_one(
+        session_result = await get_mongo_collection("triage_sessions").update_one(
             {"session_id": session_id},
             {"$set": {"status": "ended", "ended_at": ended_at}},
         )
 
-        return str(result.inserted_id)
+        if not session_result.acknowledged:
+            raise RuntimeError("Session close was not acknowledged.")
+        return document_id
     except Exception as exc:
         print(f"[mongo] archive_triage_session failed: {exc}")
         return None

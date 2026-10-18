@@ -23,11 +23,9 @@ LABELS = ["low", "medium", "high"]
 
 
 def model_dir() -> Path:
-    configured = os.environ.get("APPEAL_MODEL_DIR")
-    if configured:
-        path = Path(configured)
-        return path if path.is_absolute() else BACKEND_DIR / path
-    return BACKEND_DIR / "ml_models" / "Donation Appeal"
+    from app.models.config import settings
+
+    return settings.donation_appeal_model_path("")
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,6 +80,13 @@ def select_test_rows(df: pd.DataFrame) -> tuple[pd.DataFrame, str, int | None]:
         test = df[df["_orig_index"].isin(test_indices)].copy().reset_index(drop=True)
         selected_count = int(len(np.load(selected_indices_path))) if selected_indices_path.exists() else None
         return test, str(test_indices_path), selected_count
+
+    if artifact_dir.name == "v3_retrained":
+        raise ValueError(
+            f"v3 has no saved source-row indices at {test_indices_path}. "
+            "Use its metrics.json and test_predictions.csv; "
+            "a replacement random split is not equivalent."
+        )
 
     _train, test = train_test_split(
         df,

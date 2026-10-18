@@ -1,4 +1,5 @@
-﻿import logging
+﻿import asyncio
+import logging
 
 import pytest
 
@@ -21,6 +22,19 @@ async def test_quality_response_preserves_classifier_and_final_label(monkeypatch
     assert result.final_label == 'high'
     assert result.predicted_class == 'medium'
     assert result.class_probs['medium'] == result.confidence == 0.44
+    # The Generator evaluation and Analyzer must retain identical scoring metadata.
+    async def no_log(*args, **kwargs):
+        pass
+    monkeypatch.setattr(mongo_service, 'log_appeal_analysis', no_log)
+    analysis = await main.analyse_appeal({'appeal_text': 'Please donate water.', 'language': 'English'})
+    assert analysis['score'] == result.score
+    assert analysis['final_label'] == result.final_label
+    assert analysis['raw_quality_score'] == result.raw_quality_score
+    assert analysis['class_probs'] == result.class_probs
+    assert analysis['classifier_confidence'] == result.classifier_confidence
+    assert analysis['confidence_level'] == result.confidence_level
+    await asyncio.sleep(0)
+
 
 
 @pytest.mark.asyncio
@@ -47,5 +61,9 @@ async def test_mongo_failure_warns_and_preserves_generation(monkeypatch, caplog,
         else:
             result = await main.generate_appeal_variants_endpoint(request)
             assert result.variants[0].final_label == 'high'
+        # Logging runs off the response path; wait for its tracked tasks.
+        await asyncio.wait_for(
+            asyncio.gather(*tuple(main._APPEAL_LOG_TASKS)), timeout=1.0
+        )
     assert any(r.levelno == logging.WARNING and 'ConnectionError' in r.message for r in caplog.records)
     assert 'Private connection details' not in caplog.text

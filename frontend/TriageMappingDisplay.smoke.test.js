@@ -50,7 +50,7 @@ const mappedWarning = complaintMappingNotice(
   },
   { primary: "Orthopedic", fallback: false }
 );
-assert("Mapped floor warning uses partial-match copy", mappedWarning?.message === "Complaint partly matched - please review.");
+assert("Mapped floor warning explains coverage and severity review", mappedWarning?.message === "Complaint partly matched (33%). Severity raised for review.");
 
 const info = complaintMappingNotice(
   {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = "";
 
 const HEALTH_CONFIG = {
-  healthy:  { bg: "#dcfce7", border: "#86efac", text: "#166534", dot: "#16a34a", label: "All systems operational" },
+  healthy:  { bg: "#dcfce7", border: "#86efac", text: "#166534", dot: "#16a34a", label: "Recent requests OK" },
+  unknown:  { bg: "#f1f5f9", border: "#cbd5e1", text: "#475569", dot: "#64748b", label: "Not yet checked" },
   degraded: { bg: "#fef3c7", border: "#fcd34d", text: "#92400e", dot: "#d97706", label: "Degraded"               },
   warning:  { bg: "#fff7ed", border: "#fed7aa", text: "#92400e", dot: "#ea580c", label: "Warning"                },
   critical: { bg: "#fee2e2", border: "#fecaca", text: "#991b1b", dot: "#dc2626", label: "Critical"               },
@@ -52,6 +53,7 @@ export default function CreditStatusBar() {
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
+        aria-label="Provider status"
         onClick={() => setOpen((o) => !o)}
         style={{
           background:   cfg.bg,
@@ -143,22 +145,23 @@ export default function CreditStatusBar() {
                 <span style={{ color: "#1e293b", fontWeight: "700" }}>{p.provider}</span>
                 {p.calls_today > 0 && (
                   <span style={{ color: "#64748b", fontSize: "0.72rem", marginLeft: "0.4rem" }}>
-                    {p.calls_today} calls
+                    {p.calls_today} recorded successes
                   </span>
                 )}
+                {p.last_status && <div style={{ color: "#64748b", fontSize: "0.7rem", marginTop: "0.2rem" }}>Last result: {p.last_status}</div>}
               </div>
               <span
                 style={{
                   background: p.exhausted
                     ? "#fee2e2"
-                    : p.status_label === "Active"
+                    : ["Active", "Last request OK"].includes(p.status_label)
                       ? "#dcfce7"
                       : p.status_label === "Standby"
                         ? "#fef3c7"
                         : "#f1f5f9",
                   color: p.exhausted
                     ? "#991b1b"
-                    : p.status_label === "Active"
+                    : ["Active", "Last request OK"].includes(p.status_label)
                       ? "#166534"
                       : p.status_label === "Standby"
                         ? "#92400e"

@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 _ARTIFACTS: dict = {}
 
+
+class QualityModelLoadError(RuntimeError):
+    """The selected appeal model cannot be loaded."""
+
 _LOW_CONFIDENCE_THRESHOLD = 0.50
 _MIN_TEXT_LENGTH = 10
 _MAX_TEXT_LENGTH = 10_000
@@ -66,12 +70,33 @@ def _load_artifacts() -> dict:
         "cfg": "appeal_quality_config.joblib",
     }
 
+    model_dir = settings.donation_appeal_model_path("")
+    if not model_dir.is_dir():
+        raise QualityModelLoadError(
+            f"Appeal quality model directory missing: {model_dir}. "
+            "Restore the selected model or correct APPEAL_MODEL_DIR; "
+            "no alternate model will be loaded."
+        )
+    missing = [
+        filename for filename in names.values()
+        if not (model_dir / filename).is_file()
+    ]
+    if missing:
+        raise QualityModelLoadError(
+            f"Appeal quality model is incomplete at {model_dir}: "
+            + ", ".join(missing)
+        )
+
     loaded = {}
     for key, filename in names.items():
-        path = settings.donation_appeal_model_path(filename)
-        if not path.exists():
-            raise FileNotFoundError(f"Quality model artifact missing: {path}")
-        loaded[key] = joblib.load(path)
+        path = model_dir / filename
+        try:
+            loaded[key] = joblib.load(path)
+        except Exception as exc:
+            raise QualityModelLoadError(
+                f"Cannot load appeal quality artifact: {path} "
+                f"({type(exc).__name__})"
+            ) from exc
         logger.info("Loaded donation appeal artifact: %s", filename)
 
     loaded["N_EN"] = loaded["tfidf_en"].transform([""]).shape[1]
@@ -155,23 +180,12 @@ def _handcrafted(text: str, language: str, artifacts: dict) -> np.ndarray:
 
 
 def _resolve_label(score: float, proba: np.ndarray, artifacts: dict) -> str:
-    tolerance = artifacts["cfg"].get("boundary_tolerance", 0.25)
+    """Use the classifier category independently of the regression score.
 
-    if score <= 2.0:
-        score_label = "low"
-    elif score <= 3.0:
-        score_label = "medium"
-    else:
-        score_label = "high"
-
-    clf_label = artifacts["le"].classes_[int(np.argmax(proba))]
-    if score_label == clf_label:
-        return score_label
-
-    if abs(score - 2.0) < tolerance or abs(score - 3.0) < tolerance:
-        return clf_label
-
-    return score_label
+    Keep the score argument for compatibility with existing scoring callers.
+    The exported hybrid boundary policy is no longer the runtime label policy.
+    """
+    return str(artifacts["le"].classes_[int(np.argmax(proba))])
 
 
 def _rule_based_score(text: str, language: str) -> dict:
@@ -236,6 +250,7 @@ def _rule_based_score(text: str, language: str) -> dict:
         "quality_label": label,
         "predicted_class": label,
         "quality_score": score,
+        "raw_quality_score": score,
         "confidence": 0.0,
         "low_confidence": True,
         "probabilities": {},
@@ -289,6 +304,10 @@ def score_appeal(text: str, language: str = "English") -> dict:
         raw_score = float(np.clip(artifacts["reg"].predict(x_reg)[0], 1.0, 5.0))
         score = float(np.clip(artifacts["iso"].predict([raw_score])[0], 1.0, 5.0))
         label = _resolve_label(score, proba, artifacts)
+        raw_quality_score = round(score, 2)
+        # Preserve decimal gains within the same category. The trained label
+        # resolver is independent of the calibrated numerical prediction.
+        quality_score = raw_quality_score
 
         confidence = round(float(proba.max()), 3)
         low_confidence = confidence < _LOW_CONFIDENCE_THRESHOLD
@@ -302,7 +321,8 @@ def score_appeal(text: str, language: str = "English") -> dict:
         return {
             "quality_label": label,
             "predicted_class": predicted_class,
-            "quality_score": round(score, 2),
+            "quality_score": quality_score,
+            "raw_quality_score": raw_quality_score,
             "confidence": confidence,
             "low_confidence": low_confidence,
             "probabilities": {
@@ -310,6 +330,8 @@ def score_appeal(text: str, language: str = "English") -> dict:
                 for cls, probability in zip(artifacts["le"].classes_, proba)
             },
         }
+    except QualityModelLoadError:
+        raise
     except Exception as exc:
         logger.error("ML inference failed; activating rule-based fallback: %s", exc)
         language = _normalise_language(language)
@@ -325,6 +347,7 @@ def get_quality_score(appeal_text: str, language: str = "English") -> dict:
         confidence = result["confidence"]
         response = {
             "score": result["quality_score"],
+            "raw_quality_score": result["raw_quality_score"],
             "status": result["quality_label"],
             "predicted_class": result.get("predicted_class", result["quality_label"]),
             "class_probs": result.get("probabilities", {}),
@@ -348,12 +371,15 @@ def get_quality_score(appeal_text: str, language: str = "English") -> dict:
     except ValueError as exc:
         logger.warning("Appeal scoring input validation failed: %s", exc)
         raise
+    except QualityModelLoadError:
+        raise
     except Exception as exc:
         logger.exception("ML quality evaluation error: %s", exc)
         try:
             fallback = _rule_based_score(appeal_text, _normalise_language(language))
             return {
                 "score": fallback["quality_score"],
+                "raw_quality_score": fallback["quality_score"],
                 "status": fallback["quality_label"],
                 "method": "rule_based",
                 "confidence": 0.0,
@@ -365,6 +391,7 @@ def get_quality_score(appeal_text: str, language: str = "English") -> dict:
         except Exception:
             return {
                 "score": 3.0,
+                "raw_quality_score": 3.0,
                 "status": "medium",
                 "method": "default",
                 "confidence": 0.0,

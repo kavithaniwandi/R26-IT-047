@@ -9,11 +9,8 @@ export const ROUTED_BY_NLP = "routed by NLP";
 export const ROUTED_BY_SUGGESTED_SPECIALTY = "routed by suggested specialty";
 
 export function useSuggestedSpecialtyRoutingFlag(env = import.meta.env) {
-  return String(
-    env?.VITE_USE_SUGGESTED_SPECIALTY_ROUTING ||
-      env?.USE_SUGGESTED_SPECIALTY_ROUTING ||
-      ""
-  ).toLowerCase() === "true";
+  const configured = env?.VITE_USE_SUGGESTED_SPECIALTY_ROUTING ?? env?.USE_SUGGESTED_SPECIALTY_ROUTING;
+  return configured == null || configured === "" || String(configured).toLowerCase() === "true";
 }
 
 function eligibleMOs(mos, severity) {
@@ -85,8 +82,21 @@ export function routeMO(mos, severity, conditionGroup) {
   return scored[0].mo;
 }
 
+function preferredGeneralMO(mos, suggestion, severity) {
+  if (severity !== "LOW" || ["Pediatric", "Obstetric & Gynecologic"].includes(suggestion?.primary)) {
+    return null;
+  }
+  // Prefer an MO whose primary specialty is General Practice, even when a
+  // specialist with a General Practice secondary skill has a shorter queue.
+  return eligibleMOs(mos, severity)
+    .filter((mo) => specialtyMatches(mo.specialty, "General Practice"))
+    .sort((a, b) => (a.queueDepth || 0) - (b.queueDepth || 0))[0] || null;
+}
+
 export function findRecommendedMO(mos, suggestion, severity = "LOW") {
   if (!Array.isArray(mos) || !suggestion?.primary) return null;
+  const general = preferredGeneralMO(mos, suggestion, severity);
+  if (general) return general;
 
   const preferredSpecialties = [
     suggestion.primary,
@@ -112,13 +122,21 @@ export function chooseRoutedMO(
   severity,
   nlpSpecialty,
   suggestedSpecialty,
-  useSuggestedSpecialtyRouting = false
+  useSuggestedSpecialtyRouting = true
 ) {
   if (useSuggestedSpecialtyRouting && suggestedSpecialty?.primary) {
+    const generalMO = preferredGeneralMO(mos, suggestedSpecialty, severity);
+    if (generalMO) {
+      return {
+        mo: generalMO,
+        source: "suggested_specialty",
+        auditLabel: ROUTED_BY_SUGGESTED_SPECIALTY,
+        specialty: "General Practice",
+      };
+    }
     const preferredSpecialties = [
       suggestedSpecialty.primary,
       ...(suggestedSpecialty.secondary || []),
-      "General Practice",
     ].filter(Boolean);
     const eligible = eligibleMOs(mos, severity);
 
@@ -136,6 +154,20 @@ export function chooseRoutedMO(
         };
       }
     }
+
+    // An unavailable specialty is a roster fallback, not another NLP decision.
+    const general = eligible.filter((mo) => moMatchesSpecialty(mo, "General Practice"));
+    const mo = general.length
+      ? [...general].sort((a, b) => (a.queueDepth || 0) - (b.queueDepth || 0))[0]
+      : routeMO(mos, severity, suggestedSpecialty.primary);
+    return {
+      mo,
+      source: "suggested_specialty_fallback",
+      auditLabel: mo
+        ? `No eligible MO matches the suggested specialties; assigned to ${mo.specialty} by roster fallback. Review assignment.`
+        : "No eligible MO matches the suggested specialties; manual assignment required.",
+      specialty: mo?.specialty || suggestedSpecialty.primary,
+    };
   }
 
   return {
