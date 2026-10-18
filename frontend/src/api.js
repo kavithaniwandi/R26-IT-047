@@ -175,6 +175,7 @@ export const api = {
   pledgeDisasterRequest: (requestId, pledges) => apiRequest(`/disaster-donation-requests/${requestId}/pledge`, { method: 'POST', body: JSON.stringify({ pledges }) }),
   getOfficerPledges: () => apiRequest('/disaster-donation-requests/officer/pledges'),
   acceptDisasterPledge: (requestId, donationId) => apiRequest(`/disaster-donation-requests/${requestId}/donations/${donationId}/accept`, { method: 'PATCH' }),
+  acceptDisasterPledgeBatch: (requestId, batchId) => apiRequest(`/disaster-donation-requests/${requestId}/pledge-batches/${batchId}/accept`, { method: 'PATCH' }),
   getDonationCatalog: () => apiRequest('/donation-items'),
   getDivisions: () => apiRequest('/divisions'),
   getDSAreas: () => apiRequest('/divisions/ds-areas'),

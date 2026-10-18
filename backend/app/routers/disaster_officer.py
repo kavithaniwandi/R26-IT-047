@@ -87,6 +87,7 @@ class DisasterRequestGroupOut(BaseModel):
 
 class OfficerPledgeItemOut(BaseModel):
     donationId: str
+    pledgeBatchId: Optional[str] = None
     requestId: str
     donorName: str
     donorPhone: Optional[str] = None
@@ -662,6 +663,7 @@ async def get_officer_pending_pledges(
                 pledges_out.append(
                     OfficerPledgeItemOut(
                         donationId=don_id,
+                        pledgeBatchId=don.get("pledgeBatchId"),
                         requestId=req_id,
                         donorName=don.get("donorName", "Verified Donor"),
                         donorPhone=don.get("donorPhone") or "+94 77 123 4567",
@@ -783,6 +785,98 @@ async def accept_donation_at_ds_office(
     )
 
     updated_document = await disaster_requests_collection.find_one({"_id": ObjectId(req_id)})
+    return format_mongo_doc(updated_document)
+
+
+@router.patch("/{req_id}/pledge-batches/{batch_id}/accept")
+async def accept_pledge_batch_at_ds_office(
+    req_id: str,
+    batch_id: str,
+    token_payload: TokenPayload = Depends(
+        require_role(["admin", "authority", "disaster_officer"])
+    ),
+    db: Session = Depends(get_db),
+):
+    """Confirm every pending item submitted as part of one donor pledge."""
+    await expire_stale_pledges()
+    if not ObjectId.is_valid(req_id):
+        raise HTTPException(status_code=400, detail="Invalid Request ObjectId")
+
+    query = {"_id": ObjectId(req_id)}
+    await _apply_officer_scope(query, token_payload, db)
+    doc = await disaster_requests_collection.find_one(query)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Disaster request not found")
+
+    donations = doc.get("donations", [])
+    batch_donations = [
+        donation for donation in donations
+        if donation.get("pledgeBatchId") == batch_id
+    ]
+    if not batch_donations:
+        raise HTTPException(status_code=404, detail="Pledge batch not found in request")
+    if any(donation.get("status") == "cancelled" for donation in batch_donations):
+        raise HTTPException(
+            status_code=400,
+            detail="This pledge expired and can no longer be received",
+        )
+
+    pending_donations = [
+        donation for donation in batch_donations
+        if donation.get("status") == "pledged"
+    ]
+    if not pending_donations:
+        raise HTTPException(status_code=400, detail="This pledge has already been received")
+
+    now = datetime.now(timezone.utc)
+    items = doc.get("items", [])
+    for donation in pending_donations:
+        donation["status"] = "received"
+        donation["acceptedAt"] = now
+        donation["acceptedByOfficerId"] = str(token_payload.sub)
+
+        for item in items:
+            same_item_id = (
+                donation.get("itemId")
+                and item.get("itemId") == donation.get("itemId")
+            )
+            same_item_name = (
+                item.get("itemName", "").casefold()
+                == donation.get("itemName", "").casefold()
+            )
+            if same_item_id or same_item_name:
+                transfer_quantity = float(donation.get("quantity", 0))
+                item["pledgedQuantity"] = max(
+                    0.0,
+                    float(item.get("pledgedQuantity", 0)) - transfer_quantity,
+                )
+                item["donatedQuantity"] = (
+                    float(item.get("donatedQuantity", 0)) + transfer_quantity
+                )
+                needed_quantity = float(
+                    whole_required_quantity(item.get("neededQuantity", 0))
+                )
+                item["remainingQuantity"] = max(
+                    0.0,
+                    needed_quantity - item["donatedQuantity"],
+                )
+                if item["donatedQuantity"] >= needed_quantity:
+                    item["status"] = "fulfilled"
+                break
+
+    request_status = (
+        "fulfilled"
+        if items and all(item.get("status") == "fulfilled" for item in items)
+        else "remaining"
+    )
+    await disaster_requests_collection.update_one(
+        {"_id": ObjectId(req_id)},
+        {"$set": {"donations": donations, "items": items, "status": request_status}},
+    )
+
+    updated_document = await disaster_requests_collection.find_one(
+        {"_id": ObjectId(req_id)}
+    )
     return format_mongo_doc(updated_document)
 
 

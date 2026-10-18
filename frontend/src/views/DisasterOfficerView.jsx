@@ -11,6 +11,16 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 
+const formatSriLankaDateTime = (value) => new Intl.DateTimeFormat('en-LK', {
+  timeZone: 'Asia/Colombo',
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+}).format(new Date(value));
+
 export default function DisasterOfficer({ currentUser, onAddToast }) {
   const [activeTab, setActiveTab] = useState('unpledged'); // 'unpledged' | 'pending_pledges' | 'completed'
   const [loading, setLoading] = useState(false);
@@ -44,13 +54,18 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
     fetchData();
   }, []);
 
-  const handleMarkReceived = async (reqId, donationId) => {
-    setAcceptingId(donationId);
+  const handleMarkReceived = async (pledgeGroup) => {
+    setAcceptingId(pledgeGroup.key);
     try {
-      const cleanReqId = reqId ? reqId.replace('REQ-', '') : '';
-      await api.acceptDisasterPledge(cleanReqId, donationId);
+      const cleanReqId = pledgeGroup.requestId ? pledgeGroup.requestId.replace('REQ-', '') : '';
+      if (pledgeGroup.pledgeBatchId) {
+        await api.acceptDisasterPledgeBatch(cleanReqId, pledgeGroup.pledgeBatchId);
+      } else {
+        await api.acceptDisasterPledge(cleanReqId, pledgeGroup.items[0].donationId);
+      }
 
-      const msg = 'Item receipt verified at DS Office. Inventory and request status updated.';
+      const itemCount = pledgeGroup.items.length;
+      const msg = `${itemCount} pledged item${itemCount === 1 ? '' : 's'} verified at the DS Office. Inventory and request status updated.`;
       setSuccessMsg(msg);
       if (onAddToast) onAddToast(msg, 'success', 'Received Verified');
       fetchData();
@@ -106,6 +121,31 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
       return groups;
     }, {})
   ).sort(([left], [right]) => left.localeCompare(right));
+
+  const pendingPledgeGroups = Object.values(
+    pledges.reduce((groups, pledge) => {
+      const key = pledge.pledgeBatchId
+        ? `${pledge.requestId}:${pledge.pledgeBatchId}`
+        : `${pledge.requestId}:legacy:${pledge.donationId}`;
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          pledgeBatchId: pledge.pledgeBatchId,
+          requestId: pledge.requestId,
+          donorName: pledge.donorName,
+          donorPhone: pledge.donorPhone,
+          reliefCamp: pledge.reliefCamp,
+          dsArea: pledge.dsArea,
+          gnDivision: pledge.gnDivision,
+          donatedAt: pledge.donatedAt,
+          expiresAt: pledge.expiresAt,
+          items: [],
+        };
+      }
+      groups[key].items.push(pledge);
+      return groups;
+    }, {})
+  );
 
   return (
     <div>
@@ -176,7 +216,7 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
           onClick={() => setActiveTab('pending_pledges')}
         >
           <Clock size={16} />
-          <span>Pending Handover Pledges ({pledges.length})</span>
+          <span>Pending Handover Pledges ({pendingPledgeGroups.length})</span>
         </button>
         <button
           className={`btn ${activeTab === 'completed' ? 'btn-primary' : 'btn-secondary'}`}
@@ -357,59 +397,95 @@ export default function DisasterOfficer({ currentUser, onAddToast }) {
             </button>
           </div>
 
-          <div className="table-container">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Donor Info</th>
-                  <th>Item Pledged</th>
-                  <th>Quantity</th>
-                  <th>Drop-off Office</th>
-                  <th>DS / GN Division</th>
-                  <th>Deadline</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pledges.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
-                      No pending donor pledges in queue.
-                    </td>
-                  </tr>
-                ) : (
-                  pledges.map((p) => (
-                    <tr key={p.donationId || p.id}>
-                      <td>
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{p.donorName || 'Verified Donor'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.donorPhone || 'No Phone Registered'}</div>
-                      </td>
-                      <td style={{ fontWeight: '700', color: 'var(--accent-blue)' }}>{p.itemName}</td>
-                      <td style={{ fontWeight: '800' }}>{p.quantity} {p.unit || 'units'}</td>
-                      <td>{p.dsArea} Divisional Secretariat Office</td>
-                      <td>
-                        <div>{p.dsArea}</div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.gnDivision}</span>
-                      </td>
-                      <td style={{ color: 'var(--accent-amber)', fontWeight: '700', fontSize: '0.75rem' }}>
-                        {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : 'Legacy pledge'}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => handleMarkReceived(p.requestId, p.donationId)}
-                          disabled={acceptingId === p.donationId}
-                        >
-                          <CheckCircle2 size={13} />
-                          <span>{acceptingId === p.donationId ? 'Verifying...' : 'Mark Received'}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {pendingPledgeGroups.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+              No pending donor pledges in queue.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {pendingPledgeGroups.map((pledgeGroup) => (
+                <div
+                  key={pledgeGroup.key}
+                  style={{
+                    padding: '18px',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-lg)',
+                    backgroundColor: 'var(--bg-secondary)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <strong style={{ color: 'var(--text-primary)', fontSize: '1rem' }}>
+                          {pledgeGroup.donorName || 'Verified Donor'}
+                        </strong>
+                        <span className="badge badge-info">
+                          {pledgeGroup.items.length} item{pledgeGroup.items.length === 1 ? '' : 's'}
+                        </span>
+                        {pledgeGroup.pledgeBatchId && (
+                          <span className="badge font-mono">{pledgeGroup.pledgeBatchId}</span>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '5px', color: 'var(--text-muted)', fontSize: '0.77rem' }}>
+                        {pledgeGroup.donorPhone || 'No Phone Registered'}
+                      </div>
+                    </div>
+
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => handleMarkReceived(pledgeGroup)}
+                      disabled={acceptingId === pledgeGroup.key}
+                    >
+                      <CheckCircle2 size={13} />
+                      <span>{acceptingId === pledgeGroup.key ? 'Verifying...' : `Mark ${pledgeGroup.items.length > 1 ? 'All ' : ''}Received`}</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                    <span><MapPin size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />{pledgeGroup.dsArea} / {pledgeGroup.gnDivision}</span>
+                    <span>Drop-off: <strong>{pledgeGroup.dsArea} Divisional Secretariat Office</strong></span>
+                    {pledgeGroup.expiresAt ? (
+                      <>
+                        <span>
+                          Pledged: <strong>{formatSriLankaDateTime(pledgeGroup.donatedAt)}</strong>
+                        </span>
+                        <span style={{ color: 'var(--accent-amber)', fontWeight: '700' }}>
+                          <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />
+                          Deadline: {formatSriLankaDateTime(pledgeGroup.expiresAt)}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--accent-amber)', fontWeight: '700' }}>
+                        <Clock size={13} style={{ verticalAlign: '-2px', marginRight: '4px' }} />Legacy pledge
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '9px', marginTop: '14px' }}>
+                    {pledgeGroup.items.map((item) => (
+                      <div
+                        key={item.donationId}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          padding: '11px 13px',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'var(--bg-card)',
+                        }}
+                      >
+                        <strong style={{ color: 'var(--accent-blue)' }}>{item.itemName}</strong>
+                        <strong style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          {item.quantity} {item.unit || 'units'}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
