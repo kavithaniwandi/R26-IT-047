@@ -87,7 +87,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             )
 
     init_db()
-    expiry_task = None
     try:
         from app.models.quality_service import warm_up
 
@@ -97,12 +96,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Quality model warmup failed: %s. Appeal scoring will return errors until fixed.",
             exc,
         )
+    expiry_task = None
     try:
         from app.services.mongo_service import connect_mongo
         from app.services.pledge_expiry import pledge_expiry_worker
 
         await connect_mongo()
-        expiry_task = asyncio.create_task(pledge_expiry_worker())
+        if settings.MONGODB_URI or settings.COMPONENT_MONGODB_URI:
+            expiry_task = asyncio.create_task(pledge_expiry_worker())
     except Exception as exc:
         _startup_log.error("MongoDB connection failed: %s", exc)
     try:

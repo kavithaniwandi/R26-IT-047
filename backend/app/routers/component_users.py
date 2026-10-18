@@ -23,11 +23,6 @@ def _format(document: dict) -> dict:
         "email": document.get("email"),
         "phone": document.get("phone"),
         "address": document.get("address"),
-        "assignedDsArea": (
-            document.get("assignedDsArea")
-            or document.get("assigned_ds_area")
-            or document.get("dsArea")
-        ),
         "userType": document.get("userType"),
         "createdAt": document.get("createdAt") or datetime.now(timezone.utc),
     }

@@ -84,7 +84,7 @@ def init_db() -> None:
 
 
 def _ensure_user_donor_profile_columns() -> None:
-    """Small additive migration for deployments created before profile fields."""
+    """Small additive migration for deployments created before donor profiles."""
     existing = {column["name"] for column in inspect(engine).get_columns("users")}
     columns = {
         "donor_type": "VARCHAR(30)",
@@ -92,7 +92,6 @@ def _ensure_user_donor_profile_columns() -> None:
         "capacity_level": "VARCHAR(20)",
         "latitude": "FLOAT",
         "longitude": "FLOAT",
-        "assigned_ds_area": "VARCHAR(120)",
     }
     with engine.begin() as connection:
         for name, sql_type in columns.items():
@@ -129,24 +128,18 @@ def _seed_demo_users() -> None:
     from app.models.user import User
 
     demo_users = [
-        ("System Administrator", "admin@disaster.relief.lk", "Admin@2026!", RoleEnum.admin, None),
-        ("Victim - Kaduwela", "victim@kaduwela.lk", "Victim@2026!", RoleEnum.victim, None),
-        ("Dr. MOH Authority Officer", "authority@moh.gov.lk", "Authority@2026!", RoleEnum.authority, None),
-        ("Red Cross Relief Donor", "donor@redcross.lk", "Donor@2026!", RoleEnum.donor, None),
-        ("Field Volunteer Officer", "volunteer@relief.lk", "Volunteer@2026!", RoleEnum.volunteer, None),
-        ("Kaduwela Disaster Officer", "officer@disaster.relief.lk", "Officer@2026!", RoleEnum.disaster_officer, "Kaduwela"),
+        ("System Administrator", "admin@disaster.relief.lk", "Admin@2026!", RoleEnum.admin),
+        ("Victim - Kaduwela", "victim@kaduwela.lk", "Victim@2026!", RoleEnum.victim),
+        ("Dr. MOH Authority Officer", "authority@moh.gov.lk", "Authority@2026!", RoleEnum.authority),
+        ("Red Cross Relief Donor", "donor@redcross.lk", "Donor@2026!", RoleEnum.donor),
+        ("Field Volunteer Officer", "volunteer@relief.lk", "Volunteer@2026!", RoleEnum.volunteer),
+        ("District Disaster Officer", "officer@disaster.relief.lk", "Officer@2026!", RoleEnum.disaster_officer),
     ]
     password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     db = SessionLocal()
     try:
-        for full_name, email, password, role_name, assigned_ds_area in demo_users:
-            existing_users = db.query(User).filter(User.email == email).all()
-            if existing_users:
-                # Backfill the operational area for databases seeded before
-                # officer-level request scoping was introduced.
-                for existing_user in existing_users:
-                    if assigned_ds_area and not existing_user.assigned_ds_area:
-                        existing_user.assigned_ds_area = assigned_ds_area
+        for full_name, email, password, role_name in demo_users:
+            if db.query(User).filter(User.email == email).first():
                 continue
             role = db.query(Role).filter(Role.name == role_name).first()
             if role:
@@ -155,7 +148,6 @@ def _seed_demo_users() -> None:
                     email=email,
                     hashed_password=password_context.hash(password),
                     role_id=role.id,
-                    assigned_ds_area=assigned_ds_area,
                     is_active=True,
                 ))
         db.commit()

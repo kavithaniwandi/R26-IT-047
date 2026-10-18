@@ -159,7 +159,7 @@ def test_length_suggestion_uses_no_model_batch(monkeypatch):
 async def test_repair_kept_or_discarded(monkeypatch, improves):
     text=" ".join([TEXT]*5)
     # A shorter rearrangement uses exclusively original facts and is in the Short band.
-    rewrite=" ".join([TEXT]*5)
+    rewrite=("Please donate today. " + " ".join([TEXT]*4) + " Families in Malabe need water bottles and tents for 20 people.") if improves else text
     calls=provider(monkeypatch,[rewrite])
     # Approved policy: a visible score gain, not confidence alone, defines acceptance.
     queue=[[score(value=2.9)], [score(confidence=0.8 if improves else 0.6, value=3.0 if improves else 2.8)]]
