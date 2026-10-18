@@ -200,17 +200,71 @@ def submit_sos(
     db.commit()
     db.refresh(sos)
 
-    # Multi-channel notification audit record
+    # ── Multi-channel notification audit record ──────────────────────────────
     notif = Notification(
         recipient_user_id=user_id,
         channel="SMS",
         message_type="SOS_ALERT",
         recipient_target=user.phone or "Emergency-Broadcast-911",
-        message_content=f"EMERGENCY ALERT: SOS #{sos.id} received from {user.full_name} at ({sos.latitude:.4f}, {sos.longitude:.4f}). Priority: {sos.priority_score}.",
+        message_content=(
+            f"EMERGENCY ALERT: SOS #{sos.id} received from {user.full_name} "
+            f"at ({sos.latitude:.4f}, {sos.longitude:.4f}). "
+            f"Priority: {sos.priority_score}."
+        ),
         dispatch_status="sent",
     )
     db.add(notif)
     db.commit()
+
+    # ── Auto-dispatch SMS to user's saved emergency contacts ─────────────────
+    # Runs immediately after SOS creation so contacts are notified even if the
+    # frontend /alert-contacts call is delayed or skipped.
+    # Errors are fully isolated — a SMS failure will never block the SOS response.
+    try:
+        saved_contacts = _get_user_saved_contacts(user)
+        if saved_contacts:
+            loc_text = (
+                f"{sos.gn_division or sos.ds_division or ''}, {sos.district or 'Sri Lanka'}"
+            ).strip(", ")
+            sms_body = (
+                f"[EMERGENCY SOS ALERT] {user.full_name or 'A victim'} has triggered "
+                f"Distress Beacon #{sos.id} at {loc_text} "
+                f"({sos.latitude:.4f}°N, {sos.longitude:.4f}°E). "
+                f"Urgent relief/rescue needed! Priority: {round(sos.priority_score)}/100. "
+                f"Emergency services (119/1990) dispatched. - Sri Lanka Disaster Relief System"
+            )
+            for contact in saved_contacts:
+                phone = (contact.phone or "").strip()
+                if not phone or _is_placeholder_phone(phone):
+                    continue
+                if not contact.notifySMS:
+                    continue
+                try:
+                    sms_gateway.send_direct_sms(
+                        recipient=phone,
+                        message=sms_body,
+                        message_type="SOS_EMERGENCY_CONTACT_ALERT",
+                        db=db,
+                    )
+                    logger.info(
+                        "[SOS-AUTOALERT] SMS dispatched to contact '%s' for SOS #%s",
+                        contact.name, sos.id,
+                    )
+                except Exception as sms_exc:
+                    logger.warning(
+                        "[SOS-AUTOALERT] SMS to '%s' failed for SOS #%s: %s",
+                        contact.name, sos.id, sms_exc,
+                    )
+        else:
+            logger.info(
+                "[SOS-AUTOALERT] No saved emergency contacts for user %s — skipping auto-SMS.",
+                user_id,
+            )
+    except Exception as auto_sms_exc:
+        logger.error(
+            "[SOS-AUTOALERT] Unexpected error during auto-SMS dispatch for SOS #%s: %s",
+            sos.id, auto_sms_exc,
+        )
 
     return SOSOut(
         id=sos.id,
