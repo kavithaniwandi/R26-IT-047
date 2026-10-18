@@ -6,6 +6,9 @@
   color: #0f172a;
 }
 
+.daa-classifier-result { margin: .5rem 0 1rem; line-height: 1.5; }
+.daa-classifier-label { text-transform: capitalize; }
+
 .daa-container {
   width: 100%;
   max-width: 1220px;
@@ -218,7 +221,8 @@
 
 .daa-analyse-btn,
 .daa-improve-btn,
-.daa-copy-btn {
+.daa-copy-btn,
+.daa-original-copy-btn {
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -272,11 +276,13 @@
   width: 14px;
 }
 
-.daa-copy-btn {
+.daa-copy-btn,
+.daa-original-copy-btn {
   background: #059669;
 }
 
-.daa-copy-btn:hover {
+.daa-copy-btn:hover,
+.daa-original-copy-btn:hover {
   background: #047857;
   transform: translateY(-1px);
 }
@@ -601,6 +607,7 @@
   .daa-form-group,
   .daa-form-group select,
   .daa-copy-btn,
+  .daa-original-copy-btn,
   .daa-analyse-btn {
     width: 100%;
   }
@@ -729,4 +736,37 @@
 .daa-lang-mismatch strong {
   font-weight: 600;
   color: #92400e;
+}
+
+
+.daa-fact-options { display: grid; gap: 1rem; }
+.daa-fact-options label { display: grid; gap: .4rem; font-weight: 600; }
+.daa-fact-options input, .daa-fact-options select { padding: .7rem; border: 1px solid #cbd5e1; border-radius: .5rem; color: #0f172a; background: white; }
+.daa-confidence-note, .daa-suggestion { padding: 1rem; border: 1px solid #cbd5e1; border-radius: .5rem; margin-block: .75rem; }
+.daa-confidence-note p, .daa-suggestion p { margin-top: .4rem; line-height: 1.5; }
+.daa-rewrite-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.daa-rewrite-comparison article { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.daa-rewrite-comparison button { margin-top: 1rem; }
+@media (max-width: 700px) { .daa-rewrite-comparison { grid-template-columns: 1fr; } }
+
+.daa-page .daa-rating-details { margin-top: 1rem; }
+.daa-page .daa-rating-details summary { cursor: pointer; font-weight: 600; }
+
+/* Stack results at the same width as the input and improvement panels. */
+.daa-page .daa-container { box-sizing: border-box; }
+.daa-page .daa-results-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; width: 100%; gap: 1.1rem; }
+.daa-page .daa-results-grid > section { min-width: 0; box-sizing: border-box; }
+.daa-page .daa-improved-card { width: 100%; box-sizing: border-box; }
+.daa-page .daa-primary-btn { border: 0; border-radius: 6px; padding: .75rem 1.15rem; background: #2563eb; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.daa-page .daa-primary-btn:disabled { opacity: .5; cursor: not-allowed; }
+.daa-page .daa-remaining-uses { font-size: .75rem; color: #64748b; margin: .4rem 0; }
+.daa-page .daa-rewrite-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.daa-page .daa-rewrite-comparison > article { min-width: 0; }
+.daa-improvement-diagnostic { margin-top: 1rem; padding: 1rem; border: 1px solid #f59e0b; border-radius: .5rem; background: #fffbeb; color: #78350f; overflow-wrap: anywhere; }
+.daa-improvement-diagnostic p { margin: .5rem 0; }
+.daa-candidate-assessment { margin-top: .75rem; }
+.daa-candidate-assessment summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 720px) {
+  .daa-page .daa-results-grid, .daa-page .daa-rewrite-comparison { grid-template-columns: minmax(0, 1fr); }
+  .daa-page .daa-container { padding-left: 1rem; padding-right: 1rem; }
 }

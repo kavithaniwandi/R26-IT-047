@@ -1,0 +1,176 @@
+{
+  "specialties": [
+    "Emergency Medicine",
+    "General Practice",
+    "Pediatric",
+    "Obstetric & Gynecologic",
+    "Cardiovascular",
+    "Respiratory",
+    "Neurological",
+    "Orthopedic",
+    "Trauma & Surgery",
+    "Infection & Systemic",
+    "Endocrine & Metabolic",
+    "Gastrointestinal",
+    "Mental & Behavioral",
+    "Renal & Urinary",
+    "Allergy & Immunology",
+    "Rheumatology",
+    "Geriatric",
+    "Dermatology",
+    "ENT",
+    "Ophthalmology"
+  ],
+  "default_primary": "General Practice",
+  "critical_primary": "Emergency Medicine",
+  "secondary_threshold": 1.5,
+  "specific_phrase_preferences": [
+    {
+      "specific": "mild headache",
+      "generic": "headache",
+      "generic_specialty": "Neurological"
+    }
+  ],
+  "red_flag_keywords": {
+    "breathing_difficulty": ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "severe respiratory distress"],
+    "chest_pain": ["chest pain"],
+    "focal_neurologic_deficit": ["focal neurologic deficit", "neurological deficit", "arm weakness", "weakness"],
+    "active_bleeding": ["bleeding", "heavy bleeding", "hemorrhage", "haemorrhage"],
+    "syncope": ["syncope"],
+    "seizure": ["seizure"]
+  },
+  "equivalent_keywords": [
+    ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "severe respiratory distress"],
+    ["hypoxia", "hypoxic"],
+    ["wheeze", "wheezing"],
+    ["palpitation", "palpitations"],
+    ["diarrhoea", "diarrhea"],
+    ["diabetes", "diabetic"],
+    ["forearm deformity", "deformity"],
+    ["infected wound", "wound"],
+    ["heavy bleeding", "bleeding"],
+    ["medication refill", "ran out of medication", "ran out of meds", "needs refill"],
+    ["altered consciousness", "altered mental status", "confusion", "confused", "drowsy"],
+    ["pregnant", "pregnancy", "weeks pregnant"]
+  ],
+  "cardiac_chest_pain_pattern": {
+    "reason": "Chest pain with ischemic features should remain advisory-cardiac even when breathlessness or hypoxia is also present.",
+    "required_terms": ["chest pain"],
+    "feature_terms": ["left arm", "arm", "jaw", "neck", "shoulder", "sweating", "diaphoresis", "crushing", "pressure", "tightness"],
+    "exclusion_terms": ["cough", "fever", "wheeze", "wheezing", "sputum", "pleuritic"],
+    "cardiovascular_boost": 5.0,
+    "emergency_boost": 1.0,
+    "respiratory_spo2_boost": 1.0
+  },
+  "age_boosts": {
+    "pediatric": { "specialty": "Pediatric", "age_lt": 12, "weight": 3.0 },
+    "geriatric": { "specialty": "Geriatric", "age_gte": 65, "weight": 1.4 }
+  },
+  "rules": [
+    {
+      "specialty": "Emergency Medicine",
+      "keywords": ["shock", "cyanosis", "unconscious", "cardiac arrest", "resuscitation", "severe respiratory distress", "altered consciousness"],
+      "weight": 2.5,
+      "red_flags": ["breathing_difficulty", "active_bleeding", "syncope", "seizure", "focal_neurologic_deficit"],
+      "red_flag_weight": 2.5
+    },
+    {
+      "specialty": "Respiratory",
+      "keywords": ["short of breath", "shortness of breath", "breathlessness", "breathing difficulty", "respiratory distress", "cyanosis", "hypoxia", "hypoxic", "wheeze", "wheezing", "asthma", "cough", "pneumonia"],
+      "weight": 1.4,
+      "red_flags": ["breathing_difficulty"],
+      "red_flag_weight": 2.0
+    },
+    {
+      "specialty": "Cardiovascular",
+      "keywords": ["chest pain", "cardiac", "heart", "palpitation", "palpitations", "myocardial", "angina", "hypertension", "hypotension", "tachycardia", "bradycardia"],
+      "weight": 1.4,
+      "red_flags": ["chest_pain", "syncope"],
+      "red_flag_weight": 2.0
+    },
+    {
+      "specialty": "Neurological",
+      "keywords": ["facial droop", "slurred speech", "arm weakness", "weakness", "stroke", "seizure", "headache", "head pain", "migraine", "confusion", "confused", "drowsy", "neurological deficit", "focal neurologic deficit", "altered consciousness"],
+      "weight": 1.3,
+      "red_flags": ["focal_neurologic_deficit", "seizure"],
+      "red_flag_weight": 2.0
+    },
+    {
+      "specialty": "Orthopedic",
+      "keywords": ["fracture", "deformity", "forearm deformity", "limb injury", "joint injury", "bone injury", "dislocation", "sprain", "fall", "orthopedic", "orthopaedic"],
+      "weight": 1.5
+    },
+    {
+      "specialty": "Trauma & Surgery",
+      "keywords": ["wound", "infected wound", "pus", "abscess", "burn", "burns", "crush injury", "crush", "penetrating injury", "stab", "gunshot", "laceration", "bleeding", "heavy bleeding", "hemorrhage", "haemorrhage", "trauma"],
+      "weight": 1.5,
+      "red_flags": ["active_bleeding"],
+      "red_flag_weight": 2.0
+    },
+    {
+      "specialty": "Obstetric & Gynecologic",
+      "keywords": ["pregnant", "pregnancy", "weeks pregnant", "vaginal bleeding", "bleeding in pregnancy", "labour", "labor", "uterine", "placenta", "eclampsia", "gynecologic", "gynaecologic"],
+      "weight": 1.7
+    },
+    {
+      "specialty": "Pediatric",
+      "keywords": ["child", "children", "paediatric", "pediatric", "infant", "toddler", "newborn", "dehydration", "diarrhoea", "diarrhea", "vomiting"],
+      "weight": 1.1
+    },
+    {
+      "specialty": "Infection & Systemic",
+      "keywords": ["fever", "infection", "infected", "sepsis", "leptospirosis", "paddy fields", "muscle pain", "myalgia", "dengue", "malaria", "cellulitis", "typhoid"],
+      "weight": 1.3
+    },
+    {
+      "specialty": "Endocrine & Metabolic",
+      "keywords": ["diabetes", "diabetic", "insulin", "sugar", "glucose", "blood glucose", "sugar check", "medication refill", "ran out of medication", "ran out of meds", "needs refill", "chronic medication", "hypertension medication", "thyroid", "hypoglycemia", "hyperglycemia"],
+      "weight": 1.5
+    },
+    {
+      "specialty": "Gastrointestinal",
+      "keywords": ["abdominal pain", "abdomen", "vomiting", "diarrhoea", "diarrhea", "nausea", "gastroenteritis", "bloody stool", "jaundice"],
+      "weight": 1.2
+    },
+    {
+      "specialty": "Renal & Urinary",
+      "keywords": ["urinary", "dysuria", "uti", "kidney", "renal", "hematuria", "urine", "bladder"],
+      "weight": 1.2
+    },
+    {
+      "specialty": "Mental & Behavioral",
+      "keywords": ["suicidal", "self harm", "depression", "anxiety", "panic", "psychosis", "hallucination", "agitation", "confused and drowsy"],
+      "weight": 1.2
+    },
+    {
+      "specialty": "Allergy & Immunology",
+      "keywords": ["allergy", "allergic", "anaphylaxis", "hives", "urticaria", "angioedema"],
+      "weight": 1.3
+    },
+    {
+      "specialty": "Rheumatology",
+      "keywords": ["arthritis", "joint pain", "joint swelling", "gout", "lupus", "rheumatology"],
+      "weight": 1.1
+    },
+    {
+      "specialty": "Dermatology",
+      "keywords": ["rash", "eczema", "dermatitis", "skin lesion", "itching", "psoriasis"],
+      "weight": 1.1
+    },
+    {
+      "specialty": "ENT",
+      "keywords": ["ear pain", "sore throat", "sinus", "nosebleed", "hearing loss", "tonsillitis"],
+      "weight": 1.1
+    },
+    {
+      "specialty": "Ophthalmology",
+      "keywords": ["eye pain", "red eye", "vision loss", "blurred vision", "foreign body eye", "eye injury"],
+      "weight": 1.2
+    },
+    {
+      "specialty": "General Practice",
+      "keywords": ["small cut", "minor cut", "mild headache", "medication need", "routine care", "follow up"],
+      "weight": 0.8
+    }
+  ]
+}

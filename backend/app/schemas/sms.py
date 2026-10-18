@@ -148,13 +148,14 @@ class SMSGatewayStatusOut(BaseModel):
     """Telecom SMS gateway status and live operational metrics."""
     gateway_status: str
     active_carrier: str
-    twilio_enabled: bool = False
-    signal_strength: str
-    total_inbound_processed: int
-    total_outbound_sent: int
+    textlk_enabled: bool = False
+    smsgo_enabled: bool = False
+    provider: str = "TEXTLK"
+    total_inbound_processed: int = 0
+    total_outbound_processed: int = 0
     sent_count: int = 0
     simulated_count: int = 0
     failed_count: int = 0
-    active_emergency_alerts: int
-    delivery_success_rate: float
-    supported_keywords: list[str]
+    active_emergency_alerts: int = 0
+    dispatch_success_rate: float = 0.0
+    supported_keywords: list[str] = []

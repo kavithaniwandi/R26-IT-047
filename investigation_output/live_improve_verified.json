@@ -1,0 +1,241 @@
+{
+  "attempted": true,
+  "kept": true,
+  "before": {
+    "appeal_text": "Brilliant students from low-income families are being forced to abandon their dreams of a college education simply because they cannot afford the cost of tuition and textbooks.",
+    "quality_label": "low",
+    "final_label": "low",
+    "quality_score": 2.0,
+    "raw_quality_score": 2.42,
+    "confidence": 0.734,
+    "confidence_normalised": 0.734,
+    "confidence_display": "73%",
+    "predicted_class": "low",
+    "class_probs": {
+      "high": 0.018,
+      "low": 0.734,
+      "medium": 0.248
+    },
+    "classifier_top_class": "low",
+    "classifier_confidence": 0.734,
+    "label_agreement": true,
+    "confidence_level": "moderate",
+    "top_classes": [
+      {
+        "class": "low",
+        "probability": 0.734
+      },
+      {
+        "class": "medium",
+        "probability": 0.248
+      }
+    ],
+    "agreement_note": null
+  },
+  "diagnostic_id": "b173c2ea74a8",
+  "after": {
+    "appeal_text": "Brilliant students from low-income families are being forced to abandon their dreams of a college education simply because they cannot afford the cost of tuition and textbooks. Please support these students so they can afford the cost of tuition and textbooks and pursue a college education.",
+    "quality_label": "medium",
+    "final_label": "medium",
+    "quality_score": 3.0,
+    "raw_quality_score": 3.06,
+    "confidence": 0.661,
+    "confidence_normalised": 0.661,
+    "confidence_display": "66%",
+    "predicted_class": "medium",
+    "class_probs": {
+      "high": 0.201,
+      "low": 0.138,
+      "medium": 0.661
+    },
+    "classifier_top_class": "medium",
+    "classifier_confidence": 0.661,
+    "label_agreement": true,
+    "confidence_level": "borderline",
+    "top_classes": [
+      {
+        "class": "medium",
+        "probability": 0.661
+      },
+      {
+        "class": "high",
+        "probability": 0.201
+      }
+    ],
+    "agreement_note": null
+  },
+  "original_appeal": "Brilliant students from low-income families are being forced to abandon their dreams of a college education simply because they cannot afford the cost of tuition and textbooks.",
+  "original_score": 2.0,
+  "original_raw_quality_score": 2.42,
+  "original_label": "low",
+  "original_confidence": 0.734,
+  "improved_appeal": "Brilliant students from low-income families are being forced to abandon their dreams of a college education simply because they cannot afford the cost of tuition and textbooks. Please support these students so they can afford the cost of tuition and textbooks and pursue a college education.",
+  "improved_score": 3.0,
+  "improved_raw_quality_score": 3.06,
+  "improved_label": "medium",
+  "improved_confidence": 0.661,
+  "issues": [],
+  "method": "gated_repair",
+  "remaining_improve_uses": 9,
+  "message": "Added a donation request grounded in the original appeal; the existing model rated it higher.",
+  "rejection_reason": null,
+  "repair_ms": 8125.0,
+  "generator_model": "gemini-3.5-flash",
+  "generator_status": "live",
+  "provider_attempts": 2,
+  "provider_status": "200",
+  "rewrite_source": "grounded_request",
+  "provider_candidate_assessment": {
+    "score": {
+      "quality_label": "low",
+      "final_label": "low",
+      "quality_score": 2.0,
+      "raw_quality_score": 2.79,
+      "confidence": 0.642,
+      "confidence_normalised": 0.642,
+      "confidence_display": "64%",
+      "predicted_class": "low",
+      "class_probs": {
+        "high": 0.103,
+        "low": 0.642,
+        "medium": 0.255
+      },
+      "classifier_top_class": "low",
+      "classifier_confidence": 0.642,
+      "label_agreement": true,
+      "confidence_level": "borderline",
+      "top_classes": [
+        {
+          "class": "low",
+          "probability": 0.642
+        },
+        {
+          "class": "medium",
+          "probability": 0.255
+        }
+      ],
+      "agreement_note": null
+    },
+    "facts_passed": false,
+    "length_passed": true,
+    "guard_reason": "unsupported_claim_or_changed_relationship",
+    "length_warning": null,
+    "scoring_error": null
+  },
+  "grounded_candidate_assessment": {
+    "score": {
+      "quality_label": "medium",
+      "final_label": "medium",
+      "quality_score": 3.0,
+      "raw_quality_score": 3.06,
+      "confidence": 0.661,
+      "confidence_normalised": 0.661,
+      "confidence_display": "66%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.201,
+        "low": 0.138,
+        "medium": 0.661
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.661,
+      "label_agreement": true,
+      "confidence_level": "borderline",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.661
+        },
+        {
+          "class": "high",
+          "probability": 0.201
+        }
+      ],
+      "agreement_note": null
+    },
+    "facts_passed": true,
+    "length_passed": true,
+    "guard_reason": null,
+    "length_warning": null,
+    "scoring_error": null
+  },
+  "candidate_assessment": {
+    "score": {
+      "quality_label": "medium",
+      "final_label": "medium",
+      "quality_score": 3.0,
+      "raw_quality_score": 3.06,
+      "confidence": 0.661,
+      "confidence_normalised": 0.661,
+      "confidence_display": "66%",
+      "predicted_class": "medium",
+      "class_probs": {
+        "high": 0.201,
+        "low": 0.138,
+        "medium": 0.661
+      },
+      "classifier_top_class": "medium",
+      "classifier_confidence": 0.661,
+      "label_agreement": true,
+      "confidence_level": "borderline",
+      "top_classes": [
+        {
+          "class": "medium",
+          "probability": 0.661
+        },
+        {
+          "class": "high",
+          "probability": 0.201
+        }
+      ],
+      "agreement_note": null
+    },
+    "facts_passed": true,
+    "length_passed": true,
+    "guard_reason": null,
+    "length_warning": null,
+    "scoring_error": null
+  },
+  "candidate_scoring_ms": 1297.0,
+  "generation_ms": 6157.0,
+  "original_scoring_ms": 641.0,
+  "scoring_ms": 1938.0,
+  "gemini_calls_used": 2,
+  "classifier_top_class": "medium",
+  "classifier_confidence": 0.661,
+  "label_agreement": true,
+  "confidence_level": "borderline",
+  "top_classes": [
+    {
+      "class": "medium",
+      "probability": 0.661
+    },
+    {
+      "class": "high",
+      "probability": 0.201
+    }
+  ],
+  "agreement_note": null,
+  "suggestions": [
+    {
+      "check": "length",
+      "message": "This appeal has 46 words. High-rated appeals in the data are usually about 60 or more.",
+      "evidence": ""
+    },
+    {
+      "check": "human_detail",
+      "message": "Mention who is affected.",
+      "evidence": "Appears in 43.0% of high-rated and 4.2% of low-rated English appeals."
+    },
+    {
+      "check": "specific_call_to_action",
+      "message": "End with a specific action.",
+      "evidence": "Appears in 27.7% of high-rated and 0.6% of low-rated English appeals."
+    }
+  ],
+  "gap_statistics_available": true,
+  "suggestions_ms": 15.0,
+  "word_count": 46,
+  "length_warning": null,
+  "dataset_gap_status": "available"
+}

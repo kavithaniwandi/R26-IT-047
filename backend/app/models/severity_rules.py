@@ -83,7 +83,12 @@ def predict_severity(clinical_note: str, age: int | None = None) -> dict:
     rules = _load_rules()
     normalized_note = normalize_text(clinical_note)
 
-    for trigger in rules["critical_triggers"]:
+    triggers = sorted(
+        rules["critical_triggers"],
+        key=lambda item: len(normalize_text(item)),
+        reverse=True,
+    )
+    for trigger in triggers:
         normalized_trigger = normalize_text(trigger)
         if normalized_trigger in normalized_note:
             scores = {

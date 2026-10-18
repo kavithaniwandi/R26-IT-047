@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,6 +16,7 @@ class AppealQualityRequest(BaseModel):
 
 class AppealQualityResponse(BaseModel):
     score: float = Field(..., ge=1.0, le=5.0)
+    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     label: Literal["low", "medium", "high"]
     probabilities: dict[Literal["low", "medium", "high"], float]
 
@@ -23,6 +24,7 @@ class AppealQualityResponse(BaseModel):
 class QualityScoreRequest(BaseModel):
     appeal_text: str = Field(..., min_length=1)
     language: str = "English"
+    length_category: str = "short"
 
     @field_validator("appeal_text")
     @classmethod
@@ -32,9 +34,28 @@ class QualityScoreRequest(BaseModel):
         return value
 
 
-class QualityScoreResponse(BaseModel):
+class GuidanceFields(BaseModel):
+    classifier_top_class: str | None = None
+    classifier_confidence: float = 0.0
+    label_agreement: bool = False
+    agreement_note: str | None = None
+    confidence_level: str = "low"
+    top_classes: list[dict[str, Any]] = Field(default_factory=list)
+    suggestions: list[dict[str, Any]] = Field(default_factory=list)
+    gap_statistics_available: bool = False
+    dataset_gap_status: str = "unavailable"
+    suggestions_ms: float = 0.0
+    length_warning: str | None = None
+    word_count: int = 0
+
+
+class QualityScoreResponse(GuidanceFields):
     score: float = Field(..., ge=1.0, le=5.0)
+    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     status: Literal["low", "medium", "high"]
+    final_label: Literal["low", "medium", "high"]
+    predicted_class: str | None = None
+    class_probs: dict[str, float] = Field(default_factory=dict)
     method: str
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
@@ -53,24 +74,46 @@ class GenerateAppealRequest(BaseModel):
     length_category: str = "short"
 
 
+class GenerateNextAppealVariantRequest(GenerateAppealRequest):
+    style_index: int = Field(..., ge=1, le=2, strict=True)
+
+
 class GenerateAppealResponse(BaseModel):
     appeal_text: str
 
 
-class AppealVariant(BaseModel):
+class AppealVariant(GuidanceFields):
+    generation_ms: int = Field(default=0, ge=0)
     model: str
     temperature: float
     style: str | None = None
     appeal_text: str
     quality_label: str
+    final_label: str
     quality_score: float
+    raw_quality_score: float | None = Field(default=None, ge=1.0, le=5.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_normalised: float = Field(..., ge=0.0, le=1.0)
     confidence_display: str
+    predicted_class: str | None = None
+    class_probs: dict[str, float] = Field(default_factory=dict)
+    generator_model: str | None = None
+    generator_status: str = "live"
+    generator_error: str | None = None
+    generation_ms_shared: bool = False
+    scoring_ms: float = 0.0
+    gemini_calls_used: int = 0
+    partial: bool = False
 
 
 class GenerateAppealVariantsResponse(BaseModel):
     variants: list[AppealVariant]
+    recommended: AppealVariant | None = None
+    remaining_improve_uses: int = 0
+    gemini_calls_used: int = 0
+    partial: bool = False
+    generation_error: str | None = None
+    retry_after_seconds: int = 0
 
 
 class SeverityClassifyRequest(BaseModel):
@@ -94,14 +137,58 @@ class SeverityClassifyRequest(BaseModel):
         return value
 
 
+class SuggestedSpecialty(BaseModel):
+    primary: str
+    secondary: list[str] = Field(default_factory=list)
+    matched_keywords: list[str] = Field(default_factory=list)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    reason: str
+    fallback: bool = False
+    evidence: dict[str, list[str]] = Field(default_factory=dict)
+    evidence_scores: dict[str, float] = Field(default_factory=dict)
+    review_reasons: list[str] = Field(default_factory=list)
+
+
+class ComplaintMapping(BaseModel):
+    mapped_terms: list[str] = Field(default_factory=list)
+    unmapped_terms: list[str] = Field(default_factory=list)
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    threshold: float = Field(default=0.0, ge=0.0, le=1.0)
+    floor_applied: bool = False
+    floor_changed_result: bool = False
+    reason_code: Literal["NO_MAPPING", "LOW_COVERAGE", "PARTIAL_MATCH", "DANGER_TERM_UNMAPPED"] | None = None
+    danger_terms: list[str] = Field(default_factory=list)
+
+
+class VitalWarning(BaseModel):
+    field: str
+    raw_value: str | int | float | None = None
+    used_value: float | None = None
+    code: str
+    message: str
+
+
 class SeverityClassifyResponse(BaseModel):
     severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     priority_score: float = Field(..., ge=0.0, le=100.0)
     risk_score: int = Field(..., ge=0, le=100)
     method: Literal["rule_based", "ml"]
+    ml_skipped_reason: str | None = None
     scores: dict[Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"], float]
     matched_rules: list[str]
     critical_trigger: str | None
+    incomplete_vitals: bool = False
+    incomplete_vitals_reason: str | None = None
+    vitals_warnings: list[VitalWarning] = Field(default_factory=list)
+    can_override: bool = True
+    interpreted_as: dict | None = None
+    mapped: bool = False
+    mapping_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    mapped_complaints: list[str] = Field(default_factory=list)
+    high_acuity_terms: list[str] = Field(default_factory=list)
+    model_symptoms: str | None = None
+    original_symptoms_text: str | None = None
+    complaint_mapping: ComplaintMapping | None = None
     should_queue: bool
     queue_reason: Literal["auto_triage", "audit_sample", "rule_flag", "not_queued"]
     queue_title: str
@@ -109,11 +196,13 @@ class SeverityClassifyResponse(BaseModel):
     queue_reason_text: str
     recommended_action: str
     display_note: str
+    suggested_specialty: SuggestedSpecialty | None = None
 
 
 class ExtractRequest(BaseModel):
     clinical_note: str = Field(..., min_length=1)
     symptoms: str = ""
+    age: int | None = Field(default=None, ge=0, le=120)
 
     @field_validator("clinical_note")
     @classmethod
@@ -126,6 +215,7 @@ class ExtractRequest(BaseModel):
 class ExtractResponse(BaseModel):
     condition_group: str
     specialty: str
+    specialties: list[str] = Field(default_factory=list)
     extracted_symptoms: list[str]
     confidence: float = Field(..., ge=0.0, le=1.0)
     valid: bool = True

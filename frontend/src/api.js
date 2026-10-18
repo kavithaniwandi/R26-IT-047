@@ -3,7 +3,7 @@
  * Centralized API client for Disaster Relief Module Backend.
  */
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
+export const API_BASE_URL = '/api/v1';
 
 export const getAuthToken = () => localStorage.getItem('dr_token');
 export const setAuthToken = (token) => localStorage.setItem('dr_token', token);
@@ -53,9 +53,21 @@ async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorMsg = data?.detail || `HTTP Error ${response.status}: ${response.statusText}`;
-    throw new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+    const error = new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+    error.status = response.status;
+    throw error;
   }
 
+  return data;
+}
+
+async function triageWrite(endpoint, payload, expectedStatus = 'saved') {
+  const data = await apiRequest(endpoint, {
+    method: 'POST', body: JSON.stringify(payload), signal: AbortSignal.timeout(20000),
+  });
+  if (data?.status !== expectedStatus || !data?.doc_id) {
+    throw new Error('The server did not confirm saving. Please retry.');
+  }
   return data;
 }
 
@@ -96,9 +108,13 @@ export const api = {
   approveCamp: (campId) => apiRequest(`/camps/${campId}/approve`, { method: 'PATCH' }),
 
   // Triage persistence
-  startTriageSession: (payload) => apiRequest('/triage/session/start', { method: 'POST', body: JSON.stringify(payload) }),
-  saveTriagePatient: (payload) => apiRequest('/triage/patient/save', { method: 'POST', body: JSON.stringify(payload) }),
-  endTriageSession: (payload) => apiRequest('/triage/session/end', { method: 'POST', body: JSON.stringify(payload) }),
+  startTriageSession: (payload) => triageWrite('/triage/session/start', payload),
+  saveTriagePatient: (payload) => triageWrite('/triage/patient/save', payload),
+  endTriageSession: (payload) => triageWrite('/triage/session/end', payload, 'archived'),
+  getTriagePatients: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/triage/patients${qs ? `?${qs}` : ''}`, { signal: AbortSignal.timeout(20000) });
+  },
   getTriageArchives: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return apiRequest(`/triage/archives${qs ? `?${qs}` : ''}`);
@@ -148,6 +164,9 @@ export const api = {
   // SOS Emergency Contact Alert (real SMS dispatch to selected contacts)
   sendSOSAlertToContacts: (payload) =>
     apiRequest('/sos/alert-contacts', { method: 'POST', body: JSON.stringify(payload) }),
+  getEmergencyContacts: () => apiRequest('/sos/contacts'),
+  saveEmergencyContacts: (contacts) =>
+    apiRequest('/sos/contacts', { method: 'PUT', body: JSON.stringify(contacts) }),
   // Donors (MongoDB)
   getDonors: () => apiRequest('/donors'),
   getDonorDetail: (donorId) => apiRequest(`/donors/${donorId}`),

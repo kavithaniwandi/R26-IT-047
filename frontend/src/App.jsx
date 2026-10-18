@@ -40,6 +40,7 @@ import Profile from './pages/Profile';
 import Donation_Appeal from './pages/Donation_Appeal';
 import DonationAppealAnalyzer from './pages/DonationAppealAnalyzer';
 import CampSetup from './pages/CampSetup';
+import CampAnalyzer from './pages/CampAnalyzer';
 import PriorityApplication from './pages/PriorityApplication';
 import PriorityQueue from './pages/PriorityQueue';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -669,6 +670,17 @@ export function App() {
                 subtitle="Activate a medical camp, register MOs, and open the severity triage workflow"
               >
                 <CampSetup />
+              </SystemWorkflowShell>
+            }
+          />
+          <Route
+            path="/camp-analyzer"
+            element={
+              <SystemWorkflowShell
+                title="Camp Analyzer"
+                subtitle="Analyze active camps, medical officer workload, patient severity mix, and archived triage sessions"
+              >
+                <CampAnalyzer />
               </SystemWorkflowShell>
             }
           />

@@ -1,0 +1,56 @@
+{
+  "terms": [
+    "anaphylaxis",
+    "angioedema",
+    "cyanosis",
+    "blue lips",
+    "throat swelling",
+    "swelling of the throat",
+    "tongue swelling",
+    "swelling of the tongue",
+    "unresponsive",
+    "unconscious",
+    "seizure",
+    "convulsion",
+    "collapse",
+    "shock",
+    "severe bleeding",
+    "heavy bleeding",
+    "bleeding will not stop"
+  ],
+  "co_occurrence_rules": [
+    {
+      "label": "allergy airway compromise",
+      "reason": "Allergy or swelling terms with airway symptoms may indicate anaphylaxis.",
+      "allergy_terms": [
+        "swelling of lips",
+        "swelling of the lips",
+        "swollen lips",
+        "lip swelling",
+        "face swelling",
+        "swelling of the face",
+        "hives",
+        "urticaria",
+        "bee sting",
+        "wasp sting",
+        "peanut exposure",
+        "peanuts",
+        "peanut",
+        "nut exposure",
+        "nuts",
+        "egg exposure",
+        "egg",
+        "shellfish exposure",
+        "shellfish"
+      ],
+      "airway_terms": [
+        "difficulty breathing",
+        "trouble breathing",
+        "wheeze",
+        "wheezing",
+        "shortness of breath",
+        "stridor"
+      ]
+    }
+  ]
+}

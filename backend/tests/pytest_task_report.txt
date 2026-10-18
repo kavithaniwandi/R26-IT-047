@@ -1,0 +1,38 @@
+........................................................................ [ 20%]
+........................................................................ [ 41%]
+...........................s............................................ [ 61%]
+...............................................................F........ [ 82%]
+...............................................x..............           [100%]
+================================== FAILURES ===================================
+_________________________ test_sms_send_and_broadcast _________________________
+tests\test_sms_victim.py:188: in test_sms_send_and_broadcast
+    assert send_res.json()["status"] == "delivered"
+E   AssertionError: assert 'simulated' == 'delivered'
+E
+E     - delivered
+E     + simulated
+---------------------------- Captured stdout setup ----------------------------
+MongoDB component configured: Research047
+============================== warnings summary ===============================
+venv\lib\site-packages\pydantic\_internal\_config.py:291
+  C:\Users\kenur\OneDrive\Desktop\R26-IT-047\backend\venv\lib\site-packages\pydantic\_internal\_config.py:291: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.9/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+venv\lib\site-packages\pydantic\_internal\_fields.py:132
+  C:\Users\kenur\OneDrive\Desktop\R26-IT-047\backend\venv\lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_symptoms" in SeverityClassifyResponse has conflict with protected namespace "model_".
+
+  You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+    warnings.warn(
+
+venv\lib\site-packages\spacy\cli\_util.py:23
+  C:\Users\kenur\OneDrive\Desktop\R26-IT-047\backend\venv\lib\site-packages\spacy\cli\_util.py:23: DeprecationWarning: Importing 'parser.split_arg_string' is deprecated, it will only be available in 'shell_completion' in Click 9.0.
+    from click.parser import split_arg_string
+
+tests/test_nlp_service.py::TestExtractClinicalEntities::test_valid_note_returns_valid_true
+  C:\Users\kenur\OneDrive\Desktop\R26-IT-047\backend\venv\lib\site-packages\spacy\language.py:2195: FutureWarning: Possible set union at position 6328
+    deserializers["tokenizer"] = lambda p: self.tokenizer.from_disk(  # type: ignore[union-attr]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_sms_victim.py::test_sms_send_and_broadcast - AssertionError...
+1 failed, 347 passed, 1 skipped, 1 xfailed, 4 warnings in 136.43s (0:02:16)

@@ -2,18 +2,24 @@ import React, { useState } from "react";
 import "./DonationAppealAnalyzer.css";
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = "";
 
 const MIN_TEXT_LENGTH = 10;
 const MAX_TEXT_LENGTH = 10_000;
 const CHAR_WARN_THRESHOLD = 9_000;
-const LOW_CONFIDENCE_THRESHOLD = 0.50;
 
-const SEVERITY_CONFIG = {
-  high: { bg: "#fef2f2", border: "#fecaca", tag: "#991b1b", text: "#7f1d1d", label: "High" },
-  medium: { bg: "#fff7ed", border: "#fed7aa", tag: "#92400e", text: "#78350f", label: "Medium" },
-  low: { bg: "#f0f9ff", border: "#bae6fd", tag: "#075985", text: "#0c4a6e", label: "Low" },
-};
+
+function ClassifierResult({ result }) {
+  const probabilities = result?.class_probs ?? result?.probabilities ?? {};
+  const topClass = Object.entries(probabilities)
+    .filter(([, probability]) => Number.isFinite(probability))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+  const label = result?.predicted_class ?? result?.classifier_top_class ?? topClass
+    ?? result?.final_label ?? result?.quality_label ?? result?.label ?? result?.status;
+  return <p className="daa-classifier-result">Classifier result: <strong className="daa-classifier-label">
+    {["low", "medium", "high"].includes(label) ? label : "Unavailable"}
+  </strong></p>;
+}
 
 
 class ValidationError extends Error {
@@ -60,9 +66,9 @@ async function analyseAppeal(appealText, language) {
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     if (response.status === 422) {
-      throw new ValidationError(data?.detail || "Validation failed.");
+      throw new ValidationError(`HTTP ${response.status}: ${data?.detail || "Validation failed."}`);
     }
-    throw new Error(data?.detail || "Failed to analyse appeal.");
+    throw new Error(`HTTP ${response.status}: ${data?.detail || "Failed to analyse appeal."}`);
   }
 
   return response.json();
@@ -76,131 +82,41 @@ async function improveAppeal(appealText, language) {
     body: JSON.stringify({ appeal_text: appealText, language }),
   });
 
+  const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    throw new Error(data?.detail || "Failed to improve appeal.");
+    console.error("[Appeal Improve] HTTP failure", { http_status: response.status });
+    throw new Error(`HTTP ${response.status}: ${data?.detail || "Failed to improve appeal."}`);
   }
 
-  return response.json();
-}
-
-
-function LowConfidenceBanner() {
-  return (
-    <div className="daa-low-confidence-banner" role="alert">
-      <span className="daa-low-conf-icon">!</span>
-      <div>
-        <strong>Low confidence score</strong>
-        <p>
-          The model is uncertain about this quality rating.
-          Consider reviewing the appeal manually before acting on this score.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-
-function ScoreHero({ score, label, confidence, lowConfidence = false, title = "Quality Score" }) {
-  const pct = Math.round((Number(score) / 5) * 100);
-
-  return (
-    <div className="daa-score-hero">
-      {lowConfidence && <LowConfidenceBanner />}
-      <div>
-        <span className="daa-score-num">{Number(score).toFixed(2)}</span>
-        <span className="daa-score-denom"> / 5</span>
-      </div>
-      <div className="daa-score-label">{title}</div>
-      <div className="daa-score-bar">
-        <div className="daa-score-bar-fill" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="daa-score-meta">
-        <span className={`daa-label-pill daa-label-${label}`}>{label}</span>
-        <span className={`daa-conf-text ${lowConfidence ? "daa-conf-low" : ""}`}>
-          {Math.round(Number(confidence) * 100)}% confidence
-          {lowConfidence && " - uncertain"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-
-function IssueCard({ issue }) {
-  const c = SEVERITY_CONFIG[issue.severity] || SEVERITY_CONFIG.low;
-  const DIMENSION_HINTS = {
-    specificity: "Add concrete numbers, names, or locations to strengthen this appeal.",
-    urgency: "Use time-sensitive language to motivate immediate action.",
-    clarity: "Simplify sentences so the ask is unambiguous.",
-    credibility: "Include verifiable facts or organisation details.",
-    emotional: "Connect the need to real people and their stories.",
-    length: "Adjust the length to match the channel and audience.",
-    cta: "End with a single, direct call to action.",
-    currency: "Mention a specific donation amount or goal.",
-    "content depth": "Add more detail about what donors' contributions will specifically provide.",
-    content_depth: "Add more detail about what donors' contributions will specifically provide.",
-    content: "Add more detail about what donors' contributions will specifically provide.",
+  const beforeScore = data?.before?.quality_score ?? data?.before?.score;
+  const afterScore = data?.after?.quality_score ?? data?.after?.score;
+  if (!data || typeof data.kept !== "boolean" || typeof data.improved_appeal !== "string"
+      || !Number.isFinite(beforeScore) || !Number.isFinite(afterScore)) {
+    console.error("[Appeal Improve] Invalid response", { http_status: response.status });
+    throw new Error("The backend returned an invalid improvement response. Check the browser console and backend log.");
+  }
+  // Log diagnostics only: never dump appeal text or an entire provider response.
+  const diagnostic = {
+    diagnostic_id: data.diagnostic_id ?? "unavailable",
+    http_status: response.status,
+    outcome: data.kept ? "accepted" : data.rejection_reason ?? "not_attempted",
+    provider_status: data.provider_status ?? null,
+    provider_attempts: data.provider_attempts ?? null,
+    rewrite_source: data.rewrite_source ?? null,
+    original_score: data.original_score,
+    original_raw_score: data.original_raw_quality_score,
+    candidate_score: data.candidate_assessment?.score?.quality_score ?? null,
+    candidate_raw_score: data.candidate_assessment?.score?.raw_quality_score ?? null,
+    original_classifier_agreement: data.before?.label_agreement ?? null,
+    candidate_classifier_agreement: data.candidate_assessment?.score?.label_agreement ?? null,
+    facts_passed: data.candidate_assessment?.facts_passed ?? null,
+    length_passed: data.candidate_assessment?.length_passed ?? null,
+    guard_reason: data.candidate_assessment?.guard_reason ?? null,
+    elapsed_ms: data.repair_ms ?? null,
   };
-  const hint = DIMENSION_HINTS[issue.dimension?.toLowerCase()] || null;
-
-  return (
-    <div
-      className="daa-issue-card"
-      style={{
-        background: c.bg,
-        border: `1.5px solid ${c.border}`,
-        borderLeft: `4px solid ${c.tag}`,
-        borderRadius: "8px",
-        padding: "0.85rem 1rem",
-      }}
-    >
-      <div className="daa-issue-header">
-        <span className="daa-issue-dimension" style={{ color: c.text }}>
-          {issue.dimension}
-        </span>
-        <span className="daa-issue-severity-tag" style={{ background: c.tag }}>
-          {c.label} priority
-        </span>
-      </div>
-      <p className="daa-issue-text" style={{ color: c.text }}>{issue.issue}</p>
-      <div className="daa-issue-metrics">
-        <span style={{ color: c.text }}><strong>Found:</strong> {issue.value}</span>
-        <span style={{ color: c.text }}><strong>Target:</strong> {issue.target}</span>
-      </div>
-      {hint && (
-        <p className="daa-issue-hint" style={{ color: c.text }}>
-          Tip: {hint}
-        </p>
-      )}
-    </div>
-  );
-}
-
-
-function ScoreDelta({ original, improved, origConf, impConf }) {
-  const scoreDelta = Number(improved) - Number(original);
-  const confDelta = Math.round((Number(impConf) - Number(origConf)) * 100);
-  const neutral = scoreDelta === 0;
-
-  return (
-    <div className="daa-delta-wrap">
-      <span className={`daa-delta ${scoreDelta > 0 ? "daa-delta-up" : neutral ? "daa-delta-neutral" : "daa-delta-down"}`}>
-        {scoreDelta > 0 ? "Up" : neutral ? "Same" : "Down"} {scoreDelta > 0 ? "+" : ""}{scoreDelta.toFixed(2)} score
-      </span>
-
-      {confDelta !== 0 && (
-        <div className={`daa-confidence-delta ${confDelta > 0 ? "up" : "down"}`}>
-          {confDelta > 0 ? "Up" : "Down"} {Math.abs(confDelta)}% confidence
-          {confDelta < 0 && neutral && (
-            <p>
-              Same score, lower confidence. The model sees the improved text closer to a class boundary.
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  if (data.kept) console.info("[Appeal Improve] Result", diagnostic);
+  else console.warn("[Appeal Improve] Original retained", diagnostic);
+  return data;
 }
 
 
@@ -214,7 +130,9 @@ export default function DonationAppealAnalyzer() {
   const [analyseError, setAnalyseError] = useState("");
   const [analyseErrorIsValidation, setAnalyseErrorIsValidation] = useState(false);
   const [improveError, setImproveError] = useState("");
+  const [improveNotice, setImproveNotice] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
 
   const charCount = appealText.length;
   const charOverLimit = charCount > MAX_TEXT_LENGTH;
@@ -226,17 +144,8 @@ export default function DonationAppealAnalyzer() {
     appealText.trim().length > 20
   );
   const wordCount = appealText.split(/\s+/).filter(Boolean).length;
-  const highCount = analysis?.issues?.filter((issue) => issue.severity === "high").length || 0;
-  const mediumCount = analysis?.issues?.filter((issue) => issue.severity === "medium").length || 0;
-  const lowCount = analysis?.issues?.filter((issue) => issue.severity === "low").length || 0;
-  const analysisLowConf = analysis
-    ? (analysis.low_confidence ?? analysis.confidence < LOW_CONFIDENCE_THRESHOLD)
-    : false;
-  const improvementLowConf = improvement
-    ? (improvement.low_confidence ?? improvement.improved_confidence < LOW_CONFIDENCE_THRESHOLD)
-    : false;
-
   const handleAnalyse = async () => {
+    setImproveNotice("");
     setAnalyseError("");
     setAnalyseErrorIsValidation(false);
     setAnalysis(null);
@@ -260,11 +169,28 @@ export default function DonationAppealAnalyzer() {
     if (!appealText.trim() || !analysis) return;
 
     setImproveError("");
+    setImproveNotice("");
     setImproving(true);
 
     try {
-      setImprovement(await improveAppeal(appealText, language));
+      const result = await improveAppeal(analysis.original_appeal ?? appealText, language);
+      if (!result.kept && result.rejection_reason === "provider_error") {
+        setImprovement(null);
+        setImproveError(result.provider_status === "429"
+          ? "The appeal service is rate-limited. Please try again later."
+          : "The appeal service is temporarily unavailable. Please try again.");
+      } else if (!result.kept) {
+        setImprovement(null);
+        setImproveNotice(result.rejection_reason === "no_improvement"
+          ? ""
+          : result.rejection_reason === "facts_guard"
+            ? "No fact-preserving rewrite found. Your original appeal is unchanged."
+            : "No accepted rewrite was found. Your original appeal is unchanged.");
+      } else {
+        setImprovement(result);
+      }
     } catch (err) {
+      console.error("[Appeal Improve] Request failed", { error_type: err.name });
       setImproveError(err.message || "Improvement failed.");
     } finally {
       setImproving(false);
@@ -345,6 +271,7 @@ export default function DonationAppealAnalyzer() {
           </div>
 
           <textarea
+            spellCheck={false}
             className={`daa-textarea ${charOverLimit ? "daa-textarea-over" : ""}`}
             value={appealText}
             onChange={(event) => {
@@ -359,12 +286,12 @@ export default function DonationAppealAnalyzer() {
           />
 
           <button
-            className="daa-analyse-btn"
+            className="daa-primary-btn"
             type="button"
             onClick={handleAnalyse}
             disabled={analysing || !appealText.trim() || charOverLimit}
           >
-            {analysing ? "Analysing..." : "Analyse Appeal"}
+            {analysing ? "Analyzing..." : "Analyze Appeal"}
           </button>
 
           {analyseError && (
@@ -380,113 +307,27 @@ export default function DonationAppealAnalyzer() {
 
         {analysis && (
           <div className="daa-results-grid">
-            <div className="daa-issues-col">
-              <div className="daa-card">
-                <div className="daa-input-header">
-                  <span className="daa-section-num">2</span>
-                  <h2 className="daa-section-title">Quality Issues</h2>
-                </div>
-
-                <div className="daa-issue-summary">
-                  {highCount > 0 && <span className="daa-summary-chip daa-chip-high">{highCount} high</span>}
-                  {mediumCount > 0 && <span className="daa-summary-chip daa-chip-medium">{mediumCount} medium</span>}
-                  {lowCount > 0 && <span className="daa-summary-chip daa-chip-low">{lowCount} low</span>}
-                  {highCount === 0 && mediumCount === 0 && (
-                    <span className="daa-summary-chip daa-chip-good">No major issues</span>
-                  )}
-                </div>
-
-                <div className="daa-issues-list">
-                  {analysis.issues.map((issue, index) => (
-                    <IssueCard key={`${issue.dimension}-${index}`} issue={issue} />
-                  ))}
-                </div>
-
-                <div className="daa-improve-row">
-                  <button
-                    className="daa-improve-btn"
-                    type="button"
-                    onClick={improvement ? handleReImprove : handleImprove}
-                    disabled={improving}
-                  >
-                    {improving ? (
-                      <span className="daa-loading-label">
-                        <span className="daa-spinner" />
-                        Generating improvement...
-                      </span>
-                    ) : improvement ? "Regenerate Improvement" : "Generate Improved Version"}
-                  </button>
-
-                  {improveError && (
-                    <div className="daa-error-box api" role="alert">
-                      <strong>Improvement failed</strong>
-                      <p>{improveError}</p>
-                    </div>
-                  )}
-                </div>
+            <section className="daa-card daa-rating-card">
+              <div className="daa-input-header"><span className="daa-section-num">2</span><h2 className="daa-section-title">Classification</h2></div>
+              <ClassifierResult result={analysis} />
+            </section>
+            <section className="daa-card daa-suggestions-card">
+              <div className="daa-input-header"><span className="daa-section-num">3</span><h2 className="daa-section-title">Suggestions</h2></div>
+              <div className="daa-issues-list">
+                {(analysis.suggestions || []).map(s => <article className="daa-suggestion" key={s.check}>
+                  <strong>{s.message}</strong>
+                </article>)}
+                {!analysis.suggestions?.length && <p>No suggestion is needed or available for this text.</p>}
               </div>
-            </div>
-
-            <div className="daa-score-col">
-              <div className="daa-card">
-                <div className="daa-input-header">
-                  <span className="daa-section-num">3</span>
-                  <h2 className="daa-section-title">
-                    {improvement ? "Score Comparison" : "Quality Score"}
-                  </h2>
-                </div>
-
-                {!improvement ? (
-                  <>
-                    <ScoreHero
-                      score={analysis.score}
-                      label={analysis.label}
-                      confidence={analysis.confidence}
-                      lowConfidence={analysisLowConf}
-                    />
-                    <div className="daa-score-rows">
-                      <div className="daa-score-row">
-                        <span>Method</span>
-                        <span className="daa-method-pill">{analysis.method}</span>
-                      </div>
-                      <div className="daa-score-row">
-                        <span>Issues found</span>
-                        <span>{analysis.issues.length}</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="daa-compare-label">Before</p>
-                    <ScoreHero
-                      score={analysis.score}
-                      label={analysis.label}
-                      confidence={analysis.confidence}
-                      lowConfidence={analysisLowConf}
-                      title="Original Score"
-                    />
-
-                    <div className="daa-compare-divider">
-                      <ScoreDelta
-                        original={analysis.score}
-                        improved={improvement.improved_score}
-                        origConf={analysis.confidence}
-                        impConf={improvement.improved_confidence}
-                      />
-                    </div>
-
-                    <p className="daa-compare-label">After</p>
-                    <ScoreHero
-                      score={improvement.improved_score}
-                      label={improvement.improved_label}
-                      confidence={improvement.improved_confidence}
-                      lowConfidence={improvementLowConf}
-                      title="Improved Score"
-                    />
-                  </>
-                )}
+              <div className="daa-improve-row">
+                <button className="daa-primary-btn" type="button" onClick={improvement ? handleReImprove : handleImprove}
+                  disabled={improving || (improvement?.remaining_improve_uses ?? analysis.remaining_improve_uses) === 0}>
+                  {improving ? "Generating improvement..." : "Improve this appeal"}
+                </button>
+                {improveNotice && <p role="status">{improveNotice}</p>}
+                {improveError && <div className="daa-error-box api" role="alert"><p>{improveError}</p></div>}
               </div>
-            </div>
+            </section>
           </div>
         )}
 
@@ -494,41 +335,26 @@ export default function DonationAppealAnalyzer() {
           <section className="daa-card daa-improved-card">
             <div className="daa-input-header">
               <span className="daa-section-num">4</span>
-              <h2 className="daa-section-title">Improved Appeal</h2>
+              <h2 className="daa-section-title">{improvement.kept ? "Improved version" : "Improvement result — original retained"}</h2>
             </div>
 
-            <div className="daa-improved-badges">
-              <span className={`daa-label-pill daa-label-${improvement.improved_label}`}>
-                {improvement.improved_label}
-              </span>
-              <span className="daa-score-chip">
-                {Number(improvement.improved_score).toFixed(2)} / 5
-              </span>
-              <span className="daa-score-chip">
-                {Math.round(Number(improvement.improved_confidence) * 100)}% confidence
-              </span>
+            <div className="daa-rewrite-comparison">
+              <article><h3>Before</h3>
+                <ClassifierResult result={improvement.before || analysis} />
+                <p className="daa-original-text">{improvement.original_appeal}</p>
+                <button className="daa-original-copy-btn" type="button" onClick={async () => { try { await navigator.clipboard.writeText(improvement.original_appeal); setCopyMessage("Original copied"); } catch { setCopyMessage("Copy unavailable; select the original text to copy."); } }}>Copy Original Appeal</button>
+              </article>
+              <article><h3>After{!improvement.kept && " (original retained)"}</h3>
+                <ClassifierResult result={improvement.after || analysis} />
+                <p>{improvement.improved_appeal}</p>
+              </article>
             </div>
-
-            {improvementLowConf && (
-              <div className="daa-low-confidence-banner" role="alert">
-                <span className="daa-low-conf-icon">!</span>
-                <div>
-                  <strong>Low confidence on improved version</strong>
-                  <p>
-                    The model is uncertain about the improved appeal's quality rating.
-                    Review it manually before publishing.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="daa-improved-text">
-              <p>{improvement.improved_appeal}</p>
-            </div>
+            {improvement.kept && improvement.message && <p role="status">{improvement.message}</p>}
+            {copyMessage && <p role="status">{copyMessage}</p>}
 
             <div className="daa-copy-row">
               <button className="daa-copy-btn" type="button" onClick={handleCopy}>
-                {copied ? "Copied" : "Copy Improved Appeal"}
+                {copied ? "Copied" : improvement.kept ? "Copy Improved Appeal" : "Copy Original Appeal"}
               </button>
             </div>
           </section>
