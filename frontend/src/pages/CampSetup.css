@@ -293,6 +293,22 @@
   border-color: #93c5fd;
 }
 
+.cs-btn-back {
+  margin-bottom: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.cs-btn-back:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+.cs-btn-back:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .cs-progress-track {
   display: flex;
   align-items: center;

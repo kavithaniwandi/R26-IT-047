@@ -1,0 +1,55 @@
+﻿from pathlib import Path
+import json,hashlib
+ROOT=Path(__file__).resolve().parents[1]; out=ROOT/'investigation_output'
+def read_capture(path):
+    data=path.read_bytes()
+    return data.decode('utf-16') if data[:2] in (b'\xff\xfe',b'\xfe\xff') else data.decode('utf-8-sig')
+log=read_capture(out/'logs.txt').replace('\r\n','\n')
+blocks=log.split('EXACT_REQUEST_BODY_BEGIN\n')[1:]
+with (out/'exact_prompts.txt').open('w',encoding='utf-8',newline='') as f:
+    for i,block in enumerate(blocks):
+        body=json.loads(block.split('EXACT_REQUEST_BODY_END')[0])
+        f.write('\n===== REQUEST '+str(i+1)+' contents[0].parts[0].text (system + two newlines + user prompt) =====\n')
+        f.write(body['contents'][0]['parts'][0]['text'])
+        f.write('\n===== END REQUEST '+str(i+1)+' =====\n')
+paths=['backend/app/models/main.py','backend/app/models/appeal_generation_service.py','backend/app/models/appeal_rewrite_validator.py','backend/app/models/appeal_guidance_service.py','backend/app/models/quality_service.py','backend/app/models/gemini_service.py','backend/app/models/appeal_improvement_selection.py','backend/app/services/appeal_budget.py','frontend/src/pages/DonationAppealAnalyzer.jsx','frontend/src/config/appealLengths.json']
+current=''.join('\n===== '+p+' =====\n'+(ROOT/p).read_bytes().decode('utf-8') for p in paths)
+assert current.encode('utf-8')==(out/'source.txt').read_bytes()
+summary='''Investigation: Improve this appeal
+Application source files were not edited. Temporary logging added only print statements to in-memory function definitions; original files were never written. Raw rejected rewrites were scored separately after the flow. The repair service was invoked directly with the Analyzer payload, not via HTTP, to avoid unrelated database logging. The handler delegates to this same service. No mocks were used for Gemini or the scoring model. Six live Gemini calls succeeded with model gemini-3.5-flash, one attempt per case.
+
+Active route: frontend improveAppeal -> POST /api/quality/improve -> main.improve_appeal -> appeal_generation_service.repair -> _call -> gemini_service.call_gemini_with_key.
+The generated-appeal improve endpoint delegates to the same handler.
+There is no function named facts_guard: that is the rejection code for is_safe_rewrite/validate_rewrite, with _safe_rewrite as the non-ASCII fallback.
+Displayed suggestions are not sent by the frontend and are not read when building the active repair prompt. There is no active suggestion-to-instruction conversion. The inactive legacy _build_improvement_prompt converts _diagnose_weaknesses issue/target dictionaries into prompt lines. It is included in requested_source.txt for comparison; the active handler never calls it.
+Both the system text and the active repair prompt prohibit invented details. The active prompt independently asks for clarity, removal of filler, and a grounded final donation request. Mentioning an amount is displayed as guidance but cannot be satisfied by inventing an amount.
+The provider sends system text concatenated with two newlines and the repair prompt inside a single contents[0].parts[0].text field. It does not use a separate systemInstruction field. exact_prompts.txt contains this actual combined text for all six requests; logs.txt contains the exact JSON request bodies, excluding credentials.
+
+Scores in the results table are quality_score (the displayed score). raw_quality_score is the post-isotonic score before label clamping, not the uncalibrated GBR output. For the scholarship appeal, both original and Gemini output have displayed score 3.00 and pre-clamp score 3.45. Raw Gemini output means provider-adapter output before the facts or length guard; the adapter already concatenates text parts and strips outer whitespace.
+
+All six rewrites failed facts_guard. Scholarship: changed_negation on 'you fund a degree and empower the next generation of innovators'; the corresponding source window contains 'not just funding'. This is a conservative lexical false positive on rhetorical wording, rather than an invented factual claim. No new content tokens occur in that failing clause.
+Rodolfo: the original contains non-ASCII alphabetic character 'Â', so validate_rewrite returns unsupported_language and delegates to _safe_rewrite. The actual rejection is the fallback vocabulary subset rule, with new disallowed tokens elderly, he, who, year. The rewrite is also below the 65-word minimum.
+Jacob: first failing clause 'Jacob Bury was in an accident'; 'accident' is absent from the supplied truncated appeal. This rewrite is also below the length minimum.
+Harleigh: first failing clause 'Harleigh needs help for a dog named Gremlin'; new content token 'named' fails the clause subsequence rule. Later text also substitutes Giardia for the original Garcia; the guard exits before reaching that later change.
+John: first failing clause 'John Strumsky would never ask for help himself'; all tokens exist globally, but no permitted local source window contains them in the required sequence. Factual paraphrase is insufficient for this lexical admission policy.
+Elise: changed_quantity because 30 and 100,000 were omitted. Removing a statement can therefore fail number preservation, even though REWRITE_CONSTRAINTS permits omission of a complete statement.
+
+Model inputs: 13 scaled handcrafted features plus three language TF-IDF blocks (25,000 English + 7,584 Sinhala + 7,309 Tamil) enter the calibrated classifier: 39,906 total columns. Inactive language blocks are zero. English uses word unigrams and bigrams. The regressor receives 3 class probabilities + 13 scaled features + 150/50/50 LSA components: 266 columns. GradientBoostingRegressor output is clipped, isotonic calibrated, label resolved with boundary tolerance 0.5, then clamped to the chosen label's score interval.
+Handcrafted features: log text length, log word count, average word length, sentence count, average sentence length, exclamation count, question count, digit ratio, uppercase ratio, has_currency, has_donate_word, is_sinhala, is_tamil. The has_currency regular expression is a character class containing letters as well as currency symbols/digits, so it can be true without a monetary amount (including the scholarship appeal).
+The model can respond to fact-preserving changes in length, punctuation, vocabulary and CTA wording. It has no explicit clarity, tone or paragraph-layout feature; these can only affect its lexical/statistical inputs. Paragraph breaks alone did not change this appeal's score. A sentence split changed classifier probabilities but not the rounded score. Removing filler changed the pre-clamp score from 3.45 to 3.33 while the displayed score stayed 3.00. Appending 'Please support these students.' changed the displayed score from 3.00 to 3.79 and passed the facts guard, but exceeds the short length band and disagrees with the classifier's medium top class. The active selection policy can therefore keep the original despite a higher numeric candidate score. Shortening to the facts-only probe scored 2.99. Exact inputs and outputs are in wording_probes.txt.
+
+Test provenance: reconstructed the training script's first StratifiedGroupKFold (seed 42, five folds), including its original near-duplicate grouping. Verified all 1,413 saved test language, true_label and true_score entries against the reconstructed split. Chose the first two low, first two medium and first high English examples in corpus order; these are dataset labels, not model labels. The dataset byte hash does not match the model manifest, and neither LF nor CRLF normalization explains it. Thus historical corpus identity is not proven, despite the complete saved label/target sequence match. Python runtime is 3.10.10; the manifest records 3.10.22. Exact artifact configuration and runtime are logged.
+
+Verification: all ten inspected application/frontend source files match the original byte-for-byte source snapshot after the investigation. Debugging is gone when the diagnostic process exits. Diagnostic scripts and reports are new files only under investigation_output. Normal rejected-rewrite logging appended the six rejected outputs to the existing temporary-directory diagnostic log.
+'''
+(out/'findings.txt').write_text(summary,encoding='utf-8')
+with (out/'full_report.txt').open('w',encoding='utf-8',newline='') as f:
+    f.write(summary)
+    for name in ['requested_source.txt','exact_prompts.txt','logs.txt','stderr.txt','guard_details.txt','guard_details_stderr.txt','wording_probes.txt','wording_probes_stderr.txt','initial_split_check.txt','instrumentation_error_logs.txt','instrumentation_error_stderr.txt']:
+        f.write('\n\n===== '+name+' (verbatim content) =====\n')
+        f.write(read_capture(out/name))
+print('SOURCE_SNAPSHOT_MATCH: True')
+print('EXACT_PROMPT_REQUESTS:',len(blocks))
+print('FULL_REPORT:',out/'full_report.txt')
+print('REPORT_BYTES:',(out/'full_report.txt').stat().st_size)
+

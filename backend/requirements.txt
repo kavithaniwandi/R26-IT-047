@@ -78,7 +78,7 @@ ultralytics==8.4.133
 scispacy
 https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz
 sentence-transformers
-google-genai
-huggingface_hub
+google-genai==1.2.0
+huggingface_hub==1.28.0
 pymongo
 motor

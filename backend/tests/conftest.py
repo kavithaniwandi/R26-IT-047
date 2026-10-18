@@ -25,6 +25,19 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 from app.database import Base, get_db
 from app.models.main import app
 
+
+@pytest.fixture(autouse=True)
+def isolated_provider_credit(monkeypatch, tmp_path):
+    """Provider tests must never overwrite the running application's credit state."""
+    from app.services import credit_monitor
+    monkeypatch.setattr(credit_monitor, "_key_state", {})
+    monkeypatch.setattr(credit_monitor, "STATE_FILE", tmp_path / "provider-credit.json")
+    from app.models import appeal_generation_service
+    monkeypatch.setattr(appeal_generation_service, "_REPAIR_KEY_COOLDOWNS", {})
+    from app.services import appeal_budget
+    monkeypatch.setattr(appeal_budget, "SESSIONS", {})
+    monkeypatch.setattr(appeal_budget, "DAILY", {})
+
 # ── In-memory test database ───────────────────────────────────────────────────
 TEST_DATABASE_URL = "sqlite:///:memory:"
 

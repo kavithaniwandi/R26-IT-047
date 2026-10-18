@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import "./CampSetup.css";
@@ -68,6 +68,9 @@ export default function CampSetup() {
   const [mos, setMos] = useState([]);
   const [form, setForm] = useState({ ...BLANK_MO });
   const [formError, setFormError] = useState("");
+  const [savingSession, setSavingSession] = useState(false);
+  const sessionSaveLock = useRef(false);
+  const pendingSession = useRef(null);
   const [registrationStarted, setRegistrationStarted] = useState(false);
   const [shiftHour = "", shiftMinute = ""] = form.shift ? form.shift.split(":") : ["", ""];
 
@@ -113,6 +116,9 @@ export default function CampSetup() {
 
   const handleConfirmCamp = () => {
     if (!selectedCamp) return;
+    if (pendingSession.current && pendingSession.current.camp.id !== selectedCamp.id) {
+      pendingSession.current = null;
+    }
     setStep(2);
   };
 
@@ -207,7 +213,8 @@ export default function CampSetup() {
     return "";
   };
 
-  const handleSaveMO = () => {
+  const handleSaveMO = async () => {
+    if (sessionSaveLock.current) return;
     const validationError = validateMOForm();
     if (validationError) {
       setFormError(validationError);
@@ -229,12 +236,10 @@ export default function CampSetup() {
     };
 
     const updated = [...mos, saved];
-    setMos(updated);
-
     if (moIndex + 1 >= moCount) {
       const startedAt = new Date().toISOString();
-      const sessionObj = {
-        session_id: `${selectedCamp.id}-${Date.now()}`,
+      const sessionObj = pendingSession.current || {
+        session_id: `${selectedCamp.id}-${crypto.randomUUID()}`,
         startedAt,
         camp: {
           id: selectedCamp.id,
@@ -247,14 +252,26 @@ export default function CampSetup() {
         mos: updated,
       };
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
-      api.startTriageSession(sessionObj).catch((error) => {
-        console.warn("[triage] session start:", error);
-      });
-      navigate("/priority-application");
+      pendingSession.current = sessionObj;
+      sessionSaveLock.current = true;
+      setSavingSession(true);
+      try {
+        // Validate browser storage before creating a server session.
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
+        await api.startTriageSession(sessionObj);
+        setMos(updated);
+        navigate("/priority-application");
+      } catch (error) {
+        console.error("[triage] Session save not confirmed:", error);
+        setFormError(`Session start not confirmed: ${error.message}. Retry to continue.`);
+      } finally {
+        sessionSaveLock.current = false;
+        setSavingSession(false);
+      }
       return;
     }
 
+    setMos(updated);
     setMoIndex(moIndex + 1);
     setForm({ ...BLANK_MO });
   };
@@ -415,6 +432,15 @@ export default function CampSetup() {
 
         {step === 2 && (
           <section className="cs-section">
+            <button
+              className="cs-btn-secondary cs-btn-back"
+              type="button"
+              aria-label="Back to safety camp selection"
+              disabled={savingSession}
+              onClick={() => setStep(1)}
+            >
+              ← Back
+            </button>
             <span className="cs-eyebrow">{selectedCamp.district} — {selectedCamp.name}</span>
             <h1 className="cs-title">Register medical officers</h1>
             <p className="cs-desc">
@@ -638,7 +664,7 @@ export default function CampSetup() {
                   </div>
                 )}
 
-                <button className="cs-btn-primary" onClick={handleSaveMO}>
+                <button className="cs-btn-primary" onClick={handleSaveMO} disabled={savingSession}>
                   {moIndex === moCount - 1 ? "Save & open queue →" : "Save & next →"}
                 </button>
               </div>
