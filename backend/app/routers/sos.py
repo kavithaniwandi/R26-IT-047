@@ -542,9 +542,19 @@ def alert_emergency_contacts(
             )
             # sms_log.status is 'simulated' when TEXTLK_ENABLED=false,
             # 'sent' when accepted by provider, or 'failed' on error.
-            sent_to.append({"phone": phone, "name": contact.name, "status": sms_log.status})
+            sent_to.append({
+                "phone": phone,
+                "name": contact.name,
+                "status": sms_log.status,
+                "provider": sms_log.gateway_provider or "LOCAL",
+            })
         except Exception as exc:
-            sent_to.append({"phone": phone, "name": contact.name, "status": f"error: {str(exc)}"})
+            sent_to.append({
+                "phone": phone,
+                "name": contact.name,
+                "status": f"error: {str(exc)}",
+                "provider": "LOCAL",
+            })
 
     successfully_dispatched = [
         c for c in sent_to if c["status"] not in ("failed",) and not c["status"].startswith("error")
