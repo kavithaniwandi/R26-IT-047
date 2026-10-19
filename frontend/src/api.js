@@ -182,6 +182,7 @@ export const api = {
   assignReliefCampVolunteers: (campId, volunteerIds) => apiRequest(`/relief-camps/${campId}/assign-volunteers`, { method: 'PATCH', body: JSON.stringify({ volunteerIds }) }),
   updateReliefCampPopulation: (campId, payload) => apiRequest(`/relief-camps/${campId}/population`, { method: 'PATCH', body: JSON.stringify(payload) }),
   predictReliefCampPopulation: (payload) => apiRequest('/relief-camps/predict-population', { method: 'POST', body: JSON.stringify(payload) }),
+  getKelaniEnvironment: () => apiRequest('/relief-camps/environment/kelani'),
   getDisasterRequests: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return apiRequest(`/disaster-donation-requests${qs ? `?${qs}` : ''}`);

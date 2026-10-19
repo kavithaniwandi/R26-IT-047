@@ -1268,11 +1268,15 @@ code, pre, .font-mono {
 
 .population-hour-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(145px, 1fr));
+  grid-template-columns: repeat(5, minmax(145px, 1fr));
   gap: 10px;
   margin: 15px 0;
   overflow-x: auto;
   padding-bottom: 3px;
+}
+
+.population-hour-grid.has-prediction {
+  grid-template-columns: repeat(6, minmax(145px, 1fr));
 }
 
 .population-hour-card {
@@ -1324,6 +1328,31 @@ code, pre, .font-mono {
 .population-hour-card--prediction .population-hour-card__step,
 .population-hour-card--prediction > strong { color: var(--blue-700); }
 
+.population-hour-card--overflow {
+  border-color: #f87171 !important;
+  background: linear-gradient(145deg, #fee2e2, #fef2f2) !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.18) !important;
+}
+
+.population-hour-card--overflow .population-hour-card__step,
+.population-hour-card--overflow > strong {
+  color: #dc2626 !important;
+}
+
+.population-forecast-overflow-alert {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: hsla(0, 84%, 60%, 0.1);
+  border: 1px solid hsla(0, 84%, 60%, 0.4);
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
 .population-environment-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1374,7 +1403,8 @@ code, pre, .font-mono {
 .population-forecast-explanation > p { width: 100%; margin: 2px 0 0; color: var(--text-secondary); }
 
 @media (max-width: 900px) {
-  .population-hour-grid { grid-template-columns: repeat(6, minmax(155px, 1fr)); }
+  .population-hour-grid { grid-template-columns: repeat(5, minmax(155px, 1fr)); }
+  .population-hour-grid.has-prediction { grid-template-columns: repeat(6, minmax(155px, 1fr)); }
   .population-environment-grid { grid-template-columns: 1fr; }
 }
 

@@ -25,13 +25,18 @@ from app.models.relief_camp import (
     PopulationPredictionResponse,
     HourlyLogEntry,
 )
+from app.services.camp_population_service import (
+    predict_camp_population_rf,
+    fetch_live_kelani_environment,
+    SRI_LANKA_TZ,
+)
 
 router = APIRouter(prefix="/relief-camps", tags=["Relief Camps"])
 
 
-def volunteer_identity_ids(current_user: TokenPayload, db: Session) -> List[str]:
+def volunteer_identity_ids(current_user: TokenPayload, db: Optional[Session]) -> List[str]:
     """Return all legacy SQL IDs sharing the logged-in volunteer's email."""
-    if not current_user.sub.isdigit():
+    if not current_user.sub.isdigit() or db is None:
         return [current_user.sub]
 
     user = db.query(User).filter(User.id == int(current_user.sub)).first()
@@ -223,26 +228,52 @@ async def update_camp_population(
         update_set["currentPopulation"] = cur_pop
 
     if payload.predictedPopulation is not None:
-        max_cap = int(camp.get("maxCapacityPersons", 100))
-        # Predicted count is strictly bounded by Max Capacity
-        pred_pop = min(payload.predictedPopulation, max_cap)
+        # Predicted demand is preserved as real ML demand and NOT capped at maxCapacityPersons
+        pred_pop = max(0, int(payload.predictedPopulation))
         update_set["predictedPopulation"] = pred_pop
 
     if payload.maxCapacityPersons is not None and current_user.role == "admin":
         update_set["maxCapacityPersons"] = payload.maxCapacityPersons
 
-    update_operation = {"$set": update_set}
     if payload.currentPopulation is not None:
-        log_entry = {
+        # Check existing hourly observations to avoid creating duplicate observations for the same hour
+        existing_history = [dict(h) for h in camp.get("hourlyHistory", [])]
+        current_hour_key = now.astimezone(SRI_LANKA_TZ).strftime("%Y-%m-%d %H")
+
+        matched_index = None
+        for idx, entry in enumerate(existing_history):
+            e_ts = entry.get("timestamp")
+            if e_ts:
+                if isinstance(e_ts, str):
+                    try:
+                        e_ts = datetime.fromisoformat(e_ts.replace("Z", "+00:00"))
+                    except Exception:
+                        continue
+                if e_ts.tzinfo is None:
+                    e_ts = e_ts.replace(tzinfo=timezone.utc)
+                if e_ts.astimezone(SRI_LANKA_TZ).strftime("%Y-%m-%d %H") == current_hour_key:
+                    matched_index = idx
+                    break
+
+        new_log_entry = {
             "timestamp": now,
             "population": cur_pop,
             "predictedPopulation": pred_pop,
             "rainfall": 0.0,
             "source": payload.observationSource or "manual",
         }
-        update_operation["$push"] = {
-            "hourlyHistory": {"$each": [log_entry], "$slice": -24}
-        }
+
+        if matched_index is not None:
+            # Update/replace the existing hourly observation
+            existing_history[matched_index] = new_log_entry
+        else:
+            existing_history.append(new_log_entry)
+            if len(existing_history) > 24:
+                existing_history = existing_history[-24:]
+
+        update_set["hourlyHistory"] = existing_history
+
+    update_operation = {"$set": update_set}
 
     updated = await relief_camp_collection.find_one_and_update(
         {"_id": ObjectId(camp_id)},
@@ -273,95 +304,238 @@ async def delete_relief_camp(
     return {"message": "Relief camp deleted successfully"}
 
 
-# 7. POPULATION PREDICTION MODEL
+def extract_hourly_observations_from_camp(camp: dict) -> Tuple[List[int], List[datetime]]:
+    """
+    Extract up to 5 latest distinct hourly observations from camp's hourlyHistory in chronological order.
+    Avoids duplicate observations within the same hour bucket.
+    """
+    history = camp.get("hourlyHistory", [])
+    if not history:
+        return [], []
+
+    valid_entries = []
+    for entry in history:
+        pop = entry.get("population")
+        ts = entry.get("timestamp")
+        if pop is not None and isinstance(pop, (int, float)) and pop >= 0:
+            if ts:
+                if isinstance(ts, str):
+                    try:
+                        ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                    except Exception:
+                        continue
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                valid_entries.append({"timestamp": ts, "population": int(pop), "source": entry.get("source")})
+
+    # Group by Sri Lanka local hour bucket
+    entries_by_hour = {}
+    for entry in sorted(valid_entries, key=lambda x: x["timestamp"], reverse=True):
+        ts = entry["timestamp"]
+        hour_key = ts.astimezone(SRI_LANKA_TZ).strftime("%Y-%m-%d %H")
+        if hour_key not in entries_by_hour:
+            entries_by_hour[hour_key] = entry
+
+    # Take latest 5 and sort chronologically (oldest to newest: Hour 1 to Hour 5)
+    latest_entries = list(entries_by_hour.values())[:5]
+    latest_entries.sort(key=lambda x: x["timestamp"])
+
+    populations = [e["population"] for e in latest_entries]
+    timestamps = [e["timestamp"] for e in latest_entries]
+    return populations, timestamps
+
+
+# 7. POPULATION PREDICTION MODEL (Random Forest Regressor)
 @router.post("/predict-population", response_model=PopulationPredictionResponse)
 async def predict_population_progression(
     req: PopulationPredictionRequest,
     _current_user: TokenPayload = Depends(require_role(["admin", "volunteer", "disaster_officer"])),
 ):
-    if len(req.popHistory or []) < 5:
+    camp = None
+    if req.campId:
+        if not ObjectId.is_valid(req.campId):
+            raise HTTPException(status_code=400, detail="Invalid Camp ID format")
+        camp = await relief_camp_collection.find_one({"_id": ObjectId(req.campId)})
+        if not camp:
+            raise HTTPException(status_code=404, detail="Relief camp not found")
+
+    # Determine maximum capacity
+    if camp:
+        max_capacity = int(camp.get("maxCapacityPersons", 0) or 0)
+    else:
+        max_capacity = req.maxCapacity or 0
+
+    if max_capacity <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Relief camp maximum capacity must be greater than zero; got {max_capacity}",
+        )
+
+    # Determine 5 hourly observations
+    hourly_obs: List[int] = []
+    hourly_timestamps: Optional[List[datetime]] = None
+
+    if camp:
+        camp_obs, camp_ts = extract_hourly_observations_from_camp(camp)
+        if len(camp_obs) >= 5:
+            hourly_obs = camp_obs
+            hourly_timestamps = camp_ts
+
+    if len(hourly_obs) < 5 and req.popHistory and len(req.popHistory) >= 5:
+        raw_list = [int(v) for v in req.popHistory]
+        # If passed in reverse order (newest first, e.g. raw_list[0] == req.currentPopulation and raw_list[-1] != req.currentPopulation)
+        if req.currentPopulation is not None and raw_list[0] == req.currentPopulation and raw_list[-1] != req.currentPopulation:
+            hourly_obs = list(reversed(raw_list[:5]))
+        else:
+            hourly_obs = raw_list[-5:]
+
+    if len(hourly_obs) < 5:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Five real hourly population observations are required for forecasting",
         )
-    K = req.maxCapacity
-    P0 = max(1, req.currentPopulation)
 
-    rates = {"Low": 0.12, "Moderate": 0.22, "High": 0.35, "Critical": 0.50}
-    base_rate = rates.get(req.severity, 0.30)
+    for val in hourly_obs:
+        if val < 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Observed hourly population count cannot be negative; got {val}",
+            )
 
-    recent_population = [max(0, int(value)) for value in (req.popHistory or [])[:5]]
-    population_deltas = [
-        recent_population[index] - recent_population[index + 1]
-        for index in range(len(recent_population) - 1)
-    ]
-    average_hourly_growth = (
-        max(0.0, sum(population_deltas) / len(population_deltas))
-        if population_deltas else 0.0
-    )
+    # Retrieve live environmental data using existing telemetry
+    live_env = await fetch_live_kelani_environment()
+    live_weather = live_env.get("weather", {})
+    live_river = live_env.get("river", {})
+    live_rain_hist = live_env.get("rainHistory", [])
 
-    recent_rain = [max(0.0, float(value)) for value in (req.rainHistory or [])[:3]]
-    average_recent_rain = sum(recent_rain) / len(recent_rain) if recent_rain else 0.0
-    rain_pressure = min(average_recent_rain / 20.0, 1.5)
-
-    river_level = max(0.0, float(req.riverLevel or 0.0))
-    # Hanwella's official alert threshold is 7 m. Levels approaching or
-    # exceeding it increase the expected shelter influx.
-    river_pressure = min(max(0.0, river_level - 5.0) / 5.0, 1.5)
-    weather_code = int(req.weatherCode or 0)
-    weather_pressure = (
-        0.08 if weather_code >= 95
-        else 0.06 if weather_code >= 80
-        else 0.04 if weather_code >= 51
-        else 0.01 if weather_code in {45, 48}
-        else 0.0
-    )
-    if req.humidityPercent is not None and req.humidityPercent >= 90:
-        weather_pressure += 0.01
-    k = base_rate + (rain_pressure * 0.12) + (river_pressure * 0.18) + weather_pressure
-
-    p_t = K / (1.0 + ((K - P0) / P0) * math.exp(-k * 1))
-    trend_adjustment = int(round(average_hourly_growth * 0.5))
-    next_pred = min(max(P0, int(round(p_t)) + trend_adjustment), K)
-    delta = next_pred - P0
-    occ = (next_pred / K) * 100 if K > 0 else 0
-
-    projected_hourly = []
-    for h in range(1, 7):
-        val = K / (1.0 + ((K - P0) / P0) * math.exp(-k * h))
-        val_int = min(max(P0, int(round(val)) + trend_adjustment), K)
-        projected_hourly.append({
-            "hour": f"+{h}h",
-            "estimatedPeople": val_int,
-            "occupancyPercent": round((val_int / K) * 100, 1)
-        })
-
-    if occ >= 100:
-        note = "Predicted population reaches 100% capacity limit. Direct excess arrivals to neighboring relief centers."
-    elif occ >= 85:
-        note = "Camp will be near full capacity within the next hours. Request additional ration supply units immediately."
+    # 1. rainfall_mm
+    if req.rainfallMm is not None:
+        rainfall_mm = float(req.rainfallMm)
+    elif req.rainHistory and len(req.rainHistory) > 0:
+        rainfall_mm = float(req.rainHistory[0])
+    elif live_weather.get("available") and live_weather.get("precipitationMm") is not None:
+        rainfall_mm = float(live_weather["precipitationMm"])
     else:
-        note = "Projected intake remains within manageable capacity bounds."
+        rainfall_mm = 0.0
 
-    return PopulationPredictionResponse(
-        predictedPopulation=next_pred,
-        forecastFor=datetime.now(timezone.utc) + timedelta(hours=1),
-        delta=delta,
-        maxCapacity=K,
-        occupancyPercent=round(occ, 1),
-        projectedHourly=projected_hourly,
-        note=note,
-        factors={
-            "severity": req.severity,
-            "averageHourlyGrowth": round(average_hourly_growth, 1),
-            "recentRainfallMm": round(average_recent_rain, 1),
-            "riverLevelM": round(river_level, 2),
-            "temperatureC": req.temperatureC,
-            "humidityPercent": req.humidityPercent,
-            "weatherCode": req.weatherCode,
-            "adjustedGrowthRate": round(k, 3),
-        },
-    )
+    # 2. rainfall_3h_avg_mm
+    if req.rainfall3hAvgMm is not None:
+        rainfall_3h_avg_mm = float(req.rainfall3hAvgMm)
+    elif req.rainHistory and len(req.rainHistory) >= 1:
+        rainfall_3h_avg_mm = float(sum(req.rainHistory[:3]) / len(req.rainHistory[:3]))
+    elif live_rain_hist and len(live_rain_hist) >= 1:
+        rainfall_3h_avg_mm = float(sum(live_rain_hist[:3]) / len(live_rain_hist[:3]))
+    elif live_weather.get("available") and live_weather.get("precipitationMm") is not None:
+        rainfall_3h_avg_mm = float(live_weather["precipitationMm"])
+    else:
+        rainfall_3h_avg_mm = 0.0
+
+    # 3. temperature_c
+    if req.temperatureC is not None:
+        temperature_c = float(req.temperatureC)
+    elif live_weather.get("available") and live_weather.get("temperatureC") is not None:
+        temperature_c = float(live_weather["temperatureC"])
+    else:
+        temperature_c = 27.5
+
+    # 4. humidity_pct
+    if req.humidityPercent is not None:
+        humidity_pct = float(req.humidityPercent)
+    elif live_weather.get("available") and live_weather.get("humidityPercent") is not None:
+        humidity_pct = float(live_weather["humidityPercent"])
+    else:
+        humidity_pct = 80.0
+
+    # 5. river_level_m
+    if req.riverLevel is not None:
+        river_level_m = float(req.riverLevel)
+    elif live_river.get("available") and live_river.get("levelM") is not None:
+        river_level_m = float(live_river["levelM"])
+    else:
+        river_level_m = 5.0
+
+    # 6. river_level_change_m
+    if req.riverLevelChangeM is not None:
+        river_level_change_m = float(req.riverLevelChangeM)
+    elif live_river.get("available") and live_river.get("rateOfRiseMPerHour") is not None:
+        river_level_change_m = float(live_river["rateOfRiseMPerHour"])
+    else:
+        river_level_change_m = 0.0
+
+    # 7. hour_of_day
+    if req.hourOfDay is not None:
+        hour_of_day = int(req.hourOfDay)
+    elif hourly_timestamps and len(hourly_timestamps) >= 5:
+        hour_of_day = hourly_timestamps[-1].astimezone(SRI_LANKA_TZ).hour
+    else:
+        hour_of_day = datetime.now(SRI_LANKA_TZ).hour
+
+    try:
+        pred_res = predict_camp_population_rf(
+            max_capacity=max_capacity,
+            hourly_observations=hourly_obs,
+            rainfall_mm=rainfall_mm,
+            rainfall_3h_avg_mm=rainfall_3h_avg_mm,
+            temperature_c=temperature_c,
+            humidity_pct=humidity_pct,
+            river_level_m=river_level_m,
+            river_level_change_m=river_level_change_m,
+            hour_of_day=hour_of_day,
+            observation_timestamps=hourly_timestamps,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Inference engine failure: {exc}",
+        ) from exc
+
+    # Persist prediction metadata to MongoDB camp doc if camp was identified
+    if camp:
+        pred_meta = {
+            "campId": str(camp["_id"]),
+            "predictionGeneratedAt": pred_res["predictionGeneratedAt"],
+            "forecastFor": pred_res["forecastFor"],
+            "predictedPopulation": pred_res["predictedPopulation"],
+            "maxCapacity": max_capacity,
+            "expectedSheltered": pred_res["expectedSheltered"],
+            "overflow": pred_res["overflow"],
+            "status": pred_res["status"],
+            "modelVersion": pred_res["modelMetadata"]["version"],
+            "modelName": pred_res["modelMetadata"]["modelName"],
+            "featuresUsed": pred_res["factors"],
+        }
+        await relief_camp_collection.update_one(
+            {"_id": camp["_id"]},
+            {
+                "$set": {
+                    "predictedPopulation": pred_res["predictedPopulation"],
+                    "latestPrediction": pred_meta,
+                    "lastUpdated": datetime.now(timezone.utc),
+                },
+                "$push": {
+                    "predictionHistory": {"$each": [pred_meta], "$slice": -24}
+                }
+            }
+        )
+
+    return PopulationPredictionResponse(**pred_res)
+
+
+@router.post("/{camp_id}/predict-population", response_model=PopulationPredictionResponse)
+async def predict_camp_population_by_id(
+    camp_id: str,
+    req: Optional[PopulationPredictionRequest] = None,
+    _current_user: TokenPayload = Depends(require_role(["admin", "volunteer", "disaster_officer"])),
+):
+    if req is None:
+        req = PopulationPredictionRequest()
+    req.campId = camp_id
+    return await predict_population_progression(req, _current_user=_current_user)
 
 
 @router.get("/environment/kelani")
@@ -371,78 +545,7 @@ async def get_kelani_environment(
     ),
 ):
     """Return Kaduwela weather and the nearby Hanwella Kelani gauge snapshot."""
-    weather_url = "https://api.open-meteo.com/v1/forecast"
-    river_url = "https://slwaterlevel.mevinu.com/api/gauges/Hanwella"
-    weather_params = {
-        "latitude": 6.9344,
-        "longitude": 79.9830,
-        "current": "temperature_2m,relative_humidity_2m,weather_code,precipitation,rain",
-        "hourly": "precipitation",
-        "past_days": 1,
-        "forecast_days": 1,
-        "timezone": "Asia/Colombo",
-    }
-
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        weather_result, river_result = await asyncio.gather(
-            client.get(weather_url, params=weather_params),
-            client.get(river_url),
-            return_exceptions=True,
-        )
-
-    weather = {"available": False}
-    rain_history: List[float] = []
-    if not isinstance(weather_result, Exception) and weather_result.is_success:
-        payload = weather_result.json()
-        current = payload.get("current", {})
-        hourly = payload.get("hourly", {})
-        times = hourly.get("time", [])
-        precipitation = hourly.get("precipitation", [])
-        current_time = current.get("time", "")
-        current_hour = f"{current_time[:13]}:00" if current_time else ""
-        current_index = max(
-            (index for index, value in enumerate(times) if value <= current_hour),
-            default=len(precipitation) - 1,
-        )
-        rain_history = [
-            round(float(precipitation[index] or 0.0), 1)
-            for index in range(current_index, max(-1, current_index - 7), -1)
-        ]
-        weather = {
-            "available": True,
-            "temperatureC": current.get("temperature_2m"),
-            "humidityPercent": current.get("relative_humidity_2m"),
-            "precipitationMm": current.get("precipitation", current.get("rain", 0.0)),
-            "weatherCode": current.get("weather_code"),
-            "observedAt": current_time,
-            "source": "Open-Meteo",
-        }
-
-    river = {
-        "available": False,
-        "station": "Hanwella",
-        "basin": "Kelani Ganga",
-        "source": "Sri Lanka Flood Monitor / Irrigation telemetry",
-    }
-    if not isinstance(river_result, Exception) and river_result.is_success:
-        payload = river_result.json()
-        river.update({
-            "available": True,
-            "levelM": payload.get("water_level"),
-            "status": payload.get("status"),
-            "rateOfRiseMPerHour": payload.get("rate_of_rise"),
-            "isRising": payload.get("is_rising"),
-            "alertLevelM": payload.get("alertpull"),
-            "observedAt": payload.get("last_updated_time"),
-        })
-
-    return {
-        "location": "Kaduwela / Kelani River basin",
-        "weather": weather,
-        "rainHistory": rain_history,
-        "river": river,
-        "fetchedAt": datetime.now(timezone.utc),
-    }
+    return await fetch_live_kelani_environment()
 
 
 # 8. GET Relief Camp by ID
