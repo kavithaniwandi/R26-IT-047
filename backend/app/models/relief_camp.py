@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
 from datetime import datetime
 
@@ -29,6 +29,13 @@ class ReliefCampUpdate(BaseModel):
 
 class AssignVolunteersPayload(BaseModel):
     volunteerIds: List[str]
+
+    @field_validator("volunteerIds", mode="before")
+    @classmethod
+    def normalize_volunteer_ids(cls, value):
+        if isinstance(value, list):
+            return [str(identifier) if type(identifier) is int else identifier for identifier in value]
+        return value
 
 class ReliefCampResponse(BaseModel):
     id: str

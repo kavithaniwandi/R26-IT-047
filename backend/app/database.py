@@ -140,7 +140,10 @@ def _seed_demo_users() -> None:
     db = SessionLocal()
     try:
         for full_name, email, password, role_name in demo_users:
-            if db.query(User).filter(User.email == email).first():
+            existing_user = db.query(User).filter(User.email == email).first()
+            if existing_user:
+                if role_name == RoleEnum.disaster_officer and not existing_user.assigned_ds_area:
+                    existing_user.assigned_ds_area = "Kaduwela"
                 continue
             role = db.query(Role).filter(Role.name == role_name).first()
             if role:
@@ -149,6 +152,7 @@ def _seed_demo_users() -> None:
                     email=email,
                     hashed_password=password_context.hash(password),
                     role_id=role.id,
+                    assigned_ds_area="Kaduwela" if role_name == RoleEnum.disaster_officer else None,
                     is_active=True,
                 ))
         db.commit()
