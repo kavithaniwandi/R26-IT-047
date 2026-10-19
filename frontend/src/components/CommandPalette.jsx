@@ -23,7 +23,7 @@ import {
   ArrowRight,
   Radio
 } from 'lucide-react';
-import { PORTAL_CONFIG } from '../portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG } from '../portalConfig';
 
 export function CommandPalette({
   isOpen,
@@ -32,7 +32,8 @@ export function CommandPalette({
   onSelectTab,
   onOpenLoginModal,
   onToggleSound,
-  soundEnabled
+  soundEnabled,
+  userRole
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -87,15 +88,6 @@ export function CommandPalette({
     },
     {
       category: 'Dedicated Portals',
-      id: 'portal-donor',
-      title: 'Relief Donor Marketplace',
-      subtitle: `Port :${PORTAL_CONFIG.donor.port} · Demand-driven supplies & pledges`,
-      icon: HeartHandshake,
-      color: 'emerald',
-      action: () => { onSelectPortal('donor'); onClose(); }
-    },
-    {
-      category: 'Dedicated Portals',
       id: 'portal-volunteer',
       title: 'Field Volunteer Dispatch',
       subtitle: `Port :${PORTAL_CONFIG.volunteer.port} · On-ground rescue missions`,
@@ -106,6 +98,7 @@ export function CommandPalette({
     {
       category: 'Dedicated Portals',
       id: 'portal-volunteer-dashboard',
+      portalId: 'volunteer_dash',
       title: 'Volunteer Field Command Dashboard',
       subtitle: `Port :${PORTAL_CONFIG.volunteer_dash.port} · Shelter population and relief requests`,
       icon: Layers,
@@ -115,6 +108,7 @@ export function CommandPalette({
     {
       category: 'Dedicated Portals',
       id: 'portal-disaster-officer',
+      portalId: 'disaster_officer',
       title: 'Disaster Officer Portal',
       subtitle: `Port :${PORTAL_CONFIG.disaster_officer?.port || 5179} · Camp triage, MO routing & patient severity queue`,
       icon: Shield,
@@ -124,11 +118,22 @@ export function CommandPalette({
     {
       category: 'Dedicated Portals',
       id: 'portal-disaster-donation',
+      portalId: 'disaster_donation',
       title: 'Disaster Donation Hub',
       subtitle: `Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} · Medical appeals, inventory shortages & public pledges`,
       icon: Gift,
       color: 'emerald',
       action: () => { onSelectPortal('disaster_donation'); onClose(); }
+    },
+    {
+      category: 'Dedicated Portals',
+      id: 'portal-donor-donations',
+      portalId: 'donor',
+      title: 'Donor Donation Portal',
+      subtitle: `Port :${PORTAL_CONFIG.donor.port} · Personalized requests and pledge tracking`,
+      icon: HeartHandshake,
+      color: 'emerald',
+      action: () => { onSelectPortal('donor'); onClose(); }
     },
 
     // Admin Console Views
@@ -245,6 +250,7 @@ export function CommandPalette({
   ];
 
   const filteredItems = items.filter((item) => {
+    if (userRole === 'admin' && ADMIN_HIDDEN_PORTAL_IDS.has(item.portalId)) return false;
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return (

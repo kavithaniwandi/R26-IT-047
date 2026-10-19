@@ -20,6 +20,7 @@ def clock(monkeypatch, tmp_path):
     monkeypatch.setattr(cm, 'datetime', Clock)
     monkeypatch.setattr(cm, 'STATE_FILE', tmp_path / 'credit.json')
     monkeypatch.setattr(cm, '_key_state', {})
+    monkeypatch.setattr(cm.settings, 'GEMINI_API_KEY', 'test_key_1')
     return times
 
 

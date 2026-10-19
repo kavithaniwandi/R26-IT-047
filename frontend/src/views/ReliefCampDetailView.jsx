@@ -17,12 +17,33 @@ import {
   X,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CalendarDays,
+  Clock,
+  Droplets,
+  Waves,
+  Thermometer
 } from 'lucide-react';
-import { API_BASE_URL, getAuthToken } from '../api';
+import { api, API_BASE_URL, getAuthToken } from '../api';
 
-const DISASTER_TYPES = ['Flood', 'Landslide', 'Tsunami', 'Drought', 'Fire', 'Other'];
+const DISASTER_TYPES = ['Flood', 'Landslide'];
 const SEVERITY_LEVELS = ['Low', 'Moderate', 'High', 'Critical'];
+
+const getLatestHourlyEntries = (history, limit = 5) => {
+  const entriesByHour = new Map();
+  [...(history || [])]
+    .filter((entry) =>
+      entry?.timestamp
+      && Number.isFinite(Number(entry.population))
+      && ['manual', 'image_analysis'].includes(entry.source)
+    )
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .forEach((entry) => {
+      const hourKey = Math.floor(new Date(entry.timestamp).getTime() / 3600000);
+      if (!entriesByHour.has(hourKey)) entriesByHour.set(hourKey, entry);
+    });
+  return [...entriesByHour.values()].slice(0, limit);
+};
 
 export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }) {
   const token = getAuthToken() || '';
@@ -55,6 +76,8 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
   const [predictionResult, setPredictionResult] = useState(null);
   const [predicting, setPredicting] = useState(false);
   const [applyingPrediction, setApplyingPrediction] = useState(false);
+  const [syncingEnvironment, setSyncingEnvironment] = useState(false);
+  const [environmentData, setEnvironmentData] = useState(null);
   const [weatherStatus, setWeatherStatus] = useState('');
 
   // Create Donation Request Modal State
@@ -87,19 +110,11 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       setManualCount(campData.currentPopulation || 0);
 
       if (campData.hourlyHistory && campData.hourlyHistory.length > 0) {
-        const historyPops = campData.hourlyHistory.map((h) => h.population).reverse();
-        const padded = [...historyPops, ...Array(7).fill(historyPops[historyPops.length - 1] || 0)].slice(0, 7);
-        setPopHistory(padded);
+        const historyPops = getLatestHourlyEntries(campData.hourlyHistory, 7)
+          .map((entry) => entry.population);
+        setPopHistory(historyPops);
       } else {
-        setPopHistory([
-          campData.currentPopulation || 0,
-          Math.max(0, (campData.currentPopulation || 0) - 8),
-          Math.max(0, (campData.currentPopulation || 0) - 15),
-          Math.max(0, (campData.currentPopulation || 0) - 25),
-          Math.max(0, (campData.currentPopulation || 0) - 35),
-          Math.max(0, (campData.currentPopulation || 0) - 45),
-          Math.max(0, (campData.currentPopulation || 0) - 50),
-        ]);
+        setPopHistory([]);
       }
 
       if (reqsRes.ok) {
@@ -131,23 +146,16 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!camp) return;
     setSavingManual(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentPopulation: Number(manualCount) }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        currentPopulation: Number(manualCount),
+        observationSource: 'manual',
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        setManualCount(updated.currentPopulation);
-        setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
-        if (onAddToast) onAddToast(`Manual population updated to ${updated.currentPopulation} people.`, 'success', 'Population Saved');
-      }
+      setCamp(updated);
+      setManualCount(updated.currentPopulation);
+      setPopHistory(getLatestHourlyEntries(updated.hourlyHistory, 7).map((entry) => entry.population));
+      if (onAddToast) onAddToast(`Manual population updated to ${updated.currentPopulation} people.`, 'success', 'Population Saved');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to update population', 'error', 'Update Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to update population', 'error', 'Update Failed');
     } finally {
       setSavingManual(false);
     }
@@ -228,57 +236,76 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentPopulation: totalVerifiedCrowd }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        currentPopulation: totalVerifiedCrowd,
+        observationSource: 'image_analysis',
       });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        setManualCount(updated.currentPopulation);
-        setPopHistory((prev) => [updated.currentPopulation, ...prev.slice(0, 6)]);
-        if (onAddToast) onAddToast(`Verified AI crowd count of ${totalVerifiedCrowd} applied!`, 'success', 'AI Count Applied');
-      }
+      setCamp(updated);
+      setManualCount(updated.currentPopulation);
+      setPopHistory(getLatestHourlyEntries(updated.hourlyHistory, 7).map((entry) => entry.population));
+      if (onAddToast) onAddToast(`Verified AI crowd count of ${totalVerifiedCrowd} applied!`, 'success', 'AI Count Applied');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to apply detected crowd count', 'error', 'Action Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to apply detected crowd count', 'error', 'Action Failed');
     }
   };
 
   // --- INFLUX PREDICTOR AI ---
-  const handleAutoRainFetch = async () => {
-    setWeatherStatus('Fetching hourly rainfall from Open-Meteo API...');
+  const handleEnvironmentSync = async (silent = false) => {
+    setSyncingEnvironment(true);
+    if (!silent) setWeatherStatus('Syncing Kaduwela weather and Kelani River conditions...');
     try {
-      const res = await fetch(
-        'https://api.open-meteo.com/v1/forecast?latitude=6.9344&longitude=79.9830&hourly=precipitation&past_days=2&forecast_days=1&timezone=auto'
-      );
-      if (!res.ok) throw new Error('Failed to retrieve weather data');
+      const res = await fetch(`${API_BASE_URL}/relief-camps/environment/kelani`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to retrieve live environmental data');
       const data = await res.json();
-      const times = data.hourly.time;
-      const precip = data.hourly.precipitation;
+      const newRains = [...(data.rainHistory || [])].slice(0, 7);
+      while (newRains.length < 7) newRains.push(0);
+      const liveRiverLevel = Number(data.river?.levelM);
 
-      const now = new Date();
-      let idxNow = times.findIndex((t) => new Date(t) > now) - 1;
-      if (idxNow < 6) idxNow = times.length - 2;
-
-      const newRains = [0, 1, 2, 3, 4, 5, 6].map((offset) =>
-        Number((precip[idxNow - offset] || 0).toFixed(1))
-      );
       setRainHistory(newRains);
-      setWeatherStatus(`✓ Live rainfall synced from weather station for ${times[idxNow]}`);
+      if (data.river?.available && Number.isFinite(liveRiverLevel)) {
+        setRiverLevel(liveRiverLevel);
+      }
+      setHourOfDay(new Date().getHours());
+      setEnvironmentData(data);
+      setWeatherStatus(
+        data.river?.available
+          ? 'Live weather, rainfall, and Hanwella gauge data synchronized.'
+          : 'Weather and rainfall synchronized; live river gauge is temporarily unavailable.'
+      );
+      return {
+        rainHistory: newRains,
+        riverLevel: data.river?.available && Number.isFinite(liveRiverLevel)
+          ? liveRiverLevel
+          : riverLevel,
+        temperatureC: data.weather?.temperatureC,
+        humidityPercent: data.weather?.humidityPercent,
+        weatherCode: data.weather?.weatherCode,
+      };
     } catch (err) {
-      setWeatherStatus('Could not auto-fetch weather. Using manual entries.');
+      setWeatherStatus('Live conditions unavailable. The forecast will use the last synchronized values.');
+      return null;
+    } finally {
+      setSyncingEnvironment(false);
     }
   };
 
   const handlePredictProgression = async () => {
     if (!camp) return;
+    if (popHistory.length < 5) {
+      if (onAddToast) {
+        onAddToast(
+          `Collect ${5 - popHistory.length} more hourly population observation${5 - popHistory.length === 1 ? '' : 's'} before forecasting.`,
+          'warning',
+          'More Observations Required'
+        );
+      }
+      return;
+    }
     setPredicting(true);
     try {
+      const liveInputs = await handleEnvironmentSync(true);
       const res = await fetch(`${API_BASE_URL}/relief-camps/predict-population`, {
         method: 'POST',
         headers: {
@@ -288,18 +315,20 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         body: JSON.stringify({
           currentPopulation: Number(popHistory[0] || camp.currentPopulation),
           maxCapacity: Number(camp.maxCapacityPersons),
-          popHistory: popHistory,
-          rainHistory: rainHistory,
-          riverLevel: Number(riverLevel),
+          popHistory: popHistory.slice(0, 5),
+          rainHistory: liveInputs?.rainHistory || rainHistory,
+          riverLevel: Number(liveInputs?.riverLevel ?? riverLevel),
+          temperatureC: liveInputs?.temperatureC ?? environmentData?.weather?.temperatureC,
+          humidityPercent: liveInputs?.humidityPercent ?? environmentData?.weather?.humidityPercent,
+          weatherCode: liveInputs?.weatherCode ?? environmentData?.weather?.weatherCode,
           hourOfDay: Number(hourOfDay),
           severity: predSeverity,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setPredictionResult(data);
-      }
+      if (!res.ok) throw new Error('Forecast service rejected the request');
+      const data = await res.json();
+      setPredictionResult(data);
     } catch (err) {
       if (onAddToast) onAddToast('Error running next-hour prediction', 'error', 'Prediction Failed');
     } finally {
@@ -311,22 +340,13 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
     if (!predictionResult || !camp) return;
     setApplyingPrediction(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/relief-camps/${camp.id}/population`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ predictedPopulation: predictionResult.predictedPopulation }),
+      const updated = await api.updateReliefCampPopulation(camp.id, {
+        predictedPopulation: predictionResult.predictedPopulation,
       });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setCamp(updated);
-        if (onAddToast) onAddToast(`Predicted population updated to ${updated.predictedPopulation} people.`, 'success', 'Prediction Applied');
-      }
+      setCamp(updated);
+      if (onAddToast) onAddToast(`Predicted population updated to ${updated.predictedPopulation} people.`, 'success', 'Prediction Applied');
     } catch (err) {
-      if (onAddToast) onAddToast('Failed to save predicted population', 'error', 'Update Failed');
+      if (onAddToast) onAddToast(err.message || 'Failed to save predicted population', 'error', 'Update Failed');
     } finally {
       setApplyingPrediction(false);
     }
@@ -368,7 +388,11 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
         itemId: i.itemId,
         itemName: i.item,
         unit: i.unit,
-        neededQuantity: (Number(i.quantityPerPerson) || 1) * chosenPopulationForRequest,
+        // Supplies are requested as whole units. Rounding up also prevents
+        // floating-point artifacts such as 0.1 * 34 = 3.4000000000000004.
+        neededQuantity: Math.ceil(
+          (Number(i.quantityPerPerson) || 1) * chosenPopulationForRequest
+        ),
       })),
     };
 
@@ -398,6 +422,17 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       setSubmittingRequest(false);
     }
   };
+
+  const latestFiveObservations = getLatestHourlyEntries(camp?.hourlyHistory, 5).reverse();
+  const hasForecastHistory = latestFiveObservations.length === 5;
+  const observationSlots = [
+    ...Array(Math.max(0, 5 - latestFiveObservations.length)).fill(null),
+    ...latestFiveObservations,
+  ];
+  const predictedFor = new Date(
+    predictionResult?.forecastFor
+      || new Date(camp?.lastUpdated || 0).getTime() + 60 * 60 * 1000
+  );
 
   if (loading) {
     return (
@@ -597,37 +632,118 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
             </div>
 
             {/* 3. Influx Predictor AI */}
-            <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700' }}>Next-Hour Influx Forecast AI</h4>
-                <button className="btn btn-secondary btn-sm" onClick={handleAutoRainFetch}>
+            <div className="population-forecast-panel">
+              <div className="population-forecast-header">
+                <div>
+                  <h4>Next-Hour Population Forecast</h4>
+                  <p>Five latest hourly headcounts followed by the next-hour forecast.</p>
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleEnvironmentSync(false)} disabled={syncingEnvironment}>
                   <CloudRain size={13} />
-                  <span>Sync Rain Data</span>
+                  <span>{syncingEnvironment ? 'Syncing...' : 'Sync Live Conditions'}</span>
                 </button>
               </div>
 
               {weatherStatus && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: '12px' }}>{weatherStatus}</div>
+                <div className="population-forecast-status">{weatherStatus}</div>
               )}
 
-              <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting}>
-                <TrendingUp size={14} />
-                <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
-              </button>
+              <div className="population-hour-grid">
+                {observationSlots.map((entry, index) => (
+                  <div className={`population-hour-card ${entry ? '' : 'empty'}`} key={entry?.timestamp || `empty-${index}`}>
+                    <span className="population-hour-card__step">Hour {index + 1}</span>
+                    {entry ? (
+                      <>
+                        <div className="population-hour-card__date">
+                          <CalendarDays size={13} />
+                          {new Date(entry.timestamp).toLocaleDateString('en-GB', {
+                            timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
+                          })}
+                        </div>
+                        <div className="population-hour-card__time">
+                          <Clock size={13} />
+                          {new Date(entry.timestamp).toLocaleTimeString('en-US', {
+                            timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </div>
+                        <strong>{entry.population}</strong>
+                        <small>{entry.source === 'image_analysis' ? 'Image analysis' : entry.source === 'manual' ? 'Manual count' : 'Verified count'}</small>
+                      </>
+                    ) : (
+                      <div className="population-hour-card__empty">Awaiting hourly observation</div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="population-hour-card population-hour-card--prediction">
+                  <span className="population-hour-card__step">Next Hour</span>
+                  <div className="population-hour-card__date">
+                    <CalendarDays size={13} />
+                    {predictedFor.toLocaleDateString('en-GB', {
+                      timeZone: 'Asia/Colombo', day: '2-digit', month: 'short', year: 'numeric'
+                    })}
+                  </div>
+                  <div className="population-hour-card__time">
+                    <Clock size={13} />
+                    {predictedFor.toLocaleTimeString('en-US', {
+                      timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </div>
+                  <strong>{predictionResult?.predictedPopulation ?? '—'}</strong>
+                  <small>{predictionResult ? `${predictionResult.delta >= 0 ? '+' : ''}${predictionResult.delta} expected` : 'Run forecast'}</small>
+                </div>
+              </div>
+
+              <div className="population-environment-grid">
+                <div className="population-environment-card">
+                  <Thermometer size={18} />
+                  <span>Kaduwela weather</span>
+                  <strong>{environmentData?.weather?.available ? `${environmentData.weather.temperatureC}°C` : 'Not synced'}</strong>
+                  <small>{environmentData?.weather?.available ? `${environmentData.weather.humidityPercent}% humidity · Open-Meteo` : 'Sync to load current weather'}</small>
+                </div>
+                <div className="population-environment-card">
+                  <Droplets size={18} />
+                  <span>Latest rainfall</span>
+                  <strong>{rainHistory[0] || 0} mm</strong>
+                  <small>Recent 3-hour average is used by the forecast</small>
+                </div>
+                <div className="population-environment-card">
+                  <Waves size={18} />
+                  <span>Kelani River · Hanwella</span>
+                  <strong>{Number(riverLevel).toFixed(2)} m</strong>
+                  <small>
+                    {environmentData?.river?.available
+                      ? `${String(environmentData.river.status || 'normal').replaceAll('_', ' ')} · ${environmentData.river.isRising ? 'rising' : 'stable/falling'}`
+                      : 'Last/default value; live gauge unavailable'}
+                  </small>
+                </div>
+              </div>
+
+              <div className="population-forecast-actions">
+                <button className="btn btn-primary btn-sm" onClick={handlePredictProgression} disabled={predicting || syncingEnvironment || !hasForecastHistory}>
+                  <TrendingUp size={14} />
+                  <span>{predicting ? 'Computing...' : 'Predict Next-Hour Population'}</span>
+                </button>
+                {predictionResult && (
+                  <button className="btn btn-secondary btn-sm" onClick={handleSavePredictedToCamp} disabled={applyingPrediction}>
+                    <span>{applyingPrediction ? 'Applying...' : 'Apply Prediction'}</span>
+                  </button>
+                )}
+              </div>
+
+              {!hasForecastHistory && (
+                <div className="population-forecast-history-warning">
+                  {latestFiveObservations.length}/5 real hourly observations collected. Add a verified manual or image-analysis count during each hour to enable forecasting.
+                </div>
+              )}
 
               {predictionResult && (
-                <div style={{ marginTop: '14px', padding: '14px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ fontSize: '1.4rem' }}>{predictionResult.predictedPopulation}</strong> people
-                      <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)' }}>
-                        Delta: {predictionResult.delta >= 0 ? '+' : ''}{predictionResult.delta}
-                      </div>
-                    </div>
-                    <button className="btn btn-primary btn-sm" onClick={handleSavePredictedToCamp} disabled={applyingPrediction}>
-                      <span>Apply Prediction</span>
-                    </button>
-                  </div>
+                <div className="population-forecast-explanation">
+                  <strong>Forecast inputs</strong>
+                  <span>Hourly growth: {predictionResult.factors?.averageHourlyGrowth ?? 0} people/hour</span>
+                  <span>Recent rain: {predictionResult.factors?.recentRainfallMm ?? 0} mm</span>
+                  <span>River level: {predictionResult.factors?.riverLevelM ?? riverLevel} m</span>
+                  <p>{predictionResult.note}</p>
                 </div>
               )}
             </div>
@@ -693,77 +809,112 @@ export function ReliefCampDetailView({ campId, onBack, currentUser, onAddToast }
       {/* Modal: Publish Request */}
       {isRequestModalOpen && (
         <div className="modal-overlay" onClick={() => setIsRequestModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '680px' }}>
-            <div className="modal-header">
-              <h2 className="modal-title">Publish Relief Request</h2>
-              <button className="modal-close-btn" onClick={() => setIsRequestModalOpen(false)}>
+          <div className="modal-content relief-request-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header relief-request-modal__header">
+              <div className="relief-request-modal__heading">
+                <span className="relief-request-modal__icon"><CloudRain size={22} /></span>
+                <div>
+                  <span className="relief-request-modal__eyebrow">CAMP SUPPLY REQUEST</span>
+                  <h2 className="modal-title">Publish Relief Request</h2>
+                  <p>Choose the population basis, disaster details, and required supplies.</p>
+                </div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setIsRequestModalOpen(false)} aria-label="Close request form">
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateRequestSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div
+            <form onSubmit={handleCreateRequestSubmit} className="relief-request-form">
+              <section className="relief-request-section relief-request-section--population">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Population basis</h3>
+                    <p>Quantities will be calculated using this headcount.</p>
+                  </div>
+                </div>
+                <div className="relief-request-population-grid">
+                <button
+                  type="button"
                   onClick={() => setPopulationBasis('current')}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: `2px solid ${populationBasis === 'current' ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
-                    cursor: 'pointer'
-                  }}
+                  className={`relief-request-population-card ${populationBasis === 'current' ? 'active' : ''}`}
+                  aria-pressed={populationBasis === 'current'}
                 >
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>CURRENT</span>
-                  <h4 style={{ margin: 0 }}>{camp.currentPopulation} people</h4>
-                </div>
-                <div
+                  <span>CURRENT POPULATION</span>
+                  <strong>{camp.currentPopulation} <small>people</small></strong>
+                  {populationBasis === 'current' && <CheckCircle2 size={18} />}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPopulationBasis('predicted')}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: `2px solid ${populationBasis === 'predicted' ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
-                    cursor: 'pointer'
-                  }}
+                  className={`relief-request-population-card ${populationBasis === 'predicted' ? 'active' : ''}`}
+                  aria-pressed={populationBasis === 'predicted'}
                 >
-                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)' }}>PREDICTED</span>
-                  <h4 style={{ margin: 0 }}>{camp.predictedPopulation || camp.currentPopulation} people</h4>
+                  <span>PREDICTED POPULATION</span>
+                  <strong>{camp.predictedPopulation || camp.currentPopulation} <small>people</small></strong>
+                  {populationBasis === 'predicted' && <CheckCircle2 size={18} />}
+                </button>
                 </div>
-              </div>
+              </section>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label className="form-label">Disaster Type</label>
-                  <select className="form-input" value={reqDisasterType} onChange={(e) => setReqDisasterType(e.target.value)}>
-                    {DISASTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+              <section className="relief-request-section relief-request-section--details">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Request details</h3>
+                    <p>This project accepts flood and landslide relief requests.</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="form-label">Severity Level</label>
-                  <select className="form-input" value={reqSeverity} onChange={(e) => setReqSeverity(e.target.value)}>
-                    {SEVERITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                <div className="relief-request-field-grid">
+                  <div className="relief-request-field relief-request-field--disaster">
+                    <label className="form-label">Disaster Type</label>
+                    <div className="relief-request-select-wrap">
+                      <select className="form-input" value={reqDisasterType} onChange={(e) => setReqDisasterType(e.target.value)}>
+                        {DISASTER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className={`relief-request-field relief-request-field--severity severity-${reqSeverity.toLowerCase()}`}>
+                    <label className="form-label">Severity Level</label>
+                    <div className="relief-request-select-wrap">
+                      <select className="form-input" value={reqSeverity} onChange={(e) => setReqSeverity(e.target.value)}>
+                        {SEVERITY_LEVELS.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div>
-                <label className="form-label">Catalog Items</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+              <section className="relief-request-section relief-request-section--catalog relief-request-catalog">
+                <div className="relief-request-section__heading">
+                  <div>
+                    <h3>Required relief items</h3>
+                    <p>Select every supply category needed by this camp.</p>
+                  </div>
+                  <span className="relief-request-selected-count">
+                    <Layers size={14} /> {selectedCatalogItemKeys.length} selected
+                  </span>
+                </div>
+                <div className="relief-request-item-grid">
                   {catalogItems.map((item) => {
                     const key = item.itemId || item.item;
                     const isChecked = selectedCatalogItemKeys.includes(key);
                     return (
-                      <label key={key} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '8px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                      <label key={key} className={`relief-request-item ${isChecked ? 'selected' : ''}`}>
                         <input type="checkbox" checked={isChecked} onChange={() => toggleCatalogItem(key)} />
-                        <span style={{ fontSize: '0.82rem' }}>{item.item}</span>
+                        <span>{item.item}</span>
+                        {isChecked && <CheckCircle2 size={16} />}
                       </label>
                     );
                   })}
                 </div>
-              </div>
+              </section>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsRequestModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={submittingRequest}>
+              <div className="relief-request-actions">
+                <span>Request for <strong>{chosenPopulationForRequest} people</strong></span>
+                <div>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsRequestModalOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={submittingRequest}>
                   {submittingRequest ? 'Publishing...' : 'Publish Request'}
-                </button>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

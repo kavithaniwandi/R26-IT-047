@@ -60,10 +60,11 @@ async def test_improve_candidates_use_agreement_first_order(monkeypatch, tmp_pat
     monkeypatch.setattr(guidance, "batch_score", lambda *args: next(queue))
     monkeypatch.setattr(guidance, "guidance", lambda *args: {})
     monkeypatch.setattr(service, "REJECTION_LOG_PATH", tmp_path / "rejected.jsonl")
+    rewrite = "Please donate today. " + " ".join(["Families in Malabe need water bottles and tents for 20 people. Please donate today."] * 4) + " Families in Malabe need water bottles and tents for 20 people."
     async def provider(prompt, budget):
         budget.consume()
         budget.account(True)
-        return text, "offline-model"
+        return (rewrite if kept else text), "offline-model"
     monkeypatch.setattr(service, "_call", provider)
     budgets.DAILY.clear()
     try:

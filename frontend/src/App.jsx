@@ -18,12 +18,14 @@ import { VolunteerDashboardView } from './views/VolunteerDashboardView';
 import { SMSGatewayView } from './views/SMSGatewayView';
 import DisasterOfficer from './views/DisasterOfficerView';
 import DisasterDonation from './views/DisasterDonationView';
+import { ReliefCampsManagementView } from './views/ReliefCampsManagementView';
+import { DonationMatchingView } from './views/DonationMatchingView';
+import { DonorDonationView } from './views/DonorDonationView';
 
 // Specialized Stakeholder Portals
 import { HomeView } from './views/HomeView';
 import { VictimPortalView } from './views/VictimPortalView';
 import { AuthorityPortalView } from './views/AuthorityPortalView';
-import { DonorPortalView } from './views/DonorPortalView';
 import { VolunteerPortalView } from './views/VolunteerPortalView';
 import DonorDetailsView from './views/DonorDetailsView';
 
@@ -46,7 +48,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 
 import { api } from './api';
-import { PORTAL_CONFIG, detectCurrentPortal, getPortalForRole } from './portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG, detectCurrentPortal, getPortalForRole } from './portalConfig';
 import {
   playEmergencyBeep,
   playSuccessChime,
@@ -63,14 +65,29 @@ function DashboardApp() {
   const user = authenticatedUser;
   const [selectedPortal, setCurrentPortal] = useState(() => detectCurrentPortal());
 
+  const selectPortal = useCallback((portalId) => {
+    setCurrentPortal(portalId);
+
+    const portalPath = PORTAL_CONFIG[portalId]?.path;
+    if (portalPath && (location.pathname !== portalPath || location.search)) {
+      navigate(portalPath);
+    }
+  }, [location.pathname, location.search, navigate]);
+
   useEffect(() => {
     setCurrentPortal(detectCurrentPortal());
   }, [location.search, location.pathname]);
 
   const selectedPortalRole = PORTAL_CONFIG[selectedPortal]?.defaultRole;
-  const canAccessSelectedPortal = authenticatedUser?.role === 'admin'
-    || !selectedPortalRole
-    || selectedPortalRole === authenticatedUser?.role;
+  const isVolunteerDispatchHidden = authenticatedUser?.role === 'volunteer'
+    && selectedPortal === 'volunteer';
+  const isAdminRolePortal = authenticatedUser?.role === 'admin'
+    && ADMIN_HIDDEN_PORTAL_IDS.has(selectedPortal);
+  const canAccessSelectedPortal = !isVolunteerDispatchHidden && !isAdminRolePortal && (
+    authenticatedUser?.role === 'admin'
+      || !selectedPortalRole
+      || selectedPortalRole === authenticatedUser?.role
+  );
   const currentPortal = authenticatedUser && !canAccessSelectedPortal
     ? getPortalForRole(authenticatedUser.role)
     : selectedPortal;
@@ -196,8 +213,8 @@ function DashboardApp() {
         };
       case 'donor':
         return {
-          title: 'Relief Donor & Supply Matching Marketplace',
-          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Priority Medical Demands & Verified Pledges`
+          title: 'Donor Donation & Pledge Portal',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor.port} - Personalized Requests, 12-Hour Pledges & Donation History`
         };
       case 'volunteer':
         return {
@@ -218,6 +235,11 @@ function DashboardApp() {
         return {
           title: 'Disaster Relief Donation & Resource Matchmaking',
           sub: `Dedicated Port :${PORTAL_CONFIG.disaster_donation?.port || 5180} - Shortage Appeals, Verified Pledges & Drop-Off Tracking`
+        };
+      case 'donor_matching':
+        return {
+          title: 'Personalized Donor Matching & Outreach',
+          sub: `Dedicated Port :${PORTAL_CONFIG.donor_matching?.port || 5181} - GN Proximity, Donation History & Urgency Ranking`
         };
       default:
         switch (currentTab) {
@@ -240,6 +262,11 @@ function DashboardApp() {
             return {
               title: 'Temporary Medical Camps Planning Hub',
               sub: 'Model 3 Spatial Suitability Scoring & Official Approvals'
+            };
+          case 'relief-camps':
+            return {
+              title: 'Disaster Relief Camp Registry',
+              sub: 'Shelter Capacity, Population Monitoring & Field Assignments'
             };
           case 'donations':
             return {
@@ -277,7 +304,7 @@ function DashboardApp() {
           <VictimPortalView
             user={user}
             onAddToast={addToast}
-            onReturnToAdmin={() => setCurrentPortal('admin')}
+            onReturnToAdmin={() => selectPortal('admin')}
             onLogout={handleLogout}
             onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
           />
@@ -289,7 +316,7 @@ function DashboardApp() {
             <Sidebar
               currentPortal={currentPortal}
               setPortal={(p) => {
-                setCurrentPortal(p);
+                selectPortal(p);
                 playNotificationPing();
               }}
               currentTab={currentTab}
@@ -312,7 +339,7 @@ function DashboardApp() {
                   if (!user) {
                     navigate('/signin', { state: { portal: p } });
                   } else {
-                    setCurrentPortal(p);
+                    selectPortal(p);
                     playNotificationPing();
                   }
                 }}
@@ -375,7 +402,7 @@ function DashboardApp() {
                     <VictimPortalView
                       user={user}
                       onAddToast={addToast}
-                      onReturnToAdmin={() => setCurrentPortal('admin')}
+                      onReturnToAdmin={() => selectPortal('admin')}
                       onLogout={handleLogout}
                       onNavigateSignIn={() => navigate('/signin', { state: { portal: 'victim' } })}
                     />
@@ -386,12 +413,7 @@ function DashboardApp() {
                 <AuthorityPortalView currentUser={user} onAddToast={addToast} />
               )}
 
-              {/* 3. Donor Portal */}
-              {currentPortal === 'donor' && (
-                <DonorPortalView currentUser={user} onAddToast={addToast} />
-              )}
-
-              {/* 4. Volunteer Dispatch Portal */}
+              {/* 3. Volunteer Dispatch Portal */}
               {currentPortal === 'volunteer' && (
                 <VolunteerPortalView currentUser={user} onAddToast={addToast} />
               )}
@@ -418,6 +440,10 @@ function DashboardApp() {
 
                   {currentTab === 'camps' && (
                     <CampsView currentUser={user} onAddToast={addToast} />
+                  )}
+
+                  {currentTab === 'relief-camps' && (
+                    <ReliefCampsManagementView currentUser={user} onAddToast={addToast} />
                   )}
 
                   {currentTab === 'donations' && (
@@ -447,7 +473,7 @@ function DashboardApp() {
                 <VolunteerDashboardView
                   currentUser={user}
                   onNavigate={(tab) => {
-                    setCurrentPortal('admin');
+                    selectPortal('admin');
                     setCurrentTab(tab);
                   }}
                   onAddToast={addToast}
@@ -464,26 +490,16 @@ function DashboardApp() {
                 <DisasterDonation currentUser={user} onAddToast={addToast} />
               )}
 
-              {/* 8. Admin Portal Views */}
-              {currentPortal === 'admin' && (
-                <>
-                  {currentTab === 'overview' && (
-                    <OverviewView
-                      stats={stats}
-                      onNavigate={setCurrentTab}
-                      onResolveSOS={handleResolveSOS}
-                      onAddToast={addToast}
-                    />
-                  )}
-                  {currentTab === 'sos' && <SOSView onAddToast={addToast} />}
-                  {currentTab === 'heatmap' && <HeatmapView onAddToast={addToast} />}
-                  {currentTab === 'camps' && <CampsView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'donations' && <DonationsView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'users' && <UsersView currentUser={user} onAddToast={addToast} />}
-                  {currentTab === 'notifications' && <NotificationsView onAddToast={addToast} />}
-                  {currentTab === 'analytics' && <AnalyticsDashboardView stats={stats} onAddToast={addToast} />}
-                </>
+              {/* 8. Personalized Donor Matching Portal */}
+              {currentPortal === 'donor_matching' && (
+                <DonationMatchingView currentUser={user} onAddToast={addToast} />
               )}
+
+              {/* 9. Donor Donation Portal */}
+              {currentPortal === 'donor' && (
+                <DonorDonationView currentUser={user} onAddToast={addToast} />
+              )}
+
             </div>
           </>
         )}
@@ -495,11 +511,12 @@ function DashboardApp() {
       <CommandPalette
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
-        onSelectPortal={setCurrentPortal}
+        onSelectPortal={selectPortal}
         onSelectTab={setCurrentTab}
         onOpenLoginModal={handleSwitchAccount}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
+        userRole={user?.role}
       />
 
       {/* Global Toast Notifications */}
@@ -612,6 +629,7 @@ function SystemWorkflowShell({ children, title, subtitle }) {
         onOpenLoginModal={handleLogout}
         onToggleSound={handleToggleSound}
         soundEnabled={soundActive}
+        userRole={user?.role}
       />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>

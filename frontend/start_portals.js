@@ -16,6 +16,7 @@ const portals = [
   { id: 'volunteer_dash', port: 5178 },
   { id: 'disaster_officer', port: 5179 },
   { id: 'disaster_donation', port: 5180 },
+  { id: 'donor_matching', port: 5181 },
 ];
 
 const colors = {
@@ -27,6 +28,7 @@ const colors = {
   volunteer_dash: '\x1b[33m',
   disaster_officer: '\x1b[36m',
   disaster_donation: '\x1b[32m',
+  donor_matching: '\x1b[35m',
   reset:     '\x1b[0m',
 };
 

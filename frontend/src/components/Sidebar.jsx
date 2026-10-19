@@ -18,9 +18,11 @@ import {
   Database,
   LayoutDashboard,
   Shield, 
-  Gift  
+  Gift,
+  Building2,
+  Target
 } from 'lucide-react';
-import { PORTAL_CONFIG } from '../portalConfig';
+import { ADMIN_HIDDEN_PORTAL_IDS, PORTAL_CONFIG } from '../portalConfig';
 
 export function Sidebar({ 
   currentPortal, 
@@ -36,16 +38,27 @@ export function Sidebar({
     { id: 'admin', label: 'Admin Command', icon: ShieldCheck, color: 'rose', port: PORTAL_CONFIG.admin.port },
     { id: 'victim', label: 'Victim SOS Portal', icon: ShieldAlert, color: 'rose', port: PORTAL_CONFIG.victim.port },
     { id: 'authority', label: 'Medical Authority', icon: Activity, color: 'blue', port: PORTAL_CONFIG.authority.port },
-    { id: 'donor', label: 'Donor Marketplace', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'volunteer', label: 'Volunteer Dispatch', icon: Truck, color: 'amber', port: PORTAL_CONFIG.volunteer.port },
     { id: 'volunteer_dash', label: 'Volunteer Dashboard', icon: LayoutDashboard, color: 'amber', port: PORTAL_CONFIG.volunteer_dash.port },
-    { id: 'disaster_officer', label: 'Disaster Officer', icon: Shield, color: 'blue', port: PORTAL_CONFIG.disaster_officer.port },
+    { id: 'disaster_officer', label: 'Disaster Officer Dashboard', icon: Shield, color: 'blue', port: PORTAL_CONFIG.disaster_officer.port },
+    { id: 'donor_matching', label: 'Donor Matching', icon: Target, color: 'violet', port: PORTAL_CONFIG.donor_matching.port },
+    { id: 'donor', label: 'Donor Dashboard', icon: HeartHandshake, color: 'emerald', port: PORTAL_CONFIG.donor.port },
     { id: 'disaster_donation', label: 'Disaster Donation', icon: Gift, color: 'emerald', port: PORTAL_CONFIG.disaster_donation.port },
+    {
+      id: 'relief-camps',
+      label: 'Disaster Relief Camps',
+      icon: Building2,
+      color: 'amber',
+      port: PORTAL_CONFIG.admin.port,
+      targetPortal: 'admin',
+      targetTab: 'relief-camps',
+    },
   ];
 
   const visiblePortals = user?.role === 'admin'
-    ? portals
+    ? portals.filter((portal) => !ADMIN_HIDDEN_PORTAL_IDS.has(portal.id))
     : portals.filter((portal) => (
+        portal.id !== 'volunteer' &&
         PORTAL_CONFIG[portal.id]?.defaultRole === user?.role
       ));
 
@@ -92,12 +105,24 @@ export function Sidebar({
           <div className="portal-switch-group">
             {visiblePortals.map((p) => {
               const Icon = p.icon;
-              const isCurrent = currentPortal === p.id;
+              const targetPortal = p.targetPortal || p.id;
+              const isCurrent = p.targetTab
+                ? currentPortal === targetPortal && currentTab === p.targetTab
+                : currentPortal === targetPortal && !portals.some((candidate) => (
+                  candidate.targetPortal === targetPortal && candidate.targetTab === currentTab
+                ));
               return (
                 <div
                   key={p.id}
                   className={`portal-btn ${isCurrent ? 'active' : ''}`}
-                  onClick={() => setPortal(p.id)}
+                  onClick={() => {
+                    setPortal(targetPortal);
+                    if (p.targetTab) {
+                      setTab(p.targetTab);
+                    } else if (targetPortal === 'admin') {
+                      setTab('overview');
+                    }
+                  }}
                   title={`${p.label} (Port :${p.port})`}
                 >
                   <div

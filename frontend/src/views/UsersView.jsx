@@ -34,6 +34,14 @@ export function UsersView({ currentUser }) {
   const [selectedVictim, setSelectedVictim] = useState(null);
   const [selectedCampId, setSelectedCampId] = useState('');
   const [newRole, setNewRole] = useState('victim');
+  const [officerArea, setOfficerArea] = useState('');
+  const [donorProfileForm, setDonorProfileForm] = useState({
+    donor_type: 'Organization',
+    preferred_donation_category: 'Multiple',
+    capacity_level: 'Medium',
+    latitude: '',
+    longitude: '',
+  });
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -45,6 +53,12 @@ export function UsersView({ currentUser }) {
     phone: '',
     address: '',
     role: 'victim',
+    donor_type: 'Organization',
+    preferred_donation_category: 'Multiple',
+    capacity_level: 'Medium',
+    latitude: '',
+    longitude: '',
+    assigned_ds_area: '',
   });
 
   const loadData = async () => {
@@ -74,7 +88,18 @@ export function UsersView({ currentUser }) {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      await api.changeUserRole(selectedUser.id, newRole);
+      await api.changeUserRole(
+        selectedUser.id,
+        newRole,
+        newRole === 'disaster_officer' ? officerArea : null
+      );
+      if (newRole === 'donor') {
+        await api.updateDonorProfile(selectedUser.id, {
+          ...donorProfileForm,
+          latitude: donorProfileForm.latitude === '' ? null : Number(donorProfileForm.latitude),
+          longitude: donorProfileForm.longitude === '' ? null : Number(donorProfileForm.longitude),
+        });
+      }
       setSuccessMsg(`Role updated to '${newRole}' for ${selectedUser.full_name}.`);
       setShowRoleModal(false);
       loadData();
@@ -98,10 +123,32 @@ export function UsersView({ currentUser }) {
   const handleCreateUserSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.createUser(formData);
+      const {
+        donor_type,
+        preferred_donation_category,
+        capacity_level,
+        latitude,
+        longitude,
+        assigned_ds_area,
+        ...baseProfile
+      } = formData;
+      const payload = formData.role === 'donor'
+        ? {
+            ...baseProfile,
+            donor_type,
+            preferred_donation_category,
+            capacity_level,
+            latitude: latitude === '' ? null : Number(latitude),
+            longitude: longitude === '' ? null : Number(longitude),
+          }
+        : {
+            ...baseProfile,
+            ...(formData.role === 'disaster_officer' ? { assigned_ds_area } : {}),
+          };
+      await api.createUser(payload);
       setSuccessMsg(`User '${formData.full_name}' created successfully.`);
       setShowCreateModal(false);
-      setFormData({ full_name: '', email: '', password: '', phone: '', address: '', role: 'victim' });
+      setFormData({ full_name: '', email: '', password: '', phone: '', address: '', role: 'victim', donor_type: 'Organization', preferred_donation_category: 'Multiple', capacity_level: 'Medium', latitude: '', longitude: '', assigned_ds_area: '' });
       loadData();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
@@ -302,7 +349,16 @@ export function UsersView({ currentUser }) {
                         <div>{u.email}</div>
                         {u.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.phone}</div>}
                       </td>
-                      <td>{getRoleBadge(u.role)}</td>
+                      <td>
+                        {getRoleBadge(u.role)}
+                        {u.role === 'donor' && (
+                          <div style={{ marginTop: 5, fontSize: '.68rem', color: u.donor_type && u.preferred_donation_category && u.capacity_level && (u.address || (u.latitude != null && u.longitude != null)) ? 'var(--accent-emerald)' : 'var(--accent-amber)' }}>
+                            {u.donor_type && u.preferred_donation_category && u.capacity_level && (u.address || (u.latitude != null && u.longitude != null))
+                              ? `${u.donor_type} · ${u.preferred_donation_category} · ${u.capacity_level}`
+                              : 'Recommendation profile incomplete'}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <button
                           className="btn btn-sm"
@@ -327,11 +383,19 @@ export function UsersView({ currentUser }) {
                           onClick={() => {
                             setSelectedUser(u);
                             setNewRole(u.role);
+                            setOfficerArea(u.assigned_ds_area || '');
+                            setDonorProfileForm({
+                              donor_type: u.donor_type || 'Organization',
+                              preferred_donation_category: u.preferred_donation_category || 'Multiple',
+                              capacity_level: u.capacity_level || 'Medium',
+                              latitude: u.latitude ?? '',
+                              longitude: u.longitude ?? '',
+                            });
                             setShowRoleModal(true);
                           }}
                         >
                           <Edit3 size={14} />
-                          <span>Change Role</span>
+                          <span>{u.role === 'donor' ? 'Role & Profile' : 'Change Role'}</span>
                         </button>
                       </td>
                     </tr>
@@ -523,9 +587,47 @@ export function UsersView({ currentUser }) {
                   <option value="victim">Disaster Victim</option>
                 </select>
               </div>
+              {newRole === 'disaster_officer' && (
+                <div className="form-group">
+                  <label className="form-label">Assigned DS Area</label>
+                  <input
+                    className="form-input"
+                    list="officer-ds-areas"
+                    value={officerArea}
+                    onChange={(e) => setOfficerArea(e.target.value)}
+                    placeholder="e.g. Kaduwela or Nawalapitiya"
+                    required
+                  />
+                </div>
+              )}
+              {newRole === 'donor' && (
+                <div style={{ padding: '14px', marginBottom: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
+                  <div style={{ fontWeight: '800', marginBottom: '10px' }}>Donor Recommendation Profile</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <select className="form-input" value={donorProfileForm.donor_type} onChange={(e) => setDonorProfileForm({ ...donorProfileForm, donor_type: e.target.value })} required>
+                      {['Business', 'Hospital', 'Individual', 'NGO', 'Organization', 'Pharmacy'].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                    <select className="form-input" value={donorProfileForm.preferred_donation_category} onChange={(e) => setDonorProfileForm({ ...donorProfileForm, preferred_donation_category: e.target.value })} required>
+                      {['Multiple', 'Blankets', 'Dry Rations', 'Medical', 'Tarpaulins', 'Water'].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                    <select className="form-input" value={donorProfileForm.capacity_level} onChange={(e) => setDonorProfileForm({ ...donorProfileForm, capacity_level: e.target.value })} required>
+                      {['Low', 'Medium', 'High'].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <input type="number" step="any" min="-90" max="90" className="form-input" placeholder="Latitude" value={donorProfileForm.latitude} onChange={(e) => setDonorProfileForm({ ...donorProfileForm, latitude: e.target.value })} required={!selectedUser.address} />
+                      <input type="number" step="any" min="-180" max="180" className="form-input" placeholder="Longitude" value={donorProfileForm.longitude} onChange={(e) => setDonorProfileForm({ ...donorProfileForm, longitude: e.target.value })} required={!selectedUser.address} />
+                    </div>
+                  </div>
+                  <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '.72rem' }}>{selectedUser.address ? `Registered address: ${selectedUser.address}` : 'This account has no address; coordinates are required for matching.'}</p>
+                </div>
+              )}
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '10px' }}>
                 Save Role Claim
               </button>
+              <datalist id="officer-ds-areas">
+                <option value="Kaduwela" />
+                <option value="Nawalapitiya" />
+              </datalist>
             </form>
           </div>
         </div>
@@ -572,6 +674,16 @@ export function UsersView({ currentUser }) {
                   required
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Phone</label>
+                  <input type="tel" className="form-input" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Registered Address</label>
+                  <input type="text" className="form-input" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required={formData.role === 'donor' && (formData.latitude === '' || formData.longitude === '')} />
+                </div>
+              </div>
               <div className="form-group">
                 <label className="form-label">Assigned Role</label>
                 <select
@@ -587,9 +699,59 @@ export function UsersView({ currentUser }) {
                   <option value="admin">System Admin</option>
                 </select>
               </div>
+              {formData.role === 'disaster_officer' && (
+                <div className="form-group">
+                  <label className="form-label">Assigned DS Area</label>
+                  <input
+                    className="form-input"
+                    list="officer-ds-areas"
+                    value={formData.assigned_ds_area}
+                    onChange={(e) => setFormData({ ...formData, assigned_ds_area: e.target.value })}
+                    placeholder="e.g. Kaduwela or Nawalapitiya"
+                    required
+                  />
+                </div>
+              )}
+              {formData.role === 'donor' && (
+                <div style={{ padding: '14px', marginBottom: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)' }}>
+                  <div style={{ fontWeight: '800', marginBottom: '10px' }}>Donor Recommendation Profile</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Donor Type</label>
+                      <select className="form-input" value={formData.donor_type} onChange={(e) => setFormData({ ...formData, donor_type: e.target.value })} required>
+                        {['Business', 'Hospital', 'Individual', 'NGO', 'Organization', 'Pharmacy'].map((value) => <option key={value}>{value}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Preferred Donation Category</label>
+                      <select className="form-input" value={formData.preferred_donation_category} onChange={(e) => setFormData({ ...formData, preferred_donation_category: e.target.value })} required>
+                        {['Multiple', 'Blankets', 'Dry Rations', 'Medical', 'Tarpaulins', 'Water'].map((value) => <option key={value}>{value}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Capacity Level</label>
+                      <select className="form-input" value={formData.capacity_level} onChange={(e) => setFormData({ ...formData, capacity_level: e.target.value })} required>
+                        {['Low', 'Medium', 'High'].map((value) => <option key={value}>{value}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Location Coordinates (optional with address)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <input type="number" step="any" min="-90" max="90" className="form-input" placeholder="Latitude" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} />
+                        <input type="number" step="any" min="-180" max="180" className="form-input" placeholder="Longitude" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '.72rem', color: 'var(--text-muted)' }}>These registered attributes are required for model eligibility. Coordinates provide the most accurate distance feature.</p>
+                </div>
+              )}
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '10px' }}>
                 Create Account
               </button>
+              <datalist id="officer-ds-areas">
+                <option value="Kaduwela" />
+                <option value="Nawalapitiya" />
+              </datalist>
             </form>
           </div>
         </div>

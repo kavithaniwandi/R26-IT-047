@@ -33,7 +33,7 @@ The technology stack is:
 | Admin Command Center | System administrators | 5173 | `npm run dev:admin` | `admin` |
 | Victim SOS Portal | Disaster-affected public | 5174 | `npm run dev:victim` | `victim` |
 | Medical Authority Console | Ministry of Health (MOH) | 5175 | `npm run dev:authority` | `authority` |
-| Relief Donor Marketplace | Aid organisations / donors | 5176 | `npm run dev:donor` | `donor` |
+| Donor Donation Portal | Registered donors | 5176 | `npm run dev:donor` | `donor` |
 | Field Volunteer Dispatch | On-ground responders | 5177 | `npm run dev:volunteer` | `volunteer` |
 
 Each port corresponds to a distinct entry point that is resolved at runtime by `detectCurrentPortal()` (see [Section 3](#3-portal-detection-logic)).
@@ -70,7 +70,6 @@ frontend/
         ├── NotificationsView.jsx # System-wide notification centre (admin)
         ├── VictimPortalView.jsx  # SOS submission, status tracking (victim)
         ├── AuthorityPortalView.jsx # MOH oversight console (authority)
-        ├── DonorPortalView.jsx   # Donation submission and history (donor)
         └── VolunteerPortalView.jsx # Dispatch queue, assignments (volunteer)
 ```
 
@@ -175,7 +174,7 @@ All eleven views reside in `src/views/`. Views are pure presentational component
 | Notifications | `NotificationsView.jsx` | `admin` | System notification centre | Chronological notification feed with category filters; mark-as-read bulk action; notification composition form |
 | Victim Portal | `VictimPortalView.jsx` | `victim` | SOS submission and status tracking | Guided SOS submission form with location auto-detect; live status tracker for submitted alerts; nearest camp finder |
 | Authority Portal | `AuthorityPortalView.jsx` | `authority` | MOH oversight console | Aggregate medical supply metrics; camp approval workflow; authority-scoped heatmap and camp views |
-| Donor Portal | `DonorPortalView.jsx` | `donor` | Donation submission and history | Donation submission form with category selection; personal donation history timeline; impact summary cards |
+| Donor Portal | `DonorDonationView.jsx` | `donor` | Donation request and pledge workspace | Personalized-first requests, all open requests, multi-item quantities, 12-hour pledge deadlines, and completed donation history |
 | Volunteer Portal | `VolunteerPortalView.jsx` | `volunteer` | Field dispatch and assignments | Assigned task queue with priority indicators; camp check-in/check-out actions; map view of assigned zones |
 
 ---
@@ -271,15 +270,15 @@ Each script uses `cross-env` to inject `VITE_PORTAL_TYPE` before invoking the Vi
 npm run dev:all
 ```
 
-This invokes `start_portals.js`, which spawns all five Vite child processes in parallel.
+This invokes `start_portals.js`, which spawns all configured Vite child processes in parallel.
 
 ### 7.4 How `start_portals.js` works
 
 `start_portals.js` is a plain Node.js script that:
 
-1. Defines an array of five portal configurations, each containing a `name`, `port`, and `VITE_PORTAL_TYPE` value.
+1. Defines an array of portal configurations, each containing a `name`, `port`, and `VITE_PORTAL_TYPE` value.
 2. Calls `child_process.spawn()` for each portal, passing `cross-env VITE_PORTAL_TYPE=<x> vite --port <port>` as the command.
-3. Prefixes every line of `stdout` and `stderr` from each child process with a **colour-coded label** (e.g., `[ADMIN]`, `[VICTIM]`) using ANSI escape codes, allowing all five log streams to coexist in one terminal without ambiguity.
+3. Prefixes every line of `stdout` and `stderr` from each child process with a **colour-coded label** (e.g., `[ADMIN]`, `[VICTIM]`) using ANSI escape codes, allowing all portal log streams to coexist in one terminal without ambiguity.
 4. Registers a `SIGINT` handler (Ctrl+C) that sends `SIGTERM` to all child processes and waits for graceful shutdown before exiting, preventing orphaned Vite dev servers.
 
 ```mermaid
@@ -317,7 +316,7 @@ sequenceDiagram
 | Admin Command Center | http://localhost:5173 |
 | Victim SOS Portal | http://localhost:5174 |
 | Medical Authority Console | http://localhost:5175 |
-| Relief Donor Marketplace | http://localhost:5176 |
+| Donor Donation Portal | http://localhost:5176 |
 | Field Volunteer Dispatch | http://localhost:5177 |
 
 ### 7.6 Environment variable override
@@ -326,10 +325,10 @@ In any environment where a pre-configured npm script is not available, the porta
 
 ```bash
 # Unix / macOS / Git Bash
-VITE_PORTAL_TYPE=donor vite
+VITE_PORTAL_TYPE=volunteer vite
 
 # Windows PowerShell
-$env:VITE_PORTAL_TYPE="donor"; vite
+$env:VITE_PORTAL_TYPE="volunteer"; vite
 ```
 
 `VITE_PORTAL_TYPE` takes the highest priority in the `detectCurrentPortal()` chain, so this override guarantees the correct portal identity regardless of port or path.

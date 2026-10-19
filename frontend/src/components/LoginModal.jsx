@@ -8,7 +8,7 @@ import {
   CheckCircle2, 
   ShieldAlert, 
   Activity, 
-  HeartHandshake, 
+  HeartHandshake,
   Truck, 
   Sparkles,
   ArrowRight,
@@ -49,26 +49,26 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }) {
       port: 5175
     },
     {
-      label: 'Relief Donor (Red Cross)',
+      label: 'Relief Donor',
       email: 'donor@redcross.lk',
       pw: 'Donor@2026!',
       role: 'donor',
-      badge: 'Supply Pledges',
-      desc: 'Demand-driven medical supply fulfillment, priority matching, and certified shipments.',
+      badge: 'Donation Requests',
+      desc: 'Review personalized requests, pledge supplies, and track completed donations.',
       icon: HeartHandshake,
       color: 'emerald',
       port: 5176
     },
     {
-      label: 'Field Volunteer Dispatch',
+      label: 'Field Volunteer',
       email: 'volunteer@relief.lk',
       pw: 'Volunteer@2026!',
       role: 'volunteer',
-      badge: 'Rescue Missions',
-      desc: 'On-ground disaster response, turn-by-turn routing, victim status verification.',
+      badge: 'Volunteer Dashboard',
+      desc: 'Manage assigned camps, field tasks, shelter populations, and relief supplies.',
       icon: Truck,
       color: 'amber',
-      port: 5177
+      port: 5178
     },
     {
       label: 'District Disaster Officer',

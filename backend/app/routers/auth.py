@@ -64,7 +64,22 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 )
 async def component_login(payload: LoginRequest) -> TokenResponse:
     """Preserve the individual component's existing Mongo users and ObjectIds."""
-    user = await users_collection.find_one({"email": str(payload.email)})
+    try:
+        user = await users_collection.find_one({"email": str(payload.email)})
+    except RuntimeError as exc:
+        # MongoDB is not configured — the component database is unavailable.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The component user database (MongoDB) is not configured on this server. "
+                "Use /auth/login for SQLite-backed accounts, or set MONGODB_URI in backend/.env."
+            ),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Component user database is currently unavailable. Please try again later.",
+        ) from exc
 
     password_hash = user.get("password") if user else None
     password_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")

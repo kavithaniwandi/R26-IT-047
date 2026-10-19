@@ -52,8 +52,8 @@ export const PORTAL_CONFIG = {
   },
   donor: {
     id: 'donor',
-    name: 'Relief Donor Marketplace',
-    subtitle: 'Demand-Driven Medical Supplies & Verified Pledges',
+    name: 'Donor Donation Portal',
+    subtitle: 'Personalized Requests, Pledges & Donation History',
     port: 5176,
     path: '/donor',
     defaultRole: 'donor',
@@ -107,7 +107,30 @@ export const PORTAL_CONFIG = {
     badge: 'Port :5180',
     color: 'emerald',
   },
+  donor_matching: {
+    id: 'donor_matching',
+    name: 'Personalized Donor Matching',
+    subtitle: 'GN-Based Donor Ranking & Targeted Relief Outreach',
+    port: 5181,
+    path: '/donor-matching',
+    defaultRole: 'disaster_officer',
+    defaultEmail: 'officer@disaster.relief.lk',
+    defaultPassword: 'Officer@2026!',
+    badge: 'Port :5181',
+    color: 'violet',
+  },
 };
+
+// Role-owned operational workspaces are intentionally excluded from the
+// administrator session. Admins manage users and system-wide operations from
+// Admin Command; they do not impersonate stakeholder workflows.
+export const ADMIN_HIDDEN_PORTAL_IDS = new Set([
+  'donor',
+  'volunteer_dash',
+  'disaster_donation',
+  'disaster_officer',
+  'donor_matching',
+]);
 
 /**
  * Detect current portal from port, URL path, query params, or environment variable.
@@ -134,7 +157,7 @@ export function detectCurrentPortal() {
     }
   }
 
-  // 4. Dedicated port detection for other micro-portals (ports 5174-5180)
+  // 4. Dedicated port detection for other micro-portals (ports 5174-5181)
   for (const [key, cfg] of Object.entries(PORTAL_CONFIG)) {
     if (cfg.port === currentPort && key !== 'home' && key !== 'admin') {
       return key;
@@ -157,7 +180,7 @@ export function getPortalForRole(role) {
     victim: 'victim',
     authority: 'authority',
     donor: 'donor',
-    volunteer: 'volunteer',
+    volunteer: 'volunteer_dash',
     disaster_officer: 'disaster_officer',
   }[role] || 'home';
 }
