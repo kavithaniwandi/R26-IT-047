@@ -306,11 +306,11 @@ def test_fallback_goal_is_lowercased_mid_sentence():
         "campaign_type": "flood_relief",
     }
     text = gs._build_fallback_appeal(form)
-    # "This flood relief campaign aims to support displaced families."
-    assert "aims to support" in text, (
+    # "The campaign's stated goal is to support displaced families."
+    assert "The campaign's stated goal is to support displaced families." in text, (
         f"Expected lowercase goal mid-sentence, got: {text!r}"
     )
-    assert "aims to Support" not in text
+    assert "Support displaced families" not in text
 
 
 # ---------------------------------------------------------------------------
