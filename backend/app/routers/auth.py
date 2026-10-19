@@ -137,6 +137,11 @@ async def me(
             email=mongo_user.get("email"),
             phone=mongo_user.get("phone"),
             address=mongo_user.get("address"),
+            assigned_ds_area=(
+                mongo_user.get("assignedDsArea")
+                or mongo_user.get("assigned_ds_area")
+                or mongo_user.get("dsArea")
+            ),
             role=mongo_user.get("userType", token_data.role),
             is_active=mongo_user.get("isActive", mongo_user.get("is_active", True)),
             created_at=mongo_user.get("createdAt") or mongo_user.get("created_at") or datetime.now(timezone.utc),
@@ -155,6 +160,7 @@ async def me(
         email=user.email,
         phone=user.phone,
         address=user.address,
+        assigned_ds_area=user.assigned_ds_area,
         role=role_name,
         is_active=user.is_active,
         created_at=user.created_at,

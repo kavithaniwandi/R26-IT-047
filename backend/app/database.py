@@ -92,6 +92,7 @@ def _ensure_user_donor_profile_columns() -> None:
         "capacity_level": "VARCHAR(20)",
         "latitude": "FLOAT",
         "longitude": "FLOAT",
+        "assigned_ds_area": "VARCHAR(120)",
     }
     with engine.begin() as connection:
         for name, sql_type in columns.items():
