@@ -24,6 +24,9 @@ venv/
 env/
 
 # Database
+*.db-shm
+*.db-wal
+*.db-journal
 *.db
 *.sqlite
 *.sqlite3
