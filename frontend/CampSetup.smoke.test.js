@@ -4,6 +4,8 @@
  * No test framework needed - plain Node.js assertions.
  */
 
+import { loadTriageCamps, triageCampLocation as campSubtitle } from "./src/utils/triageCamps.js";
+
 let passed = 0;
 let failed = 0;
 
@@ -87,9 +89,6 @@ function validateMOForm(form) {
   }
   return "";
 }
-
-const campSubtitle = (camp) =>
-  [camp.district, camp.ds_division].filter(Boolean).join(" \u00b7 ");
 
 const initials = (name) =>
   name.trim().split(" ").map((word) => word[0]).slice(0, 2).join("").toUpperCase() || "?";
@@ -204,24 +203,23 @@ assert("Blank shift is allowed", validateMOForm({ ...validMO, shift: "" }) === "
 assert("Shift 15.30 with dot is valid", validateMOForm({ ...validMO, shift: "15.30" }) === "");
 
 console.log("\n-- 8. Helpers --");
-assert("campSubtitle both fields", campSubtitle({ district: "Colombo", ds_division: "Kaduwela" }) === "Colombo \u00b7 Kaduwela");
-assert("campSubtitle missing ds_division", campSubtitle({ district: "Colombo", ds_division: null }) === "Colombo");
-assert("campSubtitle missing district", campSubtitle({ district: null, ds_division: "Kaduwela" }) === "Kaduwela");
-assert("campSubtitle both missing", campSubtitle({ district: null, ds_division: null }) === "");
+assert("campSubtitle both fields", campSubtitle({ ds_division: "Kaduwela", gn_division: "Ranala" }) === "Kaduwela \u00b7 Ranala");
+assert("campSubtitle missing GN division", campSubtitle({ ds_division: "Kaduwela", gn_division: null }) === "Kaduwela");
+assert("campSubtitle missing DS division", campSubtitle({ ds_division: null, gn_division: "Ranala" }) === "Ranala");
+assert("campSubtitle both missing", campSubtitle({ ds_division: null, gn_division: null }) === "");
 assert("initials two-word name", initials("Nimal Perera") === "NP");
 assert("initials three-word name takes first two", initials("Dr Nimal Perera") === "DN");
 assert("initials single word", initials("Nimal") === "N");
 assert("initials empty string", initials("") === "?");
 
 console.log("\n-- 9. Session object shape --");
-const mockCamp = {
-  id: 42,
+const [mockCamp] = await loadTriageCamps({ getReliefCamps: async () => [{
+  id: "507f1f77bcf86cd799439011",
   name: "Nawagamuwa Primary School",
-  district: "Colombo",
-  ds_division: "Kaduwela",
-  gn_division: "Wekewatta",
-  estimated_capacity: 200,
-};
+  dsArea: "Kaduwela",
+  gnDivision: "Wekewatta",
+  maxCapacityPersons: 200,
+}] });
 const mockMO = {
   id: "12345",
   name: "Dr. Nimal Perera",
@@ -246,9 +244,10 @@ const sessionObj = {
   },
   mos: [mockMO],
 };
-assert("session_id starts with camp id", sessionObj.session_id.startsWith("42-"));
-assert("session_id has timestamp suffix", /^\d+-\d+$/.test(sessionObj.session_id));
-assert("camp.id is integer", Number.isInteger(sessionObj.camp.id));
+assert("session_id starts with Mongo camp id", sessionObj.session_id.startsWith(`${mockCamp.id}-`));
+assert("session_id has timestamp suffix", /^[a-f0-9]{24}-\d+$/.test(sessionObj.session_id));
+assert("camp.id preserves Mongo ObjectId string", sessionObj.camp.id === "507f1f77bcf86cd799439011");
+assert("session stores mapped Mongo location and capacity", sessionObj.camp.ds_division === "Kaduwela" && sessionObj.camp.gn_division === "Wekewatta" && sessionObj.camp.estimated_capacity === 200);
 assert("camp has all required fields", ["id", "name", "district", "ds_division", "gn_division", "estimated_capacity"].every((key) => key in sessionObj.camp));
 assert("mos is non-empty array", Array.isArray(sessionObj.mos) && sessionObj.mos.length > 0);
 assert("MO has queueDepth: 0", sessionObj.mos[0].queueDepth === 0);
@@ -257,14 +256,14 @@ assert("startedAt is ISO string", !Number.isNaN(Date.parse(sessionObj.startedAt)
 
 console.log("\n-- 10. Activation state keying --");
 const mockCamps = [
-  { id: 1, name: "Camp A", district: "Colombo", ds_division: "Kaduwela" },
-  { id: 2, name: "Camp B", district: "Kandy", ds_division: "Pasbage Korale" },
+  { id: "507f1f77bcf86cd799439011", name: "Camp A", ds_division: "Kaduwela" },
+  { id: "507f1f77bcf86cd799439012", name: "Camp B", ds_division: "Pasbage Korale" },
 ];
-const savedMap = { 1: true };
+const savedMap = { [mockCamps[0].id]: true };
 const merged = Object.fromEntries(mockCamps.map((camp) => [camp.id, savedMap[camp.id] ?? false]));
-assert("Activation keyed by integer id", 1 in merged && 2 in merged);
-assert("Previously active camp preserved", merged[1] === true);
-assert("New camp defaults to false", merged[2] === false);
+assert("Activation keyed by Mongo id", mockCamps.every((camp) => camp.id in merged));
+assert("Previously active camp preserved", merged[mockCamps[0].id] === true);
+assert("New camp defaults to false", merged[mockCamps[1].id] === false);
 assert("No legacy camp-code key leaking in", !("KDW-001" in merged));
 
 console.log("\n------------------------------------------------------------");

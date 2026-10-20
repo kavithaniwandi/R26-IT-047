@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { loadTriageCamps, triageCampLocation as campSubtitle } from "../utils/triageCamps";
 import "./CampSetup.css";
 
 const SESSION_KEY = "severityQueueSession";
 const ACTIVATION_KEY = "campActivationState";
-
-const campSubtitle = (camp) =>
-  [camp.district, camp.ds_division].filter(Boolean).join(" · ");
 
 const SPECIALTIES = [
   "Emergency Medicine", "Cardiovascular", "Respiratory", "Neurological",
@@ -76,7 +74,7 @@ export default function CampSetup() {
 
   useEffect(() => {
     setCampsLoading(true);
-    api.getCamps({ status_filter: "approved" })
+    loadTriageCamps(api)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setCamps(list);
@@ -380,7 +378,7 @@ export default function CampSetup() {
                           </button>
                         </div>
 
-                        <div className="cs-camp-code">{camp.district}</div>
+                        <div className="cs-camp-code">{camp.ds_division}</div>
                         <div className="cs-camp-name">{camp.name}</div>
                         <div className="cs-camp-meta">{campSubtitle(camp)}</div>
 

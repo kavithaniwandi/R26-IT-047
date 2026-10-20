@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { loadTriageCamps } from "../utils/triageCamps";
 import "./CampAnalyzer.css";
 
 const SESSION_KEY = "severityQueueSession";
@@ -80,7 +81,7 @@ export default function CampAnalyzer() {
     let alive = true;
 
     Promise.allSettled([
-      api.getCamps({ status_filter: "approved" }),
+      loadTriageCamps(api),
       api.getTriagePatients({
         limit: 500,
         ...(session?.session_id ? { session_id: session.session_id } : {}),
@@ -216,7 +217,7 @@ export default function CampAnalyzer() {
 
         <section className="ca-metrics">
           <div className="ca-metric">
-            <span>Approved camps</span>
+            <span>Relief camps</span>
             <strong>{camps.length}</strong>
           </div>
           <div className="ca-metric">
@@ -298,7 +299,7 @@ export default function CampAnalyzer() {
                 <thead>
                   <tr>
                     <th>Camp</th>
-                    <th>District</th>
+                    <th>DS / GN division</th>
                     <th>Status</th>
                     <th>Capacity</th>
                   </tr>
@@ -310,7 +311,7 @@ export default function CampAnalyzer() {
                     return (
                       <tr key={camp.id} className={current ? "current" : ""}>
                         <td>{camp.name}</td>
-                        <td>{camp.district || "N/A"}</td>
+                        <td>{[camp.ds_division, camp.gn_division].filter(Boolean).join(" / ") || "N/A"}</td>
                         <td>{current ? "Current" : active ? "Active" : "Standby"}</td>
                         <td>{camp.estimated_capacity || "N/A"}</td>
                       </tr>
