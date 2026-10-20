@@ -234,14 +234,14 @@ python -m pytest tests/ -v
 ============================= test session starts =============================
 collected 27 items
 
-tests/test_auth.py::test_register_success PASSED                         [  3%]
-tests/test_auth.py::test_register_default_role_is_victim PASSED          [  7%]
-tests/test_auth.py::test_register_duplicate_email PASSED                 [ 11%]
+tests/auth/test_auth.py::test_register_success PASSED                         [  3%]
+tests/auth/test_auth.py::test_register_default_role_is_victim PASSED          [  7%]
+tests/auth/test_auth.py::test_register_duplicate_email PASSED                 [ 11%]
 ...
-tests/test_ml.py::test_flood_prediction_model PASSED                     [ 88%]
-tests/test_ml.py::test_landslide_prediction_model PASSED                 [ 92%]
-tests/test_ml.py::test_camp_suitability_model PASSED                     [ 96%]
-tests/test_ml.py::test_priority_scorer_model PASSED                      [100%]
+tests/ml/test_ml.py::test_flood_prediction_model PASSED                     [ 88%]
+tests/ml/test_ml.py::test_landslide_prediction_model PASSED                 [ 92%]
+tests/ml/test_ml.py::test_camp_suitability_model PASSED                     [ 96%]
+tests/ml/test_ml.py::test_priority_scorer_model PASSED                      [100%]
 
 ======================== 27 passed in ~16.20s =========================
 ```

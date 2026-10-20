@@ -32,7 +32,7 @@ graph TD
 
 ## 2. Test Cases Inventory
 
-### 2.1 Authentication & Registration Suite (`tests/test_auth.py`)
+### 2.1 Authentication & Registration Suite (`tests/auth/test_auth.py`)
 
 | Test ID | Test Method Name | Scenario Tested | Expected Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
@@ -45,7 +45,7 @@ graph TD
 
 ---
 
-### 2.2 Login & Token Verification Suite (`tests/test_auth.py`)
+### 2.2 Login & Token Verification Suite (`tests/auth/test_auth.py`)
 
 | Test ID | Test Method Name | Scenario Tested | Expected Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
@@ -59,7 +59,7 @@ graph TD
 
 ---
 
-### 2.3 Role-Based Access Control (`require_role`) Suite (`tests/test_auth.py`)
+### 2.3 Role-Based Access Control (`require_role`) Suite (`tests/auth/test_auth.py`)
 
 | Test ID | Test Method Name | Scenario Tested | Expected Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
@@ -74,7 +74,7 @@ graph TD
 
 ---
 
-### 2.4 Machine Learning Inference Suite (`tests/test_ml.py`)
+### 2.4 Machine Learning Inference Suite (`tests/ml/test_ml.py`)
 
 | Test ID | Test Method Name | Scenario Tested | Expected Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
@@ -96,33 +96,33 @@ rootdir: D:\My research\SDM Project refine\backend
 configfile: pytest.ini
 collected 27 items
 
-tests/test_auth.py::TestRegister::test_register_success PASSED           [  3%]
-tests/test_auth.py::TestRegister::test_register_default_role_is_victim PASSED [  7%]
-tests/test_auth.py::TestRegister::test_register_duplicate_email PASSED   [ 11%]
-tests/test_auth.py::TestRegister::test_register_weak_password_no_digit PASSED [ 14%]
-tests/test_auth.py::TestRegister::test_register_short_password PASSED    [ 18%]
-tests/test_auth.py::TestRegister::test_register_invalid_email PASSED     [ 22%]
-tests/test_auth.py::TestLogin::test_login_success PASSED                 [ 25%]
-tests/test_auth.py::TestLogin::test_login_token_is_valid_jwt PASSED      [ 29%]
-tests/test_auth.py::TestLogin::test_login_wrong_password PASSED          [ 33%]
-tests/test_auth.py::TestLogin::test_login_nonexistent_email PASSED       [ 37%]
-tests/test_auth.py::TestLogin::test_login_inactive_account PASSED        [ 40%]
-tests/test_auth.py::TestMe::test_me_with_valid_token PASSED              [ 44%]
-tests/test_auth.py::TestMe::test_me_without_token PASSED                 [ 48%]
-tests/test_auth.py::TestRequireRole::test_no_token_returns_401 PASSED    [ 51%]
-tests/test_auth.py::TestRequireRole::test_malformed_token_returns_401 PASSED [ 55%]
-tests/test_auth.py::TestRequireRole::test_expired_token_returns_401 PASSED [ 59%]
-tests/test_auth.py::TestRequireRole::test_wrong_role_returns_403 PASSED  [ 62%]
-tests/test_auth.py::TestRequireRole::test_correct_role_returns_200 PASSED [ 66%]
-tests/test_auth.py::TestRequireRole::test_multi_role_allowed PASSED      [ 70%]
-tests/test_auth.py::TestRequireRole::test_multi_role_victim_blocked PASSED [ 74%]
-tests/test_auth.py::TestRequireRole::test_authority_on_multi_role PASSED [ 77%]
-tests/test_ml.py::TestMLModels::test_model_files_exist PASSED            [ 81%]
-tests/test_ml.py::TestMLModels::test_landslide_model_inference PASSED    [ 85%]
-tests/test_ml.py::TestMLModels::test_flood_model_inference PASSED        [ 88%]
-tests/test_ml.py::TestMLModels::test_camp_suitability_model_inference PASSED [ 92%]
-tests/test_ml.py::TestMLModels::test_priority_score_model_inference PASSED [ 96%]
-tests/test_ml.py::TestMLModels::test_metadata_and_tables PASSED          [100%]
+tests/auth/test_auth.py::TestRegister::test_register_success PASSED           [  3%]
+tests/auth/test_auth.py::TestRegister::test_register_default_role_is_victim PASSED [  7%]
+tests/auth/test_auth.py::TestRegister::test_register_duplicate_email PASSED   [ 11%]
+tests/auth/test_auth.py::TestRegister::test_register_weak_password_no_digit PASSED [ 14%]
+tests/auth/test_auth.py::TestRegister::test_register_short_password PASSED    [ 18%]
+tests/auth/test_auth.py::TestRegister::test_register_invalid_email PASSED     [ 22%]
+tests/auth/test_auth.py::TestLogin::test_login_success PASSED                 [ 25%]
+tests/auth/test_auth.py::TestLogin::test_login_token_is_valid_jwt PASSED      [ 29%]
+tests/auth/test_auth.py::TestLogin::test_login_wrong_password PASSED          [ 33%]
+tests/auth/test_auth.py::TestLogin::test_login_nonexistent_email PASSED       [ 37%]
+tests/auth/test_auth.py::TestLogin::test_login_inactive_account PASSED        [ 40%]
+tests/auth/test_auth.py::TestMe::test_me_with_valid_token PASSED              [ 44%]
+tests/auth/test_auth.py::TestMe::test_me_without_token PASSED                 [ 48%]
+tests/auth/test_auth.py::TestRequireRole::test_no_token_returns_401 PASSED    [ 51%]
+tests/auth/test_auth.py::TestRequireRole::test_malformed_token_returns_401 PASSED [ 55%]
+tests/auth/test_auth.py::TestRequireRole::test_expired_token_returns_401 PASSED [ 59%]
+tests/auth/test_auth.py::TestRequireRole::test_wrong_role_returns_403 PASSED  [ 62%]
+tests/auth/test_auth.py::TestRequireRole::test_correct_role_returns_200 PASSED [ 66%]
+tests/auth/test_auth.py::TestRequireRole::test_multi_role_allowed PASSED      [ 70%]
+tests/auth/test_auth.py::TestRequireRole::test_multi_role_victim_blocked PASSED [ 74%]
+tests/auth/test_auth.py::TestRequireRole::test_authority_on_multi_role PASSED [ 77%]
+tests/ml/test_ml.py::TestMLModels::test_model_files_exist PASSED            [ 81%]
+tests/ml/test_ml.py::TestMLModels::test_landslide_model_inference PASSED    [ 85%]
+tests/ml/test_ml.py::TestMLModels::test_flood_model_inference PASSED        [ 88%]
+tests/ml/test_ml.py::TestMLModels::test_camp_suitability_model_inference PASSED [ 92%]
+tests/ml/test_ml.py::TestMLModels::test_priority_score_model_inference PASSED [ 96%]
+tests/ml/test_ml.py::TestMLModels::test_metadata_and_tables PASSED          [100%]
 
 ====================== 27 passed in 16.48s =======================
 ```

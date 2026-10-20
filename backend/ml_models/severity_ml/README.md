@@ -24,4 +24,4 @@ provenance are recovered.
 The deployed severity thresholds are stored in the shipped
 `backend/app/models/severity_model/severity_bundle.joblib`; the copied config
 values in `model_config.json` are kept in sync by
-`backend/tests/test_threshold_consistency.py`.
+`backend/tests/severity/test_threshold_consistency.py`.
